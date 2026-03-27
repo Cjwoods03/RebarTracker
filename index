@@ -1,0 +1,3279 @@
+<!DOCTYPE html>
+
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>RebarTrack</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+:root {
+–steel: #001540;
+–steel-mid: #00205B;
+–steel-light: #002F80;
+–iron: #003DA6;
+–accent: #00B04F;
+–accent-dim: #008C3C;
+–hot: #e84040;
+–safe: #00B04F;
+–warn: #f5a623;
+–spool-color: #4ab8ff;
+–empty: #001a4d;
+–text: #e8f0ff;
+–text-dim: #7a9acc;
+–border: #003080;
+}
+
+- { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { background: var(–steel); color: var(–text); font-family: ‘IBM Plex Sans’, sans-serif; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; }
+
+header {
+background: linear-gradient(135deg, #00205B 0%, #001540 100%);
+border-bottom: 3px solid #00B04F;
+padding: 0 16px;
+display: flex; align-items: center; justify-content: space-between;
+height: 60px; position: sticky; top: 0; z-index: 100;
+box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+}
+.logo {
+font-family: ‘Bebas Neue’, sans-serif; font-size: 22px; letter-spacing: 3px;
+color: #ffffff; line-height: 1;
+}
+.logo-sub { font-size: 9px; color: #00B04F; font-family: ‘IBM Plex Mono’, monospace; letter-spacing: 2px; display: block; margin-top: 1px; }
+
+/* REBAR BANNER */
+.rebar-banner {
+width: 100%; background: #00152e; border-bottom: 1px solid #003080;
+overflow: hidden; height: 28px; flex-shrink: 0;
+}
+.rebar-svg { width: 100%; height: 28px; display: block; }
+
+.stats-bar { background: var(–steel-mid); border-bottom: 1px solid var(–border); display: grid; grid-template-columns: repeat(4,1fr); padding: 8px 0; }
+.stat { text-align: center; padding: 4px 0; border-right: 1px solid var(–border); }
+.stat:last-child { border-right: none; }
+.stat-val { font-family: ‘Bebas Neue’, sans-serif; font-size: 22px; color: var(–accent); line-height: 1; }
+.stat-label { font-size: 9px; color: var(–text-dim); text-transform: uppercase; letter-spacing: 1px; }
+
+/* ZOOM */
+.zoom-controls { display:flex; align-items:center; gap:0; border:1px solid var(–border); border-radius:6px; overflow:hidden; flex-shrink:0; }
+.zoom-btn { width:34px; height:32px; background:var(–steel-light); border:none; color:var(–text); font-size:18px; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:background 0.15s; line-height:1; }
+.zoom-btn:active { background:var(–iron); }
+.zoom-btn:first-child { border-right:1px solid var(–border); }
+.zoom-btn:last-child { border-left:1px solid var(–border); }
+.zoom-val { font-family:‘IBM Plex Mono’,monospace; font-size:10px; color:var(–text-dim); padding:0 8px; background:var(–steel-light); height:32px; display:flex; align-items:center; min-width:38px; justify-content:center; }
+.page-sections { padding: 10px 12px 40px; display: flex; flex-direction: column; gap: 10px; max-width: 900px; margin: 0 auto; }
+
+.section-card { border-radius: 10px; overflow: hidden; border: 1px solid var(–border); background: var(–steel-mid); }
+
+.section-header {
+width: 100%; display: flex; align-items: center; justify-content: space-between;
+padding: 14px 16px; background: var(–steel-mid); border: none; cursor: pointer;
+transition: background 0.15s; user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.section-header:active { background: var(–iron); }
+.section-header.active { border-bottom: 2px solid var(–accent); }
+
+.sec-header-left { display: flex; align-items: center; gap: 10px; }
+.sec-icon { font-size: 18px; line-height: 1; }
+.sec-title { font-family: ‘Bebas Neue’, sans-serif; font-size: 18px; letter-spacing: 2px; color: var(–text); }
+.section-header.active .sec-title { color: var(–accent); }
+
+.sec-header-right { display: flex; align-items: center; gap: 8px; }
+.sec-badge { font-family: ‘IBM Plex Mono’, monospace; font-size: 11px; color: var(–accent); background: var(–steel-light); padding: 2px 8px; border-radius: 10px; border: 1px solid var(–border); }
+.sec-chevron { font-size: 12px; color: var(–text-dim); transition: transform 0.2s; display: inline-block; }
+
+.section-body { overflow: hidden; transition: max-height 0.3s ease, opacity 0.25s ease; max-height: 9000px; opacity: 1; }
+.section-body.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
+
+.map-section-toggle {
+display: flex; gap: 0; margin: 10px 12px 0;
+border: 1px solid var(–border); border-radius: 8px; overflow: hidden;
+}
+.mst-btn {
+flex: 1; padding: 10px 4px;
+background: var(–steel-light); border: none;
+color: var(–text-dim); font-family: ‘IBM Plex Mono’, monospace;
+font-size: 10px; letter-spacing: 0.5px; text-transform: uppercase;
+cursor: pointer; transition: all 0.15s;
+border-right: 1px solid var(–border);
+}
+.mst-btn:last-child { border-right: none; }
+.mst-btn.active { background: var(–iron); color: var(–accent); }
+.mst-btn:active { opacity: 0.7; }
+
+/* FORM */
+.form-wrap { padding: 16px; max-width: 600px; margin: 0 auto; }
+.form-group { margin-bottom: 12px; }
+.optional-label { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+.optional-label span { font-size: 10px; color: var(–text-dim); text-transform: uppercase; letter-spacing: 1px; }
+.optional-badge { font-size: 9px; color: var(–text-dim); background: var(–iron); padding: 1px 5px; border-radius: 3px; font-family: ‘IBM Plex Mono’, monospace; opacity: 0.7; }
+label { display: block; font-size: 10px; color: var(–text-dim); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px; }
+select, input[type=“text”], input[type=“number”], input[type=“date”] { width: 100%; background: var(–steel-light); border: 1px solid var(–border); color: var(–text); padding: 12px; font-family: ‘IBM Plex Mono’, monospace; font-size: 14px; border-radius: 6px; outline: none; -webkit-appearance: none; appearance: none; }
+select:focus, input:focus { border-color: var(–accent); }
+select option { background: var(–steel-mid); }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Length hint */
+.length-hint { font-size: 10px; font-family: ‘IBM Plex Mono’, monospace; margin-top: 4px; padding: 5px 8px; border-radius: 4px; }
+.length-hint.ok { background: #1a3020; color: var(–safe); }
+.length-hint.warn { background: #3a2800; color: var(–warn); }
+.length-hint.over { background: #3a1010; color: var(–hot); }
+
+.btn { width: 100%; padding: 14px; font-family: ‘Bebas Neue’, sans-serif; font-size: 20px; letter-spacing: 2px; border: none; border-radius: 6px; cursor: pointer; transition: all 0.15s; margin-top: 4px; }
+.btn-primary { background: #00B04F; color: #ffffff; }
+.btn-primary:active { opacity: 0.8; }
+.btn-suggest { background: var(–steel-light); color: #00B04F; border: 1px solid #00B04F; font-size: 15px; letter-spacing: 1px; margin-bottom: 8px; }
+.suggestion-box { background: var(–steel-light); border: 1px solid var(–safe); border-radius: 6px; padding: 12px; margin-bottom: 10px; display: none; }
+.suggestion-box.active { display: block; }
+.suggestion-loc { font-family: ‘Bebas Neue’, sans-serif; font-size: 28px; color: var(–safe); letter-spacing: 2px; line-height: 1.1; }
+.suggestion-reason { font-size: 11px; color: var(–text-dim); margin-top: 4px; font-family: ‘IBM Plex Mono’, monospace; }
+
+/* MAP */
+.map-toolbar { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(–steel-mid); border-bottom: 1px solid var(–border); flex-wrap: wrap; gap: 8px; }
+.legend { display: flex; flex-wrap: wrap; gap: 8px; }
+.legend-item { display: flex; align-items: center; gap: 5px; font-size: 10px; color: var(–text-dim); }
+.legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.view-toggle { display: flex; gap: 0; border: 1px solid var(–border); border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+.view-btn { padding: 6px 12px; background: var(–steel-light); border: none; color: var(–text-dim); font-family: ‘IBM Plex Mono’, monospace; font-size: 11px; cursor: pointer; transition: all 0.15s; letter-spacing: 1px; }
+.view-btn:first-child { border-right: 1px solid var(–border); }
+.view-btn.active { background: var(–iron); color: var(–accent); }
+
+.map-wrap { padding: 12px; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 40px; transform-origin: top left; transition: transform 0.2s ease; }
+.dock-area { background: #003d1a; border: 1px dashed #007a35; border-radius: 4px; padding: 8px; margin-bottom: 14px; font-family: ‘IBM Plex Mono’, monospace; font-size: 11px; color: #00e070; text-align: center; letter-spacing: 1px; }
+.section-title { font-family: ‘Bebas Neue’, sans-serif; font-size: 13px; letter-spacing: 2px; color: #00e070; margin: 18px 0 8px; padding: 6px 10px; background: var(–steel-mid); border-left: 3px solid #00B04F; border-radius: 0 4px 4px 0; }
+.sub-title { font-family: ‘IBM Plex Mono’, monospace; font-size: 10px; color: var(–text-dim); margin-bottom: 8px; padding-left: 4px; letter-spacing: 1px; }
+
+/* STANCHION TABLE */
+.stanchion-table { width: 100%; border-collapse: separate; border-spacing: 0 4px; min-width: 320px; }
+.stanchion-table th { font-family: ‘IBM Plex Mono’, monospace; font-size: 9px; color: var(–text-dim); text-transform: uppercase; letter-spacing: 1px; padding: 4px 8px; text-align: center; }
+.stan-num { font-family: ‘Bebas Neue’, sans-serif; font-size: 18px; color: var(–text-dim); width: 32px; text-align: center; vertical-align: middle; }
+/* 80ft usage bar per stanchion row */
+.stan-usage { width: 36px; vertical-align: middle; padding: 0 4px; }
+.usage-bar-wrap { background: var(–steel-light); border-radius: 3px; height: 36px; width: 10px; margin: 0 auto; display: flex; flex-direction: column; justify-content: flex-end; overflow: hidden; }
+.usage-bar-fill { border-radius: 3px; transition: height 0.3s; width: 100%; }
+.stan-cell { width: 30%; padding: 3px; }
+
+/* HORIZONTAL VIEW */
+/* Column layout per stanchion:
+Row 1: stan number  — height 20px
+Row 2: usage strip  — height 10px (includes margin)
+Row 3: A slot       — height 52px
+Row 4: B slot       — height 52px
+Row 5: C slot       — height 52px
+gap between rows: 4px
+Side label column mirrors rows 1-5 exactly */
+.horiz-wrap { display: flex; gap: 0; align-items: flex-start; width: max-content; }
+
+/* Side label column: fixed rows matching stanchion col */
+.horiz-side-labels {
+display: flex; flex-direction: column;
+margin-right: 6px; flex-shrink: 0;
+}
+/* Row 1 spacer — matches horiz-stan-num height */
+.horiz-side-num-spacer { height: 20px; flex-shrink: 0; }
+/* Row 2 — “80ft” label matches strip height */
+.horiz-side-strip-label {
+height: 10px; flex-shrink: 0;
+display: flex; align-items: center; justify-content: flex-end;
+font-family: ‘IBM Plex Mono’, monospace; font-size: 7px;
+color: var(–text-dim); letter-spacing: 1px;
+padding-right: 4px; margin-top: 4px;
+}
+/* Rows 3-5 — A, B, C labels, each matching slot height */
+.horiz-side-label {
+height: 52px; flex-shrink: 0;
+display: flex; align-items: center; justify-content: center;
+font-family: ‘Bebas Neue’, sans-serif; font-size: 13px;
+color: var(–text-dim); letter-spacing: 1px; width: 20px;
+margin-top: 4px;
+}
+
+.horiz-stanchion-col { display: flex; flex-direction: column; gap: 4px; margin-right: 4px; flex-shrink: 0; width: 56px; }
+.horiz-stan-num { height: 20px; display: flex; align-items: center; justify-content: center; font-family: ‘Bebas Neue’, sans-serif; font-size: 13px; color: var(–text-dim); letter-spacing: 1px; }
+/* Usage strip row — same 4px gap before it via column gap, then 4px height + bottom margin to total 10px row */
+.horiz-usage-strip { height: 4px; border-radius: 2px; margin: 0 2px 2px; background: var(–steel-light); overflow: hidden; flex-shrink: 0; }
+.horiz-usage-fill { height: 100%; border-radius: 2px; transition: width 0.3s; }
+
+.horiz-area22-col { display: flex; flex-direction: column; gap: 4px; margin-right: 4px; flex-shrink: 0; min-width: 120px; }
+.horiz-area22-num { height: 20px; display: flex; align-items: center; justify-content: center; font-family: ‘Bebas Neue’, sans-serif; font-size: 11px; color: #7acc55; letter-spacing: 1px; text-align: center; }
+.horiz-area22-inner { background: #1b2614; border: 1px dashed #3a5a28; border-radius: 6px; padding: 6px; display: flex; flex-direction: column; gap: 4px; flex: 1; }
+
+/* WEIGHT UNIT TOGGLE */
+.unit-toggle { display:flex; border:1px solid var(–border); border-radius:6px; overflow:hidden; flex-shrink:0; }
+.unit-btn { padding:8px 12px; background:var(–steel-light); border:none; color:var(–text-dim); font-family:‘IBM Plex Mono’,monospace; font-size:11px; cursor:pointer; letter-spacing:1px; transition:all 0.15s; }
+.unit-btn:first-child { border-right:1px solid var(–border); }
+.unit-btn.active { background:var(–iron); color:var(–accent); }
+.unit-btn:active { opacity:0.7; }
+
+/* SCRAP SLOT */
+.slot.scrap-slot { border-color: #cccccc !important; background: #ffffff !important; }
+.slot.scrap-slot::after { content: none; }
+.slot.scrap-slot.occupied { background: #f0f0f0 !important; border-color: #aaaaaa !important; }
+
+/* HOLD SLOT */
+.slot.hold-slot { border-color: #00aaff !important; background: #0055cc !important; }
+.slot.hold-slot.occupied { background: #0044aa !important; border-color: #00aaff !important; }
+
+/* RED TAG SLOT */
+.slot.redtag-slot { border-color: #ff4444 !important; background: #cc0000 !important; }
+.slot.redtag-slot.occupied { background: #aa0000 !important; border-color: #ff4444 !important; }
+
+/* SLOT CONTEXT POPUP MENU */
+.slot-ctx-menu {
+position: fixed; z-index: 500;
+background: #001a4d; border: 1px solid #003080;
+border-radius: 8px; overflow: hidden;
+box-shadow: 0 8px 32px rgba(0,0,0,0.7);
+display: none; min-width: 160px;
+font-family: ‘IBM Plex Mono’, monospace;
+animation: ctxFadeIn 0.12s ease;
+}
+@keyframes ctxFadeIn { from { opacity:0; transform:scale(0.92); } to { opacity:1; transform:scale(1); } }
+.slot-ctx-menu.visible { display: block; }
+.ctx-header {
+padding: 8px 12px 6px;
+font-size: 9px; color: #7a9acc; letter-spacing: 2px;
+text-transform: uppercase; border-bottom: 1px solid #003080;
+}
+.ctx-item {
+display: flex; align-items: center; gap: 10px;
+padding: 10px 14px; cursor: pointer;
+font-size: 12px; color: var(–text);
+border-bottom: 1px solid #002060;
+transition: background 0.1s;
+}
+.ctx-item:last-child { border-bottom: none; }
+.ctx-item:hover, .ctx-item:active { background: #002f80; }
+.ctx-dot {
+width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0;
+}
+.ctx-item.ctx-clear { color: var(–text-dim); }
+/* Horizontal col number stays neutral — no full col highlight needed */
+.scrap-tooltip { position: fixed; background: #3a2000; border: 1px solid #a05000; color: #ff9900; font-family: ‘IBM Plex Mono’, monospace; font-size: 11px; padding: 6px 10px; border-radius: 6px; z-index: 300; pointer-events: none; display: none; white-space: nowrap; }
+@keyframes pulse { 0%,100% { box-shadow: 0 0 0 2px var(–safe); } 50% { box-shadow: 0 0 0 5px rgba(39,192,110,0.3); } }
+.slot { border-radius: 5px; border: 1px solid var(–border); background: var(–empty); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px 2px; height: 52px; position: relative; transition: border-color 0.3s, background 0.3s; text-align: center; flex-shrink: 0; overflow: hidden; }
+.slot:active { transform: scale(0.95); }
+/* occupied/spool add a subtle overlay on top of the fill gradient */
+.slot.occupied { border-color: #007a35; }
+.slot.occupied-spool { border-color: #004099; background: #001e4d; }
+.slot.occupied-urgent { background: #4d0000 !important; border-color: #990000 !important; }
+.slot.suggested { border-color: var(–safe); box-shadow: 0 0 0 2px var(–safe); animation: pulse 1.5s ease-in-out infinite; }
+.slot.c-side { border-style: dashed; }
+.slot-side { font-family: ‘Bebas Neue’, sans-serif; font-size: 11px; color: var(–text-dim); letter-spacing: 1px; }
+.slot-size { font-family: ‘Bebas Neue’, sans-serif; font-size: 13px; color: var(–safe); letter-spacing: 1px; }
+.slot-size.spool-color { color: #7ab8ff; }
+.slot-len { font-size: 8px; font-family: ‘IBM Plex Mono’, monospace; color: var(–text-dim); }
+.slot-bdl { font-size: 8px; font-family: ‘IBM Plex Mono’, monospace; color: var(–text-dim); }
+.slot-dot { position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(–safe); }
+.slot-dot.urgent { background: var(–hot); }
+.slot-extra-badge { position: absolute; top: 2px; right: 3px; font-size: 8px; font-family: ‘IBM Plex Mono’, monospace; background: var(–accent); color: #001540; border-radius: 4px; padding: 0 3px; line-height: 1.6; font-weight: bold; }
+
+/* AREA 22 */
+.area22-wrap { background: #1b2614; border: 1px dashed #3a5a28; border-radius: 8px; padding: 12px; margin: 6px 0 10px; }
+.area22-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.area22-title { font-family: ‘Bebas Neue’, sans-serif; font-size: 14px; letter-spacing: 2px; color: #7acc55; }
+.area22-count { font-family: ‘IBM Plex Mono’, monospace; font-size: 10px; color: var(–text-dim); }
+/* AREA 22 TWO-COLUMN SIDES */
+.area22-sides { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.area22-side-col { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.area22-side-label {
+font-family: ‘Bebas Neue’, sans-serif; font-size: 13px; letter-spacing: 2px;
+color: var(–accent); padding: 4px 0 2px; border-bottom: 1px solid var(–border);
+margin-bottom: 2px;
+}
+.area22-stacks { display: flex; flex-wrap: wrap; gap: 6px; }
+.area22-stack { width: 68px; min-height: 58px; border-radius: 6px; border: 1px solid #3a5a28; background: #1e2f18; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; position: relative; transition: all 0.15s; text-align: center; flex-shrink: 0; }
+.area22-stack:active { transform: scale(0.93); }
+.area22-stack.occupied-straight { background: #003d1a; border-color: #007a35; }
+.area22-stack.occupied-spool { background: #001e4d; border-color: #004099; }
+.area22-stack.occupied-urgent { background: #4d0000; border-color: #990000; }
+.area22-stack.suggested { border-color: var(–safe); box-shadow: 0 0 0 2px var(–safe); animation: pulse 1.5s ease-in-out infinite; }
+.area22-stack.add-btn { border: 1px dashed #3a5a28; background: transparent; color: #5a9a40; font-size: 22px; cursor: pointer; }
+.area22-stack.add-btn:active { background: #1e2f18; }
+.a22-id { font-family: ‘IBM Plex Mono’, monospace; font-size: 7px; color: var(–text-dim); position: absolute; top: 2px; left: 3px; }
+.a22-type-icon { font-size: 7px; position: absolute; top: 2px; right: 3px; }
+.a22-size { font-family: ‘Bebas Neue’, sans-serif; font-size: 14px; letter-spacing: 1px; }
+.a22-size.straight { color: var(–safe); } .a22-size.spool { color: #7ab8ff; }
+.a22-len { font-size: 8px; font-family: ‘IBM Plex Mono’, monospace; color: var(–text-dim); }
+.a22-bdl { font-size: 8px; font-family: ‘IBM Plex Mono’, monospace; color: var(–text-dim); }
+.a22-dot { position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(–safe); }
+.a22-dot.urgent { background: var(–hot); }
+
+/* SPOOL RACKS */
+.rack-section { margin-bottom: 14px; }
+.rack-section-label { font-family: ‘Bebas Neue’, sans-serif; font-size: 12px; letter-spacing: 2px; color: var(–text-dim); margin-bottom: 6px; padding-left: 6px; border-left: 2px solid var(–iron); }
+.rack-grid { display: flex; flex-wrap: wrap; gap: 5px; }
+.rack-slot { width: 66px; min-height: 54px; border-radius: 5px; border: 1px solid var(–border); background: var(–empty); cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 4px; position: relative; transition: all 0.15s; text-align: center; }
+.rack-slot:active { transform: scale(0.93); }
+.rack-slot.occupied { background: #001e4d; border-color: #004099; }
+.rack-slot.occupied-urgent { background: #4d0000; border-color: #990000; }
+.rack-slot.suggested { border-color: var(–safe); box-shadow: 0 0 0 2px var(–safe); animation: pulse 1.5s ease-in-out infinite; }
+.rack-id { font-family: ‘IBM Plex Mono’, monospace; font-size: 9px; color: var(–text-dim); margin-bottom: 2px; }
+.rack-size { font-family: ‘Bebas Neue’, sans-serif; font-size: 13px; color: #7ab8ff; letter-spacing: 1px; }
+.rack-bdl { font-size: 9px; font-family: ‘IBM Plex Mono’, monospace; color: var(–text-dim); }
+.rack-cap { font-size: 8px; font-family: ‘IBM Plex Mono’, monospace; color: var(–text-dim); opacity: 0.6; margin-top: 2px; }
+.rack-dot.urgent { background: var(–hot); }
+
+/* LOCATOR CODE EDITOR */
+.locator-section-label { font-family:‘Bebas Neue’,sans-serif; font-size:13px; letter-spacing:2px; color:var(–accent); padding:8px 0 4px; border-bottom:1px solid var(–border); margin-bottom:8px; margin-top:14px; }
+.locator-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
+.locator-slot-label { font-family:‘IBM Plex Mono’,monospace; font-size:11px; color:var(–text-dim); min-width:72px; flex-shrink:0; }
+.locator-input { flex:1; background:var(–steel-light); border:1px solid var(–border); color:var(–text); padding:7px 10px; border-radius:5px; font-family:‘IBM Plex Mono’,monospace; font-size:11px; outline:none; }
+.locator-input:focus { border-color:var(–accent); }
+.locator-input.has-value { border-color:#336633; color:var(–safe); }
+.csv-upload-label { display:flex; align-items:center; gap:10px; padding:14px 16px; background:var(–steel-light); border:2px dashed var(–border); border-radius:8px; cursor:pointer; transition:border-color 0.2s; }
+.csv-upload-label:hover { border-color:var(–accent); }
+.csv-upload-icon { font-size:20px; flex-shrink:0; }
+#csv-file-name { font-family:‘IBM Plex Mono’,monospace; font-size:12px; color:var(–text-dim); }
+.csv-map-row { display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.csv-map-label { font-family:‘IBM Plex Mono’,monospace; font-size:11px; color:var(–text); min-width:110px; flex-shrink:0; }
+.csv-map-select { flex:1; background:var(–steel-light); border:1px solid var(–border); color:var(–text); padding:8px 10px; border-radius:6px; font-family:‘IBM Plex Mono’,monospace; font-size:11px; outline:none; }
+.csv-preview-table { font-family:‘IBM Plex Mono’,monospace; font-size:10px; color:var(–text-dim); border-collapse:collapse; width:100%; }
+.csv-preview-table th { color:var(–accent); padding:4px 8px; text-align:left; border-bottom:1px solid var(–border); white-space:nowrap; }
+.csv-preview-table td { padding:4px 8px; border-bottom:1px solid var(–steel-light); white-space:nowrap; max-width:120px; overflow:hidden; text-overflow:ellipsis; }
+.csv-import-ok { color:var(–safe); font-family:‘IBM Plex Mono’,monospace; font-size:12px; padding:10px; background:#0d2010; border:1px solid var(–safe); border-radius:6px; }
+.csv-import-err { color:var(–hot); font-family:‘IBM Plex Mono’,monospace; font-size:12px; padding:10px; background:#2a0a0a; border:1px solid var(–hot); border-radius:6px; }
+.inv-search-wrap { position: relative; margin-bottom: 10px; }
+.inv-search-wrap input { width: 100%; background: var(–steel-light); border: 1px solid var(–border); color: var(–text); padding: 11px 40px 11px 14px; font-family: ‘IBM Plex Mono’, monospace; font-size: 13px; border-radius: 8px; outline: none; -webkit-appearance: none; }
+.inv-search-wrap input:focus { border-color: var(–accent); }
+.inv-search-clear { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(–text-dim); font-size: 14px; cursor: pointer; padding: 4px; line-height: 1; }
+.inv-filter { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.filter-btn { padding: 6px 12px; background: var(–steel-light); border: 1px solid var(–border); color: var(–text-dim); font-family: ‘IBM Plex Mono’, monospace; font-size: 10px; border-radius: 4px; cursor: pointer; }
+.filter-btn.active { background: var(–iron); color: var(–accent); border-color: var(–accent); }
+.inv-item { background: var(–steel-light); border: 1px solid var(–border); border-left: 3px solid var(–iron); border-radius: 6px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
+.inv-item:active { opacity: 0.8; }
+.inv-item.urgent { border-left-color: var(–hot); }
+.inv-item.spool-item { border-left-color: var(–spool-color); }
+.inv-item.area22-item { border-left-color: #5a9a40; }
+/* Product on top */
+.inv-product { font-family: ‘Bebas Neue’, sans-serif; font-size: 18px; color: var(–text); letter-spacing: 1px; line-height: 1.1; margin-bottom: 5px; }
+/* Location below */
+.inv-location-row { display: flex; align-items: center; gap: 5px; margin-bottom: 4px; }
+.inv-loc-label { font-size: 11px; }
+.inv-loc { font-family: ‘IBM Plex Mono’, monospace; font-size: 11px; color: var(–accent); }
+/* Optional info line */
+.inv-info-line { font-size: 11px; color: var(–text-dim); font-family: ‘IBM Plex Mono’, monospace; margin-bottom: 5px; }
+.inv-meta { display: flex; gap: 6px; flex-wrap: wrap; }
+.tag { font-size: 10px; padding: 2px 7px; border-radius: 3px; font-family: ‘IBM Plex Mono’, monospace; font-weight: 600; }
+.tag-size { background: #001e4d; color: #4ab8ff; }
+.tag-ship { background: #003d1a; color: #00e070; }
+.tag-type { background: #3a2000; color: #ffb870; }
+.tag-urgent { background: #4d0000; color: #ff8080; }
+.tag-spool { background: #001e4d; color: #4ab8ff; }
+.tag-area22 { background: #003d1a; color: #00e070; }
+.empty-inv { text-align: center; color: var(–text-dim); font-size: 12px; padding: 32px 16px; font-family: ‘IBM Plex Mono’, monospace; line-height: 1.8; }
+
+/* MODAL */
+.modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.65); z-index: 200; display: none; align-items: flex-end; justify-content: center; }
+.modal-overlay.active { display: flex; }
+.modal { background: var(–steel-mid); border-top: 2px solid var(–accent); border-radius: 16px 16px 0 0; padding: 20px 20px 44px; width: 100%; max-width: 600px; max-height: 85vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+@keyframes slideUp { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.modal-handle { width: 40px; height: 4px; background: var(–iron); border-radius: 2px; margin: 0 auto 16px; }
+.modal-title { font-family: ‘Bebas Neue’, sans-serif; font-size: 24px; color: var(–accent); letter-spacing: 2px; margin-bottom: 14px; }
+.modal-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(–border); font-size: 14px; gap: 10px; }
+.modal-key { color: var(–text-dim); flex-shrink: 0; }
+.modal-val { font-family: ‘IBM Plex Mono’, monospace; color: var(–text); text-align: right; }
+/* Inline edit row for bundles */
+.modal-edit-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(–border); gap: 10px; }
+.modal-edit-label { font-size: 14px; color: var(–text-dim); flex-shrink: 0; }
+.modal-edit-controls { display: flex; align-items: center; gap: 8px; }
+.qty-btn { width: 32px; height: 32px; background: var(–steel-light); border: 1px solid var(–border); color: var(–text); font-size: 18px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; line-height: 1; }
+.qty-btn:active { background: var(–iron); }
+.qty-val { font-family: ‘Bebas Neue’, sans-serif; font-size: 24px; color: var(–accent); min-width: 40px; text-align: center; letter-spacing: 1px; }
+.modal-actions { display: flex; gap: 10px; margin-top: 18px; }
+.btn-secondary-add { flex:1; padding:14px; background:#1a2a1a; color:var(–accent); border:1px solid var(–accent); border-radius:6px; font-family:‘Bebas Neue’,sans-serif; font-size:16px; letter-spacing:1px; cursor:pointer; }
+.secondary-items-wrap { margin: 8px 0 4px; border-top: 1px solid var(–border); padding-top: 8px; }
+.secondary-item-row { display:flex; align-items:center; justify-content:space-between; padding: 7px 10px; background:var(–steel-light); border:1px solid var(–border); border-radius:6px; margin-bottom:5px; }
+.secondary-item-info { font-family:‘IBM Plex Mono’,monospace; font-size:12px; color:var(–text); }
+.secondary-item-label { font-size:9px; color:var(–text-dim); letter-spacing:1px; font-family:‘IBM Plex Mono’,monospace; text-transform:uppercase; margin-bottom:4px; }
+.secondary-remove-btn { background:var(–hot); color:white; border:none; border-radius:4px; font-size:11px; padding:4px 8px; cursor:pointer; font-family:‘IBM Plex Mono’,monospace; flex-shrink:0; }
+.btn-close-modal { flex: 1; padding: 14px; background: var(–steel-light); color: var(–text); border: 1px solid var(–border); border-radius: 6px; font-family: ‘IBM Plex Sans’, sans-serif; font-size: 14px; cursor: pointer; }
+
+/* AREA 22 MODAL */
+.a22-modal { background: var(–steel-mid); border-top: 2px solid #7acc55; border-radius: 16px 16px 0 0; padding: 20px 20px 44px; width: 100%; max-width: 600px; max-height: 90vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+.a22-modal-title { font-family: ‘Bebas Neue’, sans-serif; font-size: 22px; color: #7acc55; letter-spacing: 2px; margin-bottom: 14px; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: var(–steel); }
+::-webkit-scrollbar-thumb { background: var(–iron); border-radius: 2px; }
+</style>
+
+</head>
+<body>
+
+<header>
+  <div style="display:flex;align-items:center;gap:14px">
+    <!-- RT mark -->
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="20" cy="20" r="20" fill="#00B04F"/>
+      <text x="20" y="27" font-family="Arial Black, Arial" font-weight="900" font-size="20" fill="white" text-anchor="middle" letter-spacing="1">RT</text>
+    </svg>
+    <div>
+      <div class="logo">RebarTrack</div>
+      <span class="logo-sub">SHIPPING & WAREHOUSE</span>
+    </div>
+  </div>
+  <div style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim)" id="header-date"></div>
+</header>
+
+<!-- REBAR BANNER -->
+
+<div class="rebar-banner" aria-hidden="true">
+  <svg class="rebar-svg" viewBox="0 0 1200 28" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+    <!-- Main rod body -->
+    <rect x="0" y="11" width="1200" height="6" fill="#b0bec5" rx="2"/>
+    <!-- Deformation ribs — repeating pattern every 40px -->
+    <g id="rib-pattern">
+      <!-- Each rib group: two diagonal marks -->
+      <rect x="10"  y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 11.5 14)"/>
+      <rect x="20"  y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 21.5 14)"/>
+      <rect x="50"  y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 51.5 14)"/>
+      <rect x="60"  y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 61.5 14)"/>
+      <rect x="90"  y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 91.5 14)"/>
+      <rect x="100" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 101.5 14)"/>
+      <rect x="130" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 131.5 14)"/>
+      <rect x="140" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 141.5 14)"/>
+      <rect x="170" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 171.5 14)"/>
+      <rect x="180" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 181.5 14)"/>
+      <rect x="210" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 211.5 14)"/>
+      <rect x="220" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 221.5 14)"/>
+      <rect x="250" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 251.5 14)"/>
+      <rect x="260" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 261.5 14)"/>
+      <rect x="290" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 291.5 14)"/>
+      <rect x="300" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 301.5 14)"/>
+      <rect x="330" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 331.5 14)"/>
+      <rect x="340" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 341.5 14)"/>
+      <rect x="370" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 371.5 14)"/>
+      <rect x="380" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 381.5 14)"/>
+      <rect x="410" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 411.5 14)"/>
+      <rect x="420" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 421.5 14)"/>
+      <rect x="450" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 451.5 14)"/>
+      <rect x="460" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 461.5 14)"/>
+      <rect x="490" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 491.5 14)"/>
+      <rect x="500" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 501.5 14)"/>
+      <rect x="530" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 531.5 14)"/>
+      <rect x="540" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 541.5 14)"/>
+      <rect x="570" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 571.5 14)"/>
+      <rect x="580" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 581.5 14)"/>
+      <rect x="610" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 611.5 14)"/>
+      <rect x="620" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 621.5 14)"/>
+      <rect x="650" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 651.5 14)"/>
+      <rect x="660" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 661.5 14)"/>
+      <rect x="690" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 691.5 14)"/>
+      <rect x="700" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 701.5 14)"/>
+      <rect x="730" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 731.5 14)"/>
+      <rect x="740" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 741.5 14)"/>
+      <rect x="770" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 771.5 14)"/>
+      <rect x="780" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 781.5 14)"/>
+      <rect x="810" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 811.5 14)"/>
+      <rect x="820" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 821.5 14)"/>
+      <rect x="850" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 851.5 14)"/>
+      <rect x="860" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 861.5 14)"/>
+      <rect x="890" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 891.5 14)"/>
+      <rect x="900" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 901.5 14)"/>
+      <rect x="930" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 931.5 14)"/>
+      <rect x="940" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 941.5 14)"/>
+      <rect x="970" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 971.5 14)"/>
+      <rect x="980" y="7"  width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 981.5 14)"/>
+      <rect x="1010" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 1011.5 14)"/>
+      <rect x="1020" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 1021.5 14)"/>
+      <rect x="1050" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 1051.5 14)"/>
+      <rect x="1060" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 1061.5 14)"/>
+      <rect x="1090" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 1091.5 14)"/>
+      <rect x="1100" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 1101.5 14)"/>
+      <rect x="1130" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 1131.5 14)"/>
+      <rect x="1140" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 1141.5 14)"/>
+      <rect x="1170" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(-20 1171.5 14)"/>
+      <rect x="1180" y="7" width="3" height="14" rx="1" fill="#78909c" transform="rotate(20 1181.5 14)"/>
+    </g>
+    <!-- Highlight on rod top -->
+    <rect x="0" y="11" width="1200" height="2" fill="rgba(255,255,255,0.15)" rx="1"/>
+  </svg>
+</div>
+
+<div class="stats-bar">
+  <div class="stat"><div class="stat-val" id="stat-occupied">0</div><div class="stat-label">Occupied</div></div>
+  <div class="stat"><div class="stat-val" id="stat-empty">0</div><div class="stat-label">Available</div></div>
+  <div class="stat"><div class="stat-val" id="stat-bundles">0</div><div class="stat-label">Bundles</div></div>
+  <div class="stat"><div class="stat-val" id="stat-pct">0%</div><div class="stat-label">Capacity</div></div>
+</div>
+
+<div class="page-sections" id="page-sections">
+
+  <!-- ═══ SECTION: FLOOR MAP ═══ -->
+
+  <div class="section-card" id="sec-map">
+    <button class="section-header active" onclick="toggleSection('map',this)">
+      <div class="sec-header-left">
+        <span class="sec-icon">🗺</span>
+        <span class="sec-title">Floor Map</span>
+      </div>
+      <div class="sec-header-right">
+        <span class="sec-badge" id="badge-map"></span>
+        <span class="sec-chevron">▲</span>
+      </div>
+    </button>
+    <div class="section-body" id="body-map">
+      <!-- MAP TOOLBAR -->
+      <div class="map-toolbar">
+        <div class="legend">
+          <div class="legend-item"><div class="legend-dot" style="background:var(--empty);border:1px solid var(--border)"></div>Empty</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#003d1a;border:1px solid #007a35"></div>Straight</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#001e4d;border:1px solid #004099"></div>Spool</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#ffffff;border:1px solid #aaaaaa"></div>Scrap</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#0055cc;border:1px solid #00aaff"></div>Hold</div>
+          <div class="legend-item"><div class="legend-dot" style="background:#cc0000;border:1px solid #ff4444"></div>Red Tag</div>
+        </div>
+        <div class="view-toggle">
+          <button class="view-btn" id="vbtn-vertical" onclick="setView('vertical',this)">☰ Vert</button>
+          <button class="view-btn active" id="vbtn-horizontal" onclick="setView('horizontal',this)">⇔ Horiz</button>
+        </div>
+        <div class="zoom-controls">
+          <button class="zoom-btn" onclick="adjustZoom(-0.15)">−</button>
+          <div class="zoom-val" id="zoom-val">100%</div>
+          <button class="zoom-btn" onclick="adjustZoom(0.15)">+</button>
+        </div>
+      </div>
+      <!-- STANCHION / SPOOL TABS -->
+      <div class="map-section-toggle">
+        <button class="mst-btn active" id="mst-s1bsu"  onclick="setMapSection('s1bsu',this)">1–B.SU</button>
+        <button class="mst-btn" id="mst-s4_21"  onclick="setMapSection('s4_21',this)">4–21</button>
+        <button class="mst-btn" id="mst-s22"    onclick="setMapSection('s22',this)">22</button>
+        <button class="mst-btn" id="mst-s23_38" onclick="setMapSection('s23_38',this)">23–38</button>
+        <button class="mst-btn" id="mst-spool"  onclick="setMapSection('spool',this)">Spools</button>
+      </div>
+      <div class="map-wrap" id="map-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: LOG RUN ═══ -->
+
+  <div class="section-card" id="sec-log">
+    <button class="section-header" onclick="toggleSection('log',this)">
+      <div class="sec-header-left">
+        <span class="sec-icon">➕</span>
+        <span class="sec-title">Log Run</span>
+      </div>
+      <div class="sec-header-right">
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-log">
+      <div class="form-wrap">
+        <div class="form-group">
+          <label>Product Type</label>
+          <select id="inp-type" onchange="onTypeChange()">
+            <option value="straight">Straight Bar</option>
+            <option value="spool">Spooled / Coil</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bar Size</label>
+            <select id="inp-size">
+              <option value=""># Size</option>
+              <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+              <option>#7</option><option>#8</option>
+            </select>
+          </div>
+          <div class="form-group" id="length-group">
+            <label>Length</label>
+            <div style="display:flex;gap:6px;align-items:center">
+              <div style="flex:1;position:relative">
+                <input type="number" id="inp-length-ft" placeholder="ft" min="0" max="80" inputmode="numeric" oninput="onLengthChange()" style="width:100%;padding-right:28px">
+                <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">ft</span>
+              </div>
+              <div style="flex:1;position:relative">
+                <input type="number" id="inp-length-in" placeholder="in" min="0" max="11" inputmode="numeric" oninput="onLengthChange()" style="width:100%;padding-right:28px">
+                <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">in</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="length-hint" style="display:none"></div>
+        <div class="form-group">
+          <label>Bundles / Coils</label>
+          <input type="number" id="inp-bundles" placeholder="qty" min="1" inputmode="numeric">
+        </div>
+        <div class="form-group" id="spool-weight-group" style="display:none">
+          <label>Coil Weight</label>
+          <select id="inp-spool-weight">
+            <option value="">— Select coil weight —</option>
+            <option value="4000">4,000 LBS (2 tons)</option>
+            <option value="6800">6,800 LBS (3.4 tons)</option>
+            <option value="9600">9,600 LBS (4.8 tons)</option>
+          </select>
+        </div>
+        <div class="form-group" id="weight-group">
+          <label>Bundle Weight <span style="font-size:9px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace">(per bundle)</span></label>
+          <div style="display:flex;gap:8px;align-items:center">
+            <input type="number" id="inp-weight" placeholder="e.g. 2.5" min="0" step="any" inputmode="decimal" style="flex:1" oninput="onWeightChange()">
+            <div class="unit-toggle">
+              <button class="unit-btn active" id="unit-tons" onclick="setWeightUnit('tons',this)">TONS</button>
+              <button class="unit-btn" id="unit-lbs" onclick="setWeightUnit('lbs',this)">LBS</button>
+            </div>
+          </div>
+          <div id="weight-hint" style="display:none;margin-top:5px"></div>
+        </div>
+        <div style="margin: 14px 0 10px; border-top: 1px solid var(--border); padding-top: 12px;">
+          <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL FIELDS</div>
+          <div class="form-row">
+            <div class="form-group">
+              <div class="optional-label"><span>Heat #</span><span class="optional-badge">optional</span></div>
+              <input type="text" id="inp-heat" placeholder="HT-XXXX-XXXX">
+            </div>
+            <div class="form-group">
+              <div class="optional-label"><span>Ship Date</span><span class="optional-badge">optional</span></div>
+              <input type="date" id="inp-ship">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <div class="optional-label"><span>Customer</span><span class="optional-badge">optional</span></div>
+              <input type="text" id="inp-customer" placeholder="Customer name">
+            </div>
+            <div class="form-group">
+              <div class="optional-label"><span>Order #</span><span class="optional-badge">optional</span></div>
+              <input type="text" id="inp-order" placeholder="ORD-XXXX">
+            </div>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Specific Location (optional)</label>
+          <select id="inp-location"><option value="">— Auto-suggest —</option></select>
+        </div>
+        <div class="suggestion-box" id="suggestion-box">
+          <div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;font-family:'IBM Plex Mono',monospace">Suggested Location</div>
+          <div class="suggestion-loc" id="suggestion-loc">—</div>
+          <div class="suggestion-reason" id="suggestion-reason"></div>
+        </div>
+        <button class="btn btn-suggest" onclick="suggestLocation()">⚡ Suggest Location</button>
+        <button class="btn btn-primary" onclick="logRun()">LOG RUN TO WAREHOUSE</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ SECTION: IMPORT ═══ -->
+
+  <div class="section-card" id="sec-import">
+    <button class="section-header" onclick="toggleSection('import',this)">
+      <div class="sec-header-left">
+        <span class="sec-icon">📥</span>
+        <span class="sec-title">Import from EBS / TWS</span>
+      </div>
+      <div class="sec-header-right">
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-import">
+      <div style="padding:16px">
+
+```
+    <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
+      Upload a CSV exported from EBS or TWS. RebarTrack will read each row and let you map columns to fields before importing.
+      <br><br>
+      <strong style="color:var(--text)">Expected columns (any order):</strong><br>
+      Heat #, Bar Size, Length (ft), Bundles/Coils, Weight, Ship Date, Order #, Customer
+    </div>
+
+    <!-- EBS Locator Code Editor -->
+    <div style="margin-bottom:18px">
+      <button class="btn" style="margin-top:0;background:var(--steel-light);border:1px solid var(--border);color:var(--accent);font-size:13px;padding:10px 16px;width:100%;text-align:left;display:flex;align-items:center;gap:8px;letter-spacing:1px" onclick="toggleLocatorEditor(this)">
+        <span>🔗</span> <span>EBS LOCATOR CODES</span> <span id="locator-editor-chevron" style="margin-left:auto;font-size:11px;color:var(--text-dim)">▼ expand</span>
+      </button>
+      <div id="locator-editor-wrap" style="display:none;margin-top:8px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5">
+          Enter your EBS locator code for each stanchion side and spool rack. These will be stored and shown in the detail panel for each location, and used when live EBS integration is set up.
+        </div>
+        <div id="locator-code-grid"></div>
+        <button class="btn btn-primary" style="margin-top:10px;font-size:13px;padding:10px" onclick="saveLocatorCodes()">SAVE LOCATOR CODES</button>
+        <div id="locator-save-status" style="display:none;margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--safe)">✓ Saved</div>
+      </div>
+    </div>
+
+    <!-- File picker -->
+    <label class="csv-upload-label" id="csv-upload-label">
+      <input type="file" id="csv-file-input" accept=".csv,.txt" style="display:none" onchange="onCSVFileSelected(this)">
+      <span class="csv-upload-icon">📂</span>
+      <span id="csv-file-name">Choose CSV file…</span>
+    </label>
+
+    <!-- Preview + column mapper -->
+    <div id="csv-preview-wrap" style="display:none">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin:14px 0 8px;letter-spacing:1px;text-transform:uppercase">Map CSV Columns → RebarTrack Fields</div>
+      <div id="csv-column-map"></div>
+
+      <div style="margin-top:14px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);padding:8px 12px;border-bottom:1px solid var(--border);letter-spacing:1px">PREVIEW (first 5 rows)</div>
+        <div id="csv-preview-table" style="overflow-x:auto;padding:8px 12px"></div>
+      </div>
+
+      <div id="csv-import-status" style="display:none;margin-top:10px"></div>
+
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn btn-primary" style="margin-top:0" onclick="runCSVImport()">IMPORT ROWS</button>
+        <button class="btn-close-modal" onclick="clearCSVImport()">Clear</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+```
+
+  </div>
+
+  <!-- ═══ SECTION: INVENTORY ═══ -->
+
+  <div class="section-card" id="sec-inventory">
+    <button class="section-header" onclick="toggleSection('inventory',this)">
+      <div class="sec-header-left">
+        <span class="sec-icon">📋</span>
+        <span class="sec-title">Inventory</span>
+      </div>
+      <div class="sec-header-right">
+        <span class="sec-badge" id="badge-inventory"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-inventory">
+      <div class="inv-wrap">
+        <!-- Search bar -->
+        <div class="inv-search-wrap">
+          <input type="text" id="inv-search" placeholder="🔍  Search by size, heat, order, customer…" oninput="onInvSearch()" autocomplete="off" autocorrect="off" spellcheck="false">
+          <button class="inv-search-clear" id="inv-search-clear" onclick="clearInvSearch()" style="display:none">✕</button>
+        </div>
+        <div class="inv-filter">
+          <button class="filter-btn active" onclick="filterInv('all',this)">All</button>
+          <button class="filter-btn" onclick="filterInv('straight',this)">Straight</button>
+          <button class="filter-btn" onclick="filterInv('spool',this)">Spooled</button>
+          <button class="filter-btn" onclick="filterInv('area22',this)">Area 22</button>
+          <button class="filter-btn" onclick="filterInv('urgent',this)">🔴 Soon</button>
+        </div>
+        <div id="inventory-list"><div class="empty-inv">No inventory logged yet.<br>Use the Log Run tab<br>to add product.</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- DETAIL MODAL -->
+
+<div class="modal-overlay" id="modal-overlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-title">Location Detail</div>
+    <div id="modal-info"></div>
+    <!-- Secondary items list -->
+    <div id="modal-secondary-list"></div>
+    <!-- Bundles editor -->
+    <div class="modal-edit-row" id="modal-qty-row" style="display:none">
+      <span class="modal-edit-label">Bundles</span>
+      <div class="modal-edit-controls">
+        <button class="qty-btn" onclick="adjustQty(-1)">−</button>
+        <input type="number" id="modal-qty-val" value="0" min="0" inputmode="numeric"
+          style="width:64px;text-align:center;font-family:'Bebas Neue',sans-serif;font-size:22px;color:var(--accent);background:var(--steel-light);border:1px solid var(--border);border-radius:6px;padding:4px 6px;outline:none;"
+          oninput="onQtyInput(this.value)">
+        <button class="qty-btn" onclick="adjustQty(1)">+</button>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-secondary-add" id="btn-add-secondary" onclick="openSecondaryModal()" style="display:none">+ ADD ITEM</button>
+      <button class="btn-transfer" onclick="openTransferModal()">TRANSFER</button>
+      <button class="btn-clear" onclick="clearSlot()">CLEAR</button>
+      <button class="btn-close-modal" onclick="closeModal()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- SECONDARY ITEM MODAL -->
+
+<div class="modal-overlay" id="secondary-modal-overlay" onclick="handleSecondaryOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--accent)">ADD SECONDARY ITEM</div>
+    <div id="secondary-slot-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Bar Size</label>
+        <select id="sec-size">
+          <option value=""># Size</option>
+          <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+          <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Length</label>
+        <div style="display:flex;gap:6px;align-items:center">
+          <div style="flex:1;position:relative">
+            <input type="number" id="sec-length-ft" placeholder="ft" min="0" inputmode="numeric" style="width:100%;padding-right:28px">
+            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">ft</span>
+          </div>
+          <div style="flex:1;position:relative">
+            <input type="number" id="sec-length-in" placeholder="in" min="0" max="11" inputmode="numeric" style="width:100%;padding-right:28px">
+            <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">in</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Bundles</label>
+      <input type="number" id="sec-bundles" placeholder="qty" min="1" inputmode="numeric">
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" style="margin-top:0" onclick="confirmAddSecondary()">ADD TO SLOT</button>
+      <button class="btn-close-modal" onclick="closeSecondaryModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- TRANSFER MODAL -->
+
+<div class="modal-overlay" id="transfer-modal-overlay" onclick="handleTransferOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:#4ab8ff">TRANSFER PRODUCT</div>
+    <div id="transfer-from-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:14px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
+    <div class="form-group">
+      <label>Transfer To</label>
+      <select id="transfer-dest">
+        <option value="">— Select destination —</option>
+      </select>
+    </div>
+    <div id="transfer-hint" style="display:none;margin-top:6px"></div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn btn-primary" style="margin-top:0;background:#4ab8ff;color:#001540" onclick="document.getElementById('transfer-modal-overlay').dataset.mode==='secondary'?confirmSecondaryTransfer():confirmTransfer()">CONFIRM TRANSFER</button>
+      <button class="btn-close-modal" onclick="closeTransferModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- AREA 22 ADD MODAL -->
+
+<div class="modal-overlay" id="a22-modal-overlay" onclick="handleA22OverlayClick(event)">
+  <div class="a22-modal">
+    <div class="modal-handle"></div>
+    <div class="a22-modal-title">ADD TO AREA 22</div>
+    <div class="form-group">
+      <label>Side</label>
+      <select id="a22-side">
+        <option value="A">A-Side</option>
+        <option value="B">B-Side</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Product Type</label>
+      <select id="a22-type" onchange="onA22TypeChange()">
+        <option value="straight">Straight Bar</option>
+        <option value="spool">Spooled / Coil</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Bar Size</label>
+        <select id="a22-size">
+          <option value=""># Size</option>
+          <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+          <option>#7</option><option>#8</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Length (ft)</label>
+        <input type="number" id="a22-length" placeholder="ft or blank for coil" min="1" inputmode="decimal">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Bundles / Coils</label>
+      <input type="number" id="a22-bundles" placeholder="qty" min="1" inputmode="numeric">
+    </div>
+    <!-- Spool coil weight for area 22 — shown when type is spool -->
+    <div class="form-group" id="a22-spool-weight-group" style="display:none">
+      <label>Coil Weight</label>
+      <select id="a22-spool-weight">
+        <option value="">— Select coil weight —</option>
+        <option value="4000">4,000 LBS (2 tons)</option>
+        <option value="6800">6,800 LBS (3.4 tons)</option>
+        <option value="9600">9,600 LBS (4.8 tons)</option>
+      </select>
+    </div>
+    <div style="margin: 12px 0 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+      <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL</div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="optional-label"><span>Heat #</span><span class="optional-badge">optional</span></div>
+          <input type="text" id="a22-heat" placeholder="HT-XXXX">
+        </div>
+        <div class="form-group">
+          <div class="optional-label"><span>Ship Date</span><span class="optional-badge">optional</span></div>
+          <input type="date" id="a22-ship">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="optional-label"><span>Customer</span><span class="optional-badge">optional</span></div>
+          <input type="text" id="a22-customer" placeholder="Customer">
+        </div>
+        <div class="form-group">
+          <div class="optional-label"><span>Order #</span><span class="optional-badge">optional</span></div>
+          <input type="text" id="a22-order" placeholder="ORD-XXXX">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" style="margin-top:0" onclick="addToArea22()">ADD STACK</button>
+      <button class="btn-close-modal" onclick="closeA22Modal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="scrap-toast" style="display:none;position:fixed;top:120px;left:50%;transform:translateX(-50%);background:#003080;border:1px solid #0055cc;color:#e8f0ff;font-family:'IBM Plex Mono',monospace;font-size:12px;padding:8px 16px;border-radius:8px;z-index:400;white-space:nowrap;box-shadow:0 4px 16px rgba(0,0,0,0.5)"></div>
+
+<!-- SLOT CONTEXT MENU -->
+
+<div class="slot-ctx-menu" id="slot-ctx-menu">
+  <div class="ctx-header" id="ctx-slot-label">SLOT OPTIONS</div>
+  <div class="ctx-item" id="ctx-cside-item" onclick="applySlotStatus('cside')" style="display:none">
+    <div class="ctx-dot" style="background:var(--empty);border:1px dashed var(--accent)"></div>
+    <span id="ctx-cside-label">Add C-Side</span>
+  </div>
+  <div class="ctx-item" onclick="applySlotStatus('scrap')">
+    <div class="ctx-dot" style="background:#ffffff;border:1px solid #aaa"></div>
+    <span>Mark as Scrap</span>
+  </div>
+  <div class="ctx-item" onclick="applySlotStatus('hold')">
+    <div class="ctx-dot" style="background:#0055cc;border:1px solid #00aaff"></div>
+    <span>Mark as Hold</span>
+  </div>
+  <div class="ctx-item" onclick="applySlotStatus('redtag')">
+    <div class="ctx-dot" style="background:#cc0000;border:1px solid #ff4444"></div>
+    <span>Mark as Red Tag</span>
+  </div>
+  <div class="ctx-item ctx-clear" onclick="applySlotStatus('clear')">
+    <div class="ctx-dot" style="background:var(--empty);border:1px solid var(--border)"></div>
+    <span>Clear Status</span>
+  </div>
+</div>
+
+<script>
+// ─── DATA ────────────────────────────────────────────────────────
+var STANCHION_COUNT = 38;
+var MAX_STANCHION_FT = 80; // default
+var STANCHION_MAX_FT_OVERRIDES = { 2:70, 3:70, 'BSU':70 };
+
+// EBS Locator Codes — maps RebarTrack location IDs to EBS locator codes
+// Format: { '1A': 'EBS-CODE', '1B': 'EBS-CODE', 'RACK-1.1': 'EBS-CODE', ... }
+// Edit these to match your EBS locator configuration
+var LOCATOR_CODES = {};
+
+function maxFtForStanchion(stanKey) {
+  var k = (typeof stanKey === 'number') ? stanKey : stanKey;
+  return STANCHION_MAX_FT_OVERRIDES[k] !== undefined ? STANCHION_MAX_FT_OVERRIDES[k] : MAX_STANCHION_FT;
+}
+var SPOOL_SECTIONS = {
+  1:['1.1','1.2','1.3','1.4','1.5','1.6','1.7','1.8','1.9'],
+  2:['2.1','2.2'],
+  '2...':['2...'],
+  3:['3.1','3.2','3.3','3.4','3.5','3.6'],
+  4:['4.1','4.2','4.3','4.4','4.5','4.6'],
+  5:['5.1','5.2','5.3','5.4','5.5','5.6'],
+  6:['6.1','6.2','6.3','6.4','6.5','6.6','6.7','6.8','6.9','6.10'],
+  7:['7.1','7.2','7.3','7.4','7.5','7.6','7.7','7.8','7.9','7.10']
+};
+
+// Max spools per rack — null means no cap yet
+var RACK_MAX_SPOOLS = (function() {
+  var caps = {};
+  // Section 3
+  ['3.1','3.2','3.3','3.4'].forEach(function(r){ caps[r]=40; });
+  ['3.5','3.6'].forEach(function(r){ caps[r]=24; });
+  // Section 4 (4.1–4.6) and Section 5 (5.1–5.6) and Section 6 (6.1–6.7)
+  ['4.1','4.2','4.3','4.4','4.5','4.6',
+   '5.1','5.2','5.3','5.4','5.5','5.6',
+   '6.1','6.2','6.3','6.4','6.5','6.6','6.7'].forEach(function(r){ caps[r]=43; });
+  // Section 6 remainder
+  ['6.8','6.9','6.10'].forEach(function(r){ caps[r]=38; });
+  // Section 7
+  ['7.1','7.2','7.3','7.4','7.5','7.6','7.7','7.8','7.9','7.10'].forEach(function(r){ caps[r]=56; });
+  return caps;
+}());
+var store = {};         // slotId -> primary item | null
+var storeExtra = {};    // slotId -> [item, item, ...] secondary items
+var cSideEnabled = {}; // stanKey -> true when C-side has been added
+var area22Stacks = [];
+var inventory = [];
+var area22NextId = 1;
+var suggestedLoc = null;
+var modalLoc = null;
+var currentView = 'horizontal';
+var currentZoom = 1.0;
+
+function adjustZoom(delta) {
+  currentZoom = Math.min(2.5, Math.max(0.4, currentZoom + delta));
+  var pct = Math.round(currentZoom * 100);
+  document.getElementById('zoom-val').textContent = pct + '%';
+  var wrap = document.getElementById('map-wrap');
+  if (wrap) {
+    wrap.style.transformOrigin = 'top left';
+    wrap.style.transform = 'scale(' + currentZoom + ')';
+    wrap.style.width = Math.round(100 / currentZoom) + '%';
+    // Adjust the parent container height to match scaled content
+    wrap.style.marginBottom = ((currentZoom - 1) * wrap.scrollHeight) + 'px';
+  }
+}
+var scrapSlots = {}; // slotId -> true  e.g. '1A', '34B'
+var holdSlots  = {}; // slotId -> true
+var redTagSlots = {}; // slotId -> true
+
+function buildStore() {
+  for (var s = 1; s <= STANCHION_COUNT; s++) {
+    if (s === 22) continue;
+    ['A','B'].forEach(function(side) { store[s+side] = null; });
+    if (s === 3) ['A','B'].forEach(function(side) { store['BSU'+side] = null; });
+  }
+  Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
+    SPOOL_SECTIONS[sec].forEach(function(r) { store['RACK-'+r] = null; });
+  });
+}
+
+// Enable C-side for a stanchion — adds it to store
+function enableCside(stanKey) {
+  if (cSideEnabled[stanKey]) return;
+  cSideEnabled[stanKey] = true;
+  store[stanKey+'C'] = null;
+  renderAll();
+  showScrapToast(stanKey + ' C-side added');
+}
+
+// Remove C-side for a stanchion — removes from store (only if empty)
+function disableCside(stanKey) {
+  if (store[stanKey+'C']) {
+    showScrapToast('⛔ Clear ' + stanKey + 'C first before removing C-side');
+    return;
+  }
+  delete cSideEnabled[stanKey];
+  delete store[stanKey+'C'];
+  renderAll();
+  showScrapToast(stanKey + ' C-side removed');
+}
+
+// ─── TON CAPACITY ────────────────────────────────────────────────
+var MAX_TONS_PER_SIDE = 750; // tons — max per individual stanchion side (A, B, or C)
+
+// Returns total tons on a single slot (side)
+function slotTons(item) {
+  if (!item || !item.weightTons) return 0;
+  return item.weightTons;
+}
+
+// Returns total tons on a stanchion across A, B, C (all sides combined)
+function stanchionTonsUsed(stanNum) {
+  var total = 0;
+  ['A','B','C'].forEach(function(side) {
+    total += slotTons(store[stanNum+side]);
+  });
+  return total;
+}
+
+// Returns tons used on one specific side
+function sideTonsUsed(slotId) {
+  return slotTons(store[slotId]);
+}
+
+function tonUsageColor(tons, max) {
+  var pct = tons / max;
+  if (pct >= 1) return '#e84040';
+  if (pct >= 0.75) return '#e8a020';
+  return '#27c06e';
+}
+
+var currentWeightUnit = 'tons'; // 'tons' | 'lbs'
+
+function setWeightUnit(unit, btn) {
+  currentWeightUnit = unit;
+  document.querySelectorAll('.unit-btn').forEach(function(b){ b.classList.remove('active'); });
+  btn.classList.add('active');
+  onWeightChange();
+}
+
+// Convert entered weight to tons regardless of unit
+function getWeightInTons() {
+  var raw = parseFloat(document.getElementById('inp-weight').value);
+  if (isNaN(raw) || raw <= 0) return 0;
+  return currentWeightUnit === 'lbs' ? raw / 2000 : raw;
+}
+
+// Total tons this run will add to a slot
+function runTotalTons() {
+  var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+  return bundles * getWeightInTons();
+}
+
+function onWeightChange() {
+  var type = document.getElementById('inp-type').value;
+  if (type !== 'straight') { document.getElementById('weight-hint').style.display='none'; return; }
+  var hintEl = document.getElementById('weight-hint');
+  var wt = getWeightInTons();
+  var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+  if (wt <= 0 || bundles <= 0) { hintEl.style.display='none'; return; }
+
+  var totalTons = bundles * wt;
+  hintEl.style.display = 'block';
+
+  // Show total tons for this run
+  var perBdl = wt.toFixed(currentWeightUnit==='lbs'?1:3);
+  var unit = currentWeightUnit === 'lbs' ? ' lbs/bdl → ' : 't/bdl → ';
+  hintEl.className = 'length-hint ok';
+  hintEl.textContent = '✓ ' + perBdl + unit + totalTons.toFixed(2) + 't total for this run';
+}
+
+// Interpolate fill color green→amber→red based on 0–1 pct
+function fillColor(pct) {
+  if (pct <= 0) return null;
+  // 0→0.5 : green (#00B04F) → amber (#f5a623)
+  // 0.5→1  : amber (#f5a623) → red (#e84040)
+  var r, g, b;
+  if (pct <= 0.5) {
+    var t = pct / 0.5;
+    r = Math.round(0   + t * (245 - 0));
+    g = Math.round(176 + t * (166 - 176));
+    b = Math.round(79  + t * (35  - 79));
+  } else {
+    var t2 = (pct - 0.5) / 0.5;
+    r = Math.round(245 + t2 * (232 - 245));
+    g = Math.round(166 + t2 * (64  - 166));
+    b = Math.round(35  + t2 * (64  - 35));
+  }
+  return 'rgb('+r+','+g+','+b+')';
+}
+
+// Build the slot background: rising fill from bottom
+function slotFillStyle(pct, isScrap) {
+  if (isScrap) return '';
+  if (pct <= 0) return '';
+  var clampPct = Math.min(pct, 1);
+  var color = fillColor(clampPct);
+  var fillH = Math.round(clampPct * 100);
+  var dimColor = 'rgba(' + color.slice(4,-1) + ',0.18)';
+  // gradient: bottom fillH% is the fill color (dim), above is transparent
+  return 'background: linear-gradient(to top, '+dimColor+' 0%, '+dimColor+' '+fillH+'%, transparent '+fillH+'%, transparent 100%); border-color: '+color+';';
+}
+
+// ─── ORDERED STANCHION LIST ─────────────────────────────────────
+// Returns all stanchion keys in visual order (1, 2, 3, BSU, 4 ... 38)
+function orderedStanchions() {
+  var list = [];
+  for (var s = 1; s <= STANCHION_COUNT; s++) {
+    if (s === 22) continue;
+    list.push(s);
+    if (s === 3) list.push('BSU');
+  }
+  return list;
+}
+
+// ─── 80FT RULE HELPERS ───────────────────────────────────────────
+// Returns total feet used on a stanchion number across A, B, C
+function stanchionFtUsed(stanNum) {
+  var total = 0;
+  ['A','B','C'].forEach(function(side) {
+    var slotId = stanNum + side;
+    var item = store[slotId];
+    if (item && item.length) { var len = parseFloat(item.length); if (!isNaN(len)) total += len; }
+    // Secondary items are not counted toward ft (no ft enforcement for secondaries)
+  });
+  return total;
+}
+
+// Returns remaining feet on a stanchion
+function stanchionFtRemaining(stanNum) {
+  return maxFtForStanchion(stanNum) - stanchionFtUsed(stanNum);
+}
+
+// Returns usage color for a stanchion
+function usageColor(used) {
+  var pct = used / MAX_STANCHION_FT;
+  if (pct >= 1) return '#e84040';
+  if (pct >= 0.8) return '#e8a020';
+  return '#27c06e';
+}
+
+// ─── LENGTH HELPERS ──────────────────────────────────────────────
+function getLengthDecimal() {
+  var ft = parseFloat(document.getElementById('inp-length-ft').value) || 0;
+  var inches = parseFloat(document.getElementById('inp-length-in').value) || 0;
+  if (ft === 0 && inches === 0) return 0;
+  return ft + (inches / 12);
+}
+
+function getLengthDisplay() {
+  var ft = parseFloat(document.getElementById('inp-length-ft').value) || 0;
+  var inches = parseFloat(document.getElementById('inp-length-in').value) || 0;
+  if (ft === 0 && inches === 0) return '';
+  if (inches === 0) return String(ft);
+  return ft + '\'' + inches + '"';
+}
+
+function clearLengthInputs() {
+  document.getElementById('inp-length-ft').value = '';
+  document.getElementById('inp-length-in').value = '';
+}
+
+// Format a stored length string for display (e.g. "20.5" -> "20ft 6in")
+function formatLength(lenStr) {
+  if (!lenStr || lenStr === 'Coil') return lenStr || 'Coil';
+  var dec = parseFloat(lenStr);
+  if (isNaN(dec)) return lenStr;
+  var ft = Math.floor(dec);
+  var inches = Math.round((dec - ft) * 12);
+  if (inches === 0) return ft + 'ft';
+  return ft + 'ft ' + inches + 'in';
+}
+function onLengthChange() {
+  var type = document.getElementById('inp-type').value;
+  if (type !== 'straight') return;
+  var len = getLengthDecimal();
+  var locVal = document.getElementById('inp-location').value;
+  var hintEl = document.getElementById('length-hint');
+
+  if (!len || len <= 0) { hintEl.style.display = 'none'; return; }
+
+  hintEl.style.display = 'block';
+
+  // If a specific stanchion is picked, show its remaining capacity
+  if (locVal && !locVal.startsWith('RACK') && locVal !== 'AREA22') {
+    var stanKey = locVal.slice(0, -1); // strip side letter
+    var stanNum = parseInt(stanKey) || stanKey;
+    var maxFt = maxFtForStanchion(stanNum);
+    var used = stanchionFtUsed(stanNum);
+    var remaining = maxFt - used;
+    var after = used + len;
+    if (len > remaining) {
+      hintEl.className = 'length-hint over';
+      hintEl.textContent = '⛔ ' + len + 'ft exceeds remaining ' + remaining + 'ft on Stanchion ' + stanNum + ' (' + used + '/' + maxFt + 'ft used)';
+    } else if (after >= maxFt * 0.8) {
+      hintEl.className = 'length-hint warn';
+      hintEl.textContent = '⚠ ' + len + 'ft fits. Stanchion ' + stanNum + ' will be ' + after + '/' + maxFt + 'ft (' + Math.round(after/maxFt*100) + '% full)';
+    } else {
+      hintEl.className = 'length-hint ok';
+      hintEl.textContent = '✓ ' + len + 'ft fits. Stanchion ' + stanNum + ' will be ' + after + '/' + maxFt + 'ft used';
+    }
+    return;
+  }
+
+  if (len > MAX_STANCHION_FT) {
+    hintEl.className = 'length-hint over';
+    hintEl.textContent = '⛔ ' + len + 'ft exceeds the max stanchion length';
+  } else {
+    hintEl.className = 'length-hint ok';
+    hintEl.textContent = '✓ ' + len + 'ft — max stanchion capacity is ' + MAX_STANCHION_FT + 'ft total';
+  }
+}
+
+// ─── VIEW / TABS ─────────────────────────────────────────────────
+function setView(view, btn) {
+  currentView = view;
+  document.querySelectorAll('.view-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderAll();
+}
+
+var currentMapSection = 's1bsu'; // 's1bsu' | 's4_21' | 's22' | 's23_38' | 'spool'
+
+function setMapSection(sec, btn) {
+  currentMapSection = sec;
+  document.querySelectorAll('.mst-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  renderAll();
+}
+
+// ─── COLLAPSIBLE SECTIONS ─────────────────────────────────────────
+function toggleSection(name, btn) {
+  var body = document.getElementById('body-' + name);
+  var isCollapsed = body.classList.contains('collapsed');
+  body.classList.toggle('collapsed', !isCollapsed);
+  btn.classList.toggle('active', isCollapsed);
+  var chevron = btn.querySelector('.sec-chevron');
+  if (chevron) chevron.textContent = isCollapsed ? '▲' : '▼';
+  // Re-render map if opening the map section
+  if (name === 'map' && isCollapsed) renderAll();
+}
+
+function openSection(name) {
+  var body = document.getElementById('body-' + name);
+  var header = document.querySelector('#sec-' + name + ' .section-header');
+  if (body && body.classList.contains('collapsed')) {
+    body.classList.remove('collapsed');
+    if (header) {
+      header.classList.add('active');
+      var chevron = header.querySelector('.sec-chevron');
+      if (chevron) chevron.textContent = '▲';
+    }
+    if (name === 'map') renderAll();
+  }
+  // Scroll to section
+  var card = document.getElementById('sec-' + name);
+  if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+}
+
+// Legacy switchTab — redirects to openSection
+function switchTab(name, btn) {
+  openSection(name);
+}
+
+// ─── RENDER ──────────────────────────────────────────────────────
+function renderAll() {
+  var wrap = document.getElementById('map-wrap');
+  wrap.innerHTML = '';
+  if (currentMapSection === 'spool') {
+    renderSpoolRacks(wrap);
+  } else {
+    if (currentView === 'vertical') renderVertical(wrap);
+    else renderHorizontal(wrap);
+  }
+  updateStats();
+  updateBadges();
+  // Re-apply zoom after content renders
+  setTimeout(function(){ adjustZoom(0); }, 10);
+}
+
+// Returns which stanchions to render for the current map section
+function stanchionsForSection() {
+  if (currentMapSection === 's1bsu')  return { min:1, max:3,  includeBSU:true,  includeArea22:false };
+  if (currentMapSection === 's4_21') return { min:4, max:21, includeBSU:false, includeArea22:false };
+  if (currentMapSection === 's22')   return { min:22,max:22, includeBSU:false, includeArea22:true  };
+  if (currentMapSection === 's23_38')return { min:23,max:38, includeBSU:false, includeArea22:false };
+  return { min:1, max:38, includeBSU:true, includeArea22:true };
+}
+
+// ── VERTICAL ──
+function renderVertical(wrap) {
+  var sec = stanchionsForSection();
+  var rangeLabel = currentMapSection === 's1bsu'  ? 'STANCHIONS 1–3 & B.SU' :
+                   currentMapSection === 's4_21'  ? 'STANCHIONS 4–21' :
+                   currentMapSection === 's22'    ? 'STANCHION 22 — OPEN AREA' :
+                   currentMapSection === 's23_38' ? 'STANCHIONS 23–38' : 'STANCHIONS 1–38';
+
+  var secT = el('div','section-title'); secT.textContent = rangeLabel; wrap.appendChild(secT);
+  var sub = el('div','sub-title'); sub.innerHTML = 'A-SIDE · B-SIDE &nbsp;|&nbsp; RIGHT CLICK TO ADD STATUS OR C-SIDE'; wrap.appendChild(sub);
+
+  // Check if any stanchion in this view has C-side enabled
+  var hasCside = false;
+  var stanchionKeys = [];
+  for (var s2 = sec.min; s2 <= sec.max; s2++) {
+    if (s2 === 22) continue;
+    stanchionKeys.push(s2);
+    if (cSideEnabled[s2]) hasCside = true;
+    if (s2 === 3 && sec.includeBSU) {
+      stanchionKeys.push('BSU');
+      if (cSideEnabled['BSU']) hasCside = true;
+    }
+  }
+
+  var table = document.createElement('table');
+  table.className = 'stanchion-table';
+  var thead = document.createElement('thead');
+  var colSpanCount = hasCside ? 4 : 3;
+  thead.innerHTML = '<tr><th style="width:32px">#</th><th>A-SIDE</th><th>B-SIDE</th>' + (hasCside ? '<th>C-SIDE</th>' : '') + '</tr>';
+  table.appendChild(thead);
+
+  var tbody = document.createElement('tbody');
+  for (var s = sec.min; s <= sec.max; s++) {
+    if (s === 22) {
+      if (sec.includeArea22) {
+        var tr22 = document.createElement('tr');
+        var td22 = document.createElement('td'); td22.colSpan = colSpanCount + 1; td22.style.padding = '4px 0';
+        td22.appendChild(buildArea22Block());
+        tr22.appendChild(td22);
+        tbody.appendChild(tr22);
+      }
+      continue;
+    }
+
+    tbody.appendChild(makeStanchionRow(s, hasCside));
+
+    if (s === 3 && sec.includeBSU) {
+      tbody.appendChild(makeStanchionRow('BSU', hasCside));
+    }
+  }
+  table.appendChild(tbody);
+  wrap.appendChild(table);
+}
+
+function makeStanchionRow(stanKey, hasCside) {
+  var tr = document.createElement('tr');
+  var numTd = el('td','stan-num');
+  numTd.innerHTML = typeof stanKey === 'number' ? stanKey : '<span style="font-size:11px;letter-spacing:0.5px">'+stanKey+'</span>';
+  tr.appendChild(numTd);
+
+  ['A','B'].forEach(function(side) {
+    var td = el('td','stan-cell');
+    td.appendChild(makeSlot(stanKey+side, side));
+    tr.appendChild(td);
+  });
+
+  if (hasCside) {
+    var tdC = el('td','stan-cell');
+    if (cSideEnabled[stanKey]) {
+      tdC.appendChild(makeSlot(stanKey+'C', 'C'));
+    } else {
+      // Placeholder — right-click any A or B slot on this row to add C-side
+      var ph = el('div','slot');
+      ph.style.opacity = '0.2';
+      ph.style.borderStyle = 'dashed';
+      ph.style.cursor = 'default';
+      ph.innerHTML = '<div style="font-size:8px;color:var(--text-dim);font-family:\'IBM Plex Mono\',monospace">—</div>';
+      tdC.appendChild(ph);
+    }
+    tr.appendChild(tdC);
+  }
+  return tr;
+}
+
+// ── HORIZONTAL ──
+function renderHorizontal(wrap) {
+  var sec = stanchionsForSection();
+  var rangeLabel = currentMapSection === 's1bsu'  ? 'STANCHIONS 1–3 & B.SU' :
+                   currentMapSection === 's4_21'  ? 'STANCHIONS 4–21' :
+                   currentMapSection === 's22'    ? 'STANCHION 22 — OPEN AREA' :
+                   currentMapSection === 's23_38' ? 'STANCHIONS 23–38' : 'STANCHIONS 1–38';
+
+  var secT = el('div','section-title'); secT.textContent = rangeLabel; wrap.appendChild(secT);
+
+  var horizWrap = el('div','horiz-wrap');
+  var sideLabels = el('div','horiz-side-labels');
+  sideLabels.appendChild(el('div','horiz-side-num-spacer'));
+  ['A','B'].forEach(function(side) {
+    var lbl = el('div','horiz-side-label'); lbl.textContent = side; sideLabels.appendChild(lbl);
+  });
+  horizWrap.appendChild(sideLabels);
+
+  for (var s = sec.min; s <= sec.max; s++) {
+    if (s === 22) {
+      if (sec.includeArea22) horizWrap.appendChild(buildArea22HorizCol());
+      continue;
+    }
+    horizWrap.appendChild(makeHorizCol(s));
+
+    if (s === 3 && sec.includeBSU) {
+      horizWrap.appendChild(makeHorizCol('BSU'));
+    }
+  }
+  wrap.appendChild(horizWrap);
+}
+
+function makeHorizCol(stanKey) {
+  var col = el('div','horiz-stanchion-col');
+  var numLabel = el('div','horiz-stan-num');
+  numLabel.innerHTML = typeof stanKey === 'number' ? stanKey : '<span style="font-size:10px;letter-spacing:0.5px">'+stanKey+'</span>';
+  col.appendChild(numLabel);
+  ['A','B'].forEach(function(side) { col.appendChild(makeSlot(stanKey+side, side)); });
+  if (cSideEnabled[stanKey]) { col.appendChild(makeSlot(stanKey+'C', 'C')); }
+  return col;
+}
+
+function buildArea22HorizCol() {
+  var col = el('div','horiz-area22-col');
+  var numLabel = el('div','horiz-area22-num'); numLabel.textContent = '22 — OPEN'; col.appendChild(numLabel);
+  var inner = el('div','horiz-area22-inner'); inner.id = 'area22-block';
+  area22Stacks.forEach(function(stack) { inner.appendChild(makeArea22Stack(stack)); });
+  var addBtn = el('div','area22-stack add-btn'); addBtn.innerHTML = '+'; addBtn.addEventListener('click', openA22Modal);
+  inner.appendChild(addBtn);
+  col.appendChild(inner);
+  return col;
+}
+
+// ─── SLOT BUILDER ────────────────────────────────────────────────
+function makeSlot(id, side) {
+  var div = el('div','slot');
+  if (side === 'C') div.classList.add('c-side');
+  var isScrap = scrapSlots[id];
+  var isHold  = holdSlots[id];
+  var isRedTag = redTagSlots[id];
+
+  if (isScrap)  div.classList.add('scrap-slot');
+  if (isHold)   div.classList.add('hold-slot');
+  if (isRedTag) div.classList.add('redtag-slot');
+  div.id = 'slot-'+id;
+  var item = store[id];
+
+  // Ton fill gradient removed — keeping slots plain for now
+
+  if (isScrap) {
+    div.innerHTML = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;font-weight:900;color:#cc0000;letter-spacing:1px;line-height:1">SCRAP</div>';
+  } else if (isHold) {
+    div.innerHTML = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;font-weight:900;color:#ffffff;letter-spacing:1px;line-height:1">HOLD</div>';
+  } else if (isRedTag) {
+    div.innerHTML = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;font-weight:900;color:#ffffff;letter-spacing:1px;line-height:1">RED TAG</div>';
+  } else if (item) {
+    var days = getDaysToShip(item.ship);
+    var urgent = days !== null && days <= 2;
+    var isSpool = item.type === 'spool';
+    var extras = storeExtra[id] || [];
+    if (urgent) {
+      div.classList.add('occupied-urgent');
+      div.removeAttribute('style');
+    } else if (isSpool) {
+      div.classList.add('occupied-spool');
+    } else {
+      div.classList.add('occupied');
+    }
+    div.innerHTML =
+      '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+item.size+'</div>'+
+      '<div class="slot-len">'+(item.length ? formatLength(item.length) : 'Coil')+'</div>'+
+      '<div class="slot-bdl">'+item.bundles+'b</div>'+
+      (extras.length > 0 ? '<div class="slot-extra-badge">+'+extras.length+'</div>' : '')+
+      (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'');
+  } else {
+    div.innerHTML = '<div class="slot-side">'+side+'</div>';
+  }
+
+  if (id === suggestedLoc) div.classList.add('suggested');
+
+  // Long press on mobile = open status popup
+  var pressTimer = null;
+  var didLongPress = false;
+  div.addEventListener('touchstart', function(e) {
+    didLongPress = false;
+    pressTimer = setTimeout(function() {
+      didLongPress = true;
+      openSlotCtxMenu(id, e.touches[0].clientX, e.touches[0].clientY);
+    }, 500);
+  }, {passive: true});
+  div.addEventListener('touchend', function(e) {
+    clearTimeout(pressTimer);
+    if (didLongPress) e.preventDefault();
+  });
+  div.addEventListener('touchcancel', function() { clearTimeout(pressTimer); });
+
+  // Right-click on desktop = open status popup
+  div.addEventListener('contextmenu', function(e) {
+    e.preventDefault();
+    openSlotCtxMenu(id, e.clientX, e.clientY);
+  });
+
+  div.addEventListener('click', function() { if (!didLongPress) onSlotClick(id); });
+  return div;
+}
+
+// ─── AREA 22 BLOCK ───────────────────────────────────────────────
+function buildArea22Block() {
+  var wrap = el('div','area22-wrap'); wrap.id = 'area22-block';
+
+  var header = el('div','area22-header');
+  header.innerHTML =
+    '<div class="area22-title">AREA 22 — OPEN STACKING ZONE</div>' +
+    '<div class="area22-count">'+area22Stacks.length+' stack'+(area22Stacks.length!==1?'s':'')+'</div>';
+  wrap.appendChild(header);
+
+  // Two-column layout: A-Side | B-Side
+  var cols = el('div','area22-sides');
+  ['A','B'].forEach(function(side) {
+    var col = el('div','area22-side-col');
+
+    var sideLabel = el('div','area22-side-label');
+    sideLabel.textContent = side + '-Side';
+    col.appendChild(sideLabel);
+
+    var stacksDiv = el('div','area22-stacks');
+    var sideStacks = area22Stacks.filter(function(s) { return (s.side || 'A') === side; });
+    sideStacks.forEach(function(stack) { stacksDiv.appendChild(makeArea22Stack(stack)); });
+
+    // + button for this side
+    var addBtn = el('div','area22-stack add-btn');
+    addBtn.innerHTML = '+';
+    addBtn.title = 'Add stack to ' + side + '-Side';
+    addBtn.addEventListener('click', function() { openA22ModalForSide(side); });
+    stacksDiv.appendChild(addBtn);
+
+    col.appendChild(stacksDiv);
+    cols.appendChild(col);
+  });
+  wrap.appendChild(cols);
+  return wrap;
+}
+
+function openA22ModalForSide(side) {
+  openA22Modal();
+  document.getElementById('a22-side').value = side;
+}
+
+function makeArea22Stack(stack) {
+  var div = el('div','area22-stack');
+  div.id = 'a22-'+stack.id;
+  var days = getDaysToShip(stack.ship);
+  var urgent = days !== null && days <= 2;
+  var isSpool = stack.type === 'spool';
+  div.classList.add(urgent ? 'occupied-urgent' : (isSpool ? 'occupied-spool' : 'occupied-straight'));
+  div.innerHTML =
+    '<div class="a22-id">'+stack.id+'</div>'+
+    '<div class="a22-type-icon">'+(isSpool?'🔵':'🟢')+'</div>'+
+    '<div class="a22-size '+(isSpool?'spool':'straight')+'">'+stack.size+'</div>'+
+    '<div class="a22-len">'+(stack.length ? formatLength(stack.length) : 'Coil')+'</div>'+
+    '<div class="a22-bdl">'+stack.bundles+'b</div>'+
+    (days!==null?'<div class="a22-dot'+(urgent?' urgent':'')+'"></div>':'');
+  div.addEventListener('click', function() { showA22StackModal(stack.id); });
+  return div;
+}
+
+// ─── AREA 22 MODAL ───────────────────────────────────────────────
+function onA22TypeChange() {
+  var type = document.getElementById('a22-type').value;
+  var swg = document.getElementById('a22-spool-weight-group');
+  swg.style.display = type === 'spool' ? 'block' : 'none';
+  if (type !== 'spool') document.getElementById('a22-spool-weight').value = '';
+}
+
+function openA22Modal() {
+  ['a22-heat','a22-bundles','a22-order','a22-ship','a22-customer','a22-length'].forEach(function(id) { document.getElementById(id).value=''; });
+  document.getElementById('a22-size').value = '';
+  document.getElementById('a22-type').value = 'straight';
+  document.getElementById('a22-side').value = 'A';
+  document.getElementById('a22-spool-weight').value = '';
+  document.getElementById('a22-spool-weight-group').style.display = 'none';
+  document.getElementById('a22-modal-overlay').classList.add('active');
+}
+function closeA22Modal() { document.getElementById('a22-modal-overlay').classList.remove('active'); }
+function handleA22OverlayClick(e) { if (e.target===document.getElementById('a22-modal-overlay')) closeA22Modal(); }
+
+function addToArea22() {
+  var type = document.getElementById('a22-type').value;
+  var size = document.getElementById('a22-size').value;
+  var length = document.getElementById('a22-length').value.trim();
+  var bundles = document.getElementById('a22-bundles').value;
+  var side = document.getElementById('a22-side').value || 'A';
+  if (!size || !bundles) { alert('Please fill in Bar Size and Bundles/Coils.'); return; }
+  var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a22-spool-weight').value)||0) : 0;
+  var stack = {
+    id: 'S'+String(area22NextId++).padStart(2,'0'),
+    side: side,
+    heat: document.getElementById('a22-heat').value.trim(),
+    size: size, length: length, type: type,
+    bundles: parseInt(bundles),
+    spoolWeightLbs: spoolLbs,
+    weightPerBundleTons: spoolLbs > 0 ? spoolLbs/2000 : 0,
+    weightTons: spoolLbs > 0 ? (spoolLbs/2000)*(parseInt(bundles)||0) : 0,
+    ship: document.getElementById('a22-ship').value,
+    order: document.getElementById('a22-order').value.trim(),
+    customer: document.getElementById('a22-customer').value.trim(),
+    loc: 'AREA-22', logged: new Date().toLocaleTimeString()
+  };
+  area22Stacks.push(stack);
+  inventory.push(stack);
+  closeA22Modal();
+  renderAll(); renderInventory();
+  setTimeout(function() { var el2=document.getElementById('area22-block'); if(el2) el2.scrollIntoView({behavior:'smooth',block:'center'}); }, 120);
+}
+
+function showA22StackModal(stackId) {
+  var stack = area22Stacks.find(function(s){return s.id===stackId;});
+  if (!stack) return;
+  var days = getDaysToShip(stack.ship);
+  var isSpool = stack.type === 'spool';
+  document.getElementById('modal-title').textContent = 'Area 22 — ' + (stack.side || 'A') + '-Side Stack ' + stack.id;
+  document.getElementById('modal-info').innerHTML = buildModalRows(stack, isSpool, days);
+  document.getElementById('modal-qty-row').style.display = 'flex';
+  document.getElementById('modal-qty-val').value = stack.bundles;
+  modalLoc = 'A22:'+stackId;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+// ─── SPOOL RACKS ─────────────────────────────────────────────────
+function renderSpoolRacks(wrap) {
+  var secT = el('div','section-title'); secT.style.marginTop='24px'; secT.textContent='SPOOL RACKS — SECTIONS 1–7 & 2...'; wrap.appendChild(secT);
+  Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
+    var section = el('div','rack-section');
+    var label = el('div','rack-section-label'); label.textContent='SECTION '+sec+' — '+SPOOL_SECTIONS[sec].length+' RACKS'; section.appendChild(label);
+    var grid = el('div','rack-grid');
+    SPOOL_SECTIONS[sec].forEach(function(rack) { grid.appendChild(makeRackSlot('RACK-'+rack, rack)); });
+    section.appendChild(grid); wrap.appendChild(section);
+  });
+}
+
+function makeRackSlot(rid, rack) {
+  var div = el('div','rack-slot'); div.id='slot-'+rid;
+  var item = store[rid];
+  var maxSpools = RACK_MAX_SPOOLS[rack] || null;
+  var usedSpools = item ? (item.bundles || 0) : 0;
+  var pct = (maxSpools && usedSpools > 0) ? Math.min(usedSpools / maxSpools, 1) : 0;
+
+  if (item) {
+    var days = getDaysToShip(item.ship);
+    var isOver = maxSpools && usedSpools > maxSpools;
+    div.classList.add(isOver ? 'occupied-urgent' : (days!==null&&days<=2?'occupied-urgent':'occupied'));
+
+    // Fill background based on capacity
+    if (maxSpools && pct > 0) {
+      var fc = rackFillColor(pct);
+      var dim = 'rgba('+fc+',0.2)';
+      div.style.background = 'linear-gradient(to top,'+dim+' 0%,'+dim+' '+Math.round(pct*100)+'%,transparent '+Math.round(pct*100)+'%,transparent 100%)';
+      div.style.borderColor = 'rgb('+fc+')';
+    }
+
+    var capLabel = maxSpools ? (usedSpools+'/'+maxSpools) : usedSpools+'c';
+    div.innerHTML =
+      '<div class="rack-id">'+rack+'</div>'+
+      '<div class="rack-size">'+item.size+'</div>'+
+      '<div class="rack-bdl" style="'+(isOver?'color:var(--hot);font-weight:bold':'')+'">' + capLabel + '</div>'+
+      (days!==null?'<div class="rack-dot'+(days<=2?' urgent':'')+'"></div>':'');
+  } else {
+    var capHint = maxSpools ? '<div class="rack-cap">max '+maxSpools+'</div>' : '';
+    div.innerHTML = '<div class="rack-id">'+rack+'</div>' + capHint;
+  }
+
+  if (rid===suggestedLoc) div.classList.add('suggested');
+  div.addEventListener('click', function(){onSlotClick(rid);});
+  return div;
+}
+
+function rackFillColor(pct) {
+  // green → amber → red  (same as stanchion fill)
+  var r,g,b;
+  if (pct <= 0.5) { var t=pct/0.5; r=Math.round(t*245); g=Math.round(176+t*(166-176)); b=Math.round(79+t*(35-79)); }
+  else { var t2=(pct-0.5)/0.5; r=Math.round(245+t2*(232-245)); g=Math.round(166+t2*(64-166)); b=Math.round(35+t2*(64-35)); }
+  return r+','+g+','+b;
+}
+
+// ─── SLOT CLICK ──────────────────────────────────────────────────
+function onSlotClick(id) {
+  if (store[id]) { modalLoc=id; showModal(id); }
+  else {
+    suggestedLoc=id;
+    document.getElementById('suggestion-loc').textContent = id.replace('RACK-','RACK ');
+    document.getElementById('suggestion-reason').textContent = 'Manually selected on floor map';
+    document.getElementById('suggestion-box').classList.add('active');
+    document.getElementById('inp-type').value = id.startsWith('RACK-')?'spool':'straight';
+    onTypeChange(); renderAll();
+    openSection('log');
+  }
+}
+
+// ─── DETAIL MODAL ────────────────────────────────────────────────
+function buildModalRows(item, isSpool, days) {
+  var rows = '';
+  if (item.side) rows += mrow('Side', item.side + '-Side');
+  rows += mrow('Bar Size', item.size);
+  rows += mrow('Type', isSpool?'Spooled':'Straight Bar');
+  rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
+  if (item.spoolWeightLbs) {
+    rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
+    rows += mrow('Total Weight', ((item.spoolWeightLbs/2000)*(item.bundles||0)).toFixed(2) + 't');
+  } else if (item.weightTons) {
+    rows += mrow('Weight/Bundle', item.weightPerBundleTons ? item.weightPerBundleTons.toFixed(3)+'t ('+(item.weightPerBundleTons*2000).toFixed(0)+' lbs)' : '—');
+    rows += mrow('Total Weight', item.weightTons.toFixed(2)+'t ('+(item.weightTons*2000).toFixed(0)+' lbs)');
+  }
+  if (item.heat) rows += mrow('Heat #', item.heat);
+  if (item.order) rows += mrow('Order #', item.order);
+  if (item.customer) rows += mrow('Customer', item.customer);
+  if (item.ship) rows += mrow('Ship Date', item.ship + (days!==null?' ('+days+'d)':''));
+  rows += mrow('Logged', item.logged);
+  // Show EBS locator code if mapped
+  var ebsCode = item.loc ? getLocatorCode(item.loc) : null;
+  if (ebsCode) rows += mrow('EBS Locator', '<span style="color:var(--accent);font-family:\'IBM Plex Mono\',monospace">' + ebsCode + '</span>');
+  return rows;
+}
+function mrow(k,v) { return '<div class="modal-row"><span class="modal-key">'+k+'</span><span class="modal-val">'+v+'</span></div>'; }
+
+function showModal(id) {
+  var item = store[id]; if (!item) return;
+  var days = getDaysToShip(item.ship);
+  var isSpool = item.type==='spool';
+  document.getElementById('modal-title').textContent = id.replace('RACK-','RACK ');
+  document.getElementById('modal-info').innerHTML = buildModalRows(item, isSpool, days);
+  document.getElementById('modal-qty-row').style.display = 'flex';
+  document.getElementById('modal-qty-val').value = item.bundles;
+
+  // Render secondary items
+  renderSecondaryList(id);
+
+  // Show "Add Secondary" button only for stanchion slots (not racks or area22)
+  var isStanchion = !id.startsWith('RACK-');
+  var addBtn = document.getElementById('btn-add-secondary');
+  if (addBtn) addBtn.style.display = isStanchion ? 'block' : 'none';
+
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
+function renderSecondaryList(slotId) {
+  var container = document.getElementById('modal-secondary-list');
+  if (!container) return;
+  var extras = storeExtra[slotId] || [];
+  if (extras.length === 0) { container.innerHTML = ''; return; }
+  var html = '<div class="secondary-items-wrap"><div class="secondary-item-label">Secondary Items (' + extras.length + ')</div>';
+  extras.forEach(function(ei, idx) {
+    var safeSlotId = (slotId||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
+    html += '<div class="secondary-item-row">' +
+      '<div class="secondary-item-info">' + ei.size + ' · ' + (ei.length ? formatLength(ei.length) : 'Coil') + ' · ' + ei.bundles + ' bundles</div>' +
+      '<div style="display:flex;gap:5px">' +
+      '<button class="secondary-remove-btn" style="background:#004099;color:#fff" onclick="openSecondaryTransfer(\'' + safeSlotId + '\',' + idx + ')">MOVE</button>' +
+      '<button class="secondary-remove-btn" onclick="removeSecondaryItem(\'' + safeSlotId + '\',' + idx + ')">REMOVE</button>' +
+      '</div>' +
+      '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+function closeModal() {
+  document.getElementById('modal-overlay').classList.remove('active');
+  document.getElementById('modal-qty-row').style.display = 'none';
+  var sl = document.getElementById('modal-secondary-list');
+  if (sl) sl.innerHTML = '';
+  var ab = document.getElementById('btn-add-secondary');
+  if (ab) ab.style.display = 'none';
+  modalLoc = null;
+}
+function handleOverlayClick(e) { if(e.target===document.getElementById('modal-overlay')) closeModal(); }
+
+// ─── ADJUST QTY ──────────────────────────────────────────────────
+function setQty(newVal) {
+  if (!modalLoc) return;
+  newVal = Math.max(0, newVal);
+  var item = null;
+  var isA22 = modalLoc.startsWith('A22:');
+  if (isA22) {
+    var stackId = modalLoc.replace('A22:','');
+    item = area22Stacks.find(function(s){return s.id===stackId;});
+  } else {
+    item = store[modalLoc];
+  }
+  if (!item) return;
+
+  // Enforce spool rack cap when adjusting quantity
+  if (!isA22 && modalLoc && modalLoc.startsWith('RACK-') && item.type === 'spool') {
+    var rackKey2 = modalLoc.replace('RACK-','');
+    var maxCap2 = RACK_MAX_SPOOLS[rackKey2];
+    if (maxCap2 && newVal > maxCap2) {
+      newVal = maxCap2;
+      showScrapToast('Max ' + maxCap2 + ' spools for Rack ' + rackKey2);
+    }
+  }
+
+  // Update bundle count
+  item.bundles = newVal;
+
+  // Recalculate total weight based on new bundle count
+  if (item.spoolWeightLbs) {
+    item.weightTons = (item.spoolWeightLbs / 2000) * newVal;
+  } else if (item.weightPerBundleTons) {
+    item.weightTons = item.weightPerBundleTons * newVal;
+  }
+
+  // Sync inventory array
+  var invItem = inventory.find(function(i){ return isA22 ? i.id===item.id : i.loc===modalLoc; });
+  if (invItem) {
+    invItem.bundles = newVal;
+    invItem.weightTons = item.weightTons;
+  }
+
+  // Refresh the modal info rows so Total Weight updates live
+  var days = getDaysToShip(item.ship);
+  var isSpool = item.type === 'spool';
+  document.getElementById('modal-info').innerHTML = buildModalRows(item, isSpool, days);
+
+  // Keep the input value in sync (oninput fires before setQty sets it back)
+  document.getElementById('modal-qty-val').value = newVal;
+
+  updateStats();
+
+  // Update the tile on the floor map
+  var slotEl = isA22 ? document.getElementById('a22-'+item.id) : document.getElementById('slot-'+modalLoc);
+  if (slotEl) {
+    var bdlEl = slotEl.querySelector(isA22 ? '.a22-bdl' : '.slot-bdl, .rack-bdl');
+    if (bdlEl) bdlEl.textContent = newVal + (item.type==='spool'&&!isA22?'c':'b');
+  }
+}
+
+function adjustQty(delta) {
+  var current = parseInt(document.getElementById('modal-qty-val').value) || 0;
+  setQty(current + delta);
+}
+
+function onQtyInput(val) {
+  var parsed = parseInt(val);
+  if (!isNaN(parsed)) setQty(parsed);
+}
+
+// ─── SECONDARY ITEMS ─────────────────────────────────────────────
+function openSecondaryModal() {
+  if (!modalLoc || !store[modalLoc]) return;
+  var primary = store[modalLoc];
+  var stanKey = modalLoc.slice(0, -1);
+  var maxFt = maxFtForStanchion(stanKey);
+  var usedFt = stanchionFtUsed(stanKey);
+  document.getElementById('secondary-slot-info').innerHTML =
+    '<strong style="color:var(--text)">Slot:</strong> ' + modalLoc +
+    ' &nbsp;·&nbsp; Primary: ' + primary.size + ' ' + formatLength(primary.length||'') +
+    ' &nbsp;·&nbsp; <span style="color:var(--accent)">' + (maxFt - usedFt).toFixed(0) + 'ft remaining</span>';
+  document.getElementById('sec-size').value = '';
+  document.getElementById('sec-length-ft').value = '';
+  document.getElementById('sec-length-in').value = '';
+  document.getElementById('sec-bundles').value = '';
+  document.getElementById('secondary-modal-overlay').classList.add('active');
+}
+
+function closeSecondaryModal() {
+  document.getElementById('secondary-modal-overlay').classList.remove('active');
+}
+
+function handleSecondaryOverlayClick(e) {
+  if (e.target === document.getElementById('secondary-modal-overlay')) closeSecondaryModal();
+}
+
+function confirmAddSecondary() {
+  if (!modalLoc) return;
+  var size = document.getElementById('sec-size').value;
+  var ftVal = parseFloat(document.getElementById('sec-length-ft').value) || 0;
+  var inVal = parseFloat(document.getElementById('sec-length-in').value) || 0;
+  var lenDecimal = ftVal + (inVal / 12);
+  var bundles = parseInt(document.getElementById('sec-bundles').value) || 0;
+  if (!size || !bundles) { alert('Please fill in Bar Size and Bundles.'); return; }
+
+  var newItem = {
+    size: size, length: lenDecimal ? String(lenDecimal) : '', type: 'straight',
+    bundles: bundles, heat: '', ship: '', order: '', customer: '',
+    loc: modalLoc, logged: new Date().toLocaleTimeString()
+  };
+
+  if (!storeExtra[modalLoc]) storeExtra[modalLoc] = [];
+  storeExtra[modalLoc].push(newItem);
+  inventory.push(newItem);
+
+  closeSecondaryModal();
+  renderAll();
+  renderInventory();
+  renderSecondaryList(modalLoc);
+  showScrapToast('Secondary item added to ' + modalLoc);
+}
+
+function removeSecondaryItem(slotId, idx) {
+  var extras = storeExtra[slotId];
+  if (!extras || idx >= extras.length) return;
+  var removed = extras[idx];
+  extras.splice(idx, 1);
+  if (extras.length === 0) delete storeExtra[slotId];
+  // Remove from inventory
+  var ii = inventory.findIndex(function(i) { return i === removed; });
+  if (ii > -1) inventory.splice(ii, 1);
+  renderAll();
+  renderInventory();
+  renderSecondaryList(slotId);
+  showScrapToast('Secondary item removed from ' + slotId);
+}
+
+// Clear secondary items when a slot is cleared
+function clearSecondaryItems(slotId) {
+  var extras = storeExtra[slotId] || [];
+  extras.forEach(function(ei) {
+    var ii = inventory.findIndex(function(i){ return i === ei; });
+    if (ii > -1) inventory.splice(ii, 1);
+  });
+  delete storeExtra[slotId];
+}
+// ─── SECONDARY ITEM TRANSFER ─────────────────────────────────────
+var secTransferSlot = null;
+var secTransferIdx = null;
+
+function openSecondaryTransfer(slotId, idx) {
+  var extras = storeExtra[slotId] || [];
+  var ei = extras[idx];
+  if (!ei) return;
+  secTransferSlot = slotId;
+  secTransferIdx = idx;
+
+  document.getElementById('transfer-from-info').innerHTML =
+    '<strong style="color:var(--text)">Secondary from:</strong> ' + slotId +
+    ' &nbsp;·&nbsp; ' + ei.size +
+    (ei.length ? ' · ' + formatLength(ei.length) : '') +
+    ' &nbsp;·&nbsp; ' + ei.bundles + ' bundles';
+
+  var sel = document.getElementById('transfer-dest');
+  sel.innerHTML = '<option value="">— Select destination —</option>';
+
+  // List all stanchion sides — no ft restriction for secondary items
+  var order = orderedStanchions();
+  order.forEach(function(s) {
+    var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+    sides.forEach(function(side) {
+      var id = s + side;
+      if (id === slotId) return;
+      var label = (s==='BSU'?'B.SU':'Stanchion '+s) + ' ' + side + '-side';
+      var opt = document.createElement('option');
+      opt.value = id;
+      var existing = store[id];
+      var extraCount = (storeExtra[id] || []).length;
+      var slotDesc = existing ? (existing.size + ' ' + formatLength(existing.length||'')) : 'empty';
+      opt.textContent = label + ' — ' + slotDesc + (extraCount > 0 ? ' +' + extraCount + ' more' : '');
+      sel.appendChild(opt);
+    });
+  });
+
+  document.getElementById('transfer-hint').style.display = 'none';
+  // Tag the modal so confirmTransfer knows to run secondary logic
+  document.getElementById('transfer-modal-overlay').dataset.mode = 'secondary';
+  document.getElementById('transfer-modal-overlay').classList.add('active');
+}
+
+function confirmSecondaryTransfer() {
+  var dest = document.getElementById('transfer-dest').value;
+  if (!dest) { alert('Please select a destination.'); return; }
+  if (secTransferSlot === null || secTransferIdx === null) return;
+
+  var extras = storeExtra[secTransferSlot] || [];
+  var ei = extras[secTransferIdx];
+  if (!ei) return;
+
+  if (!storeExtra[dest]) storeExtra[dest] = [];
+  var moved = JSON.parse(JSON.stringify(ei));
+  moved.loc = dest;
+  moved.logged = 'transferred from ' + secTransferSlot + ' — ' + new Date().toLocaleTimeString();
+
+  // If destination is empty, promote to primary item
+  if (!store[dest]) {
+    store[dest] = moved;
+    inventory.push(moved);
+  } else {
+    storeExtra[dest].push(moved);
+    var ii = inventory.findIndex(function(i){ return i === ei; });
+    if (ii > -1) inventory[ii] = moved;
+  }
+
+  // Remove from source extras
+  extras.splice(secTransferIdx, 1);
+  if (extras.length === 0) delete storeExtra[secTransferSlot];
+  // Remove original inventory reference (new one was pushed in the if/else above)
+  var srcInvIdx = inventory.findIndex(function(i){ return i === ei; });
+  if (srcInvIdx > -1) inventory.splice(srcInvIdx, 1);
+
+  var fromSlot = secTransferSlot;
+  secTransferSlot = null;
+  secTransferIdx = null;
+  document.getElementById('transfer-modal-overlay').dataset.mode = '';
+
+  closeTransferModal();
+  renderAll();
+  renderInventory();
+  renderSecondaryList(fromSlot);
+  showScrapToast('Secondary item moved to ' + dest);
+  setTimeout(function() {
+    var e = document.getElementById('slot-'+dest);
+    if (e) e.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 200);
+}
+
+function openTransferModal() {
+  if (!modalLoc || modalLoc.startsWith('A22:')) return; // Area 22 not supported yet
+  var item = store[modalLoc];
+  if (!item) return;
+
+  // Show from info
+  document.getElementById('transfer-from-info').innerHTML =
+    '<strong style="color:var(--text)">From:</strong> ' + modalLoc +
+    ' &nbsp;·&nbsp; ' + item.size +
+    (item.length ? ' · ' + formatLength(item.length) : ' · Coil') +
+    ' &nbsp;·&nbsp; ' + item.bundles + (item.type==='spool'?' coils':' bundles');
+
+  // Build destination dropdown — all stanchion sides + racks with same type
+  var sel = document.getElementById('transfer-dest');
+  sel.innerHTML = '<option value="">— Select destination —</option>';
+
+  var isSpool = item.type === 'spool';
+
+  if (isSpool) {
+    // Spool: list all racks
+    Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
+      SPOOL_SECTIONS[sec].forEach(function(rack) {
+        var rid = 'RACK-'+rack;
+        if (rid === modalLoc) return; // skip current
+        var maxCap = RACK_MAX_SPOOLS[rack];
+        var existing = store[rid];
+        var existingCoils = existing ? existing.bundles : 0;
+        var availStr = maxCap ? (existingCoils+'/'+maxCap+' used') : (existing ? existingCoils+' coils' : 'empty');
+        var opt = document.createElement('option');
+        opt.value = rid;
+        opt.textContent = 'Rack ' + rack + ' — ' + (existing ? existing.size+' · ' : '') + availStr;
+        if (maxCap && existingCoils >= maxCap) { opt.disabled = true; opt.textContent += ' (FULL)'; }
+        sel.appendChild(opt);
+      });
+    });
+  } else {
+    // Straight bar: list all stanchion sides with enough footage
+    var length = parseFloat(item.length) || 0;
+    var order = orderedStanchions();
+    var srcStan = modalLoc.slice(0, -1);
+    var srcFt = parseFloat(item.length) || 0;
+    order.forEach(function(s) {
+      var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+      sides.forEach(function(side) {
+        var id = s + side;
+        if (id === modalLoc) return;
+        // Effective remaining: if same stanchion, source footage will be freed
+        var rawRemaining = stanchionFtRemaining(s);
+        var effectiveRemaining = (String(s) === String(srcStan)) ? rawRemaining + srcFt : rawRemaining;
+        var existing = store[id];
+        var label = (s==='BSU'?'B.SU':'Stanchion '+s) + ' ' + side + '-side';
+        var opt = document.createElement('option');
+        opt.value = id;
+        if (existing) {
+          if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length)) {
+            // Same product — always allow merge (no footage added, just bundles)
+            opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
+            opt.style.fontWeight = 'bold';
+          } else {
+            // Different product — cannot merge
+            opt.disabled = true;
+            opt.textContent = label + ' — occupied: ' + existing.size + ' ' + formatLength(existing.length||'') + ' (different product)';
+          }
+        } else {
+          if (length > effectiveRemaining) {
+            opt.disabled = true;
+            opt.textContent = label + ' — empty (only ' + effectiveRemaining.toFixed(0) + 'ft avail)';
+          } else {
+            opt.textContent = label + ' — empty (' + effectiveRemaining.toFixed(0) + 'ft avail)';
+          }
+        }
+        sel.appendChild(opt);
+      });
+    });
+  }
+
+  document.getElementById('transfer-hint').style.display = 'none';
+  document.getElementById('transfer-modal-overlay').classList.add('active');
+}
+
+function closeTransferModal() {
+  document.getElementById('transfer-modal-overlay').classList.remove('active');
+  document.getElementById('transfer-modal-overlay').dataset.mode = '';
+  secTransferSlot = null;
+  secTransferIdx = null;
+}
+
+function handleTransferOverlayClick(e) {
+  if (e.target === document.getElementById('transfer-modal-overlay')) closeTransferModal();
+}
+
+function confirmTransfer() {
+  var dest = document.getElementById('transfer-dest').value;
+  if (!dest) { alert('Please select a destination.'); return; }
+  if (!modalLoc) return;
+
+  var srcItem = store[modalLoc];
+  if (!srcItem) return;
+
+  var hint = document.getElementById('transfer-hint');
+  var isSpool = srcItem.type === 'spool';
+
+  // Validate destination
+  if (!isSpool) {
+    var destItem0 = store[dest];
+    // If destination already has the same product, this is a bundle merge — no footage is added
+    // so no ft check needed. Only check ft when moving to an empty slot or different stanchion.
+    var isMerge = destItem0 && destItem0.size === srcItem.size && parseFloat(destItem0.length) === parseFloat(srcItem.length);
+    if (!isMerge) {
+      var length = parseFloat(srcItem.length) || 0;
+      var destStan = dest.slice(0, -1);
+      var srcStan = modalLoc.slice(0, -1);
+      var srcFt = parseFloat(srcItem.length) || 0;
+      var rawRemaining = stanchionFtRemaining(destStan);
+      var effectiveRemaining = (String(destStan) === String(srcStan)) ? rawRemaining + srcFt : rawRemaining;
+      if (length > effectiveRemaining) {
+        hint.className = 'length-hint over';
+        hint.textContent = '⛔ Not enough space — only ' + effectiveRemaining.toFixed(0) + 'ft available on that stanchion.';
+        hint.style.display = 'block';
+        return;
+      }
+    }
+  }
+
+  if (isSpool) {
+    var rackKey = dest.replace('RACK-','');
+    var maxCap = RACK_MAX_SPOOLS[rackKey];
+    var destItem = store[dest];
+    var destCoils = destItem ? destItem.bundles : 0;
+    if (maxCap && destCoils + srcItem.bundles > maxCap) {
+      hint.className = 'length-hint over';
+      hint.textContent = '⛔ Rack ' + rackKey + ' only has ' + (maxCap - destCoils) + ' spots remaining.';
+      hint.style.display = 'block';
+      return;
+    }
+  }
+
+  var destItem2 = store[dest];
+
+  if (destItem2) {
+    // Only allow merge if same size AND same length
+    if (destItem2.size !== srcItem.size || destItem2.length !== srcItem.length) {
+      hint.className = 'length-hint over';
+      hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge matching product.';
+      hint.style.display = 'block';
+      return;
+    }
+    // Merge — add bundles to existing
+    destItem2.bundles += srcItem.bundles;
+    if (destItem2.weightPerBundleTons) destItem2.weightTons = destItem2.weightPerBundleTons * destItem2.bundles;
+    // Update inventory record for dest
+    var di = inventory.find(function(i){ return i.loc === dest; });
+    if (di) { di.bundles = destItem2.bundles; di.weightTons = destItem2.weightTons; }
+  } else {
+    // Move to empty slot
+    var moved = JSON.parse(JSON.stringify(srcItem));
+    moved.loc = dest;
+    moved.logged = 'transferred from ' + modalLoc + ' — ' + new Date().toLocaleTimeString();
+    store[dest] = moved;
+    inventory.push(moved);
+  }
+
+  // Clear source
+  store[modalLoc] = null;
+  var srcIdx = inventory.findIndex(function(i){ return i.loc === modalLoc; });
+  if (srcIdx > -1) inventory.splice(srcIdx, 1);
+
+  var fromId = modalLoc;
+  closeTransferModal();
+  closeModal();
+  showScrapToast('✓ Transferred from ' + fromId + ' → ' + dest.replace('RACK-','Rack '));
+  renderAll();
+  renderInventory();
+
+  // Scroll to destination
+  setTimeout(function() {
+    var e = document.getElementById('slot-'+dest);
+    if (e) e.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 200);
+}
+
+function clearSlot() {
+  if (!modalLoc) return;
+  if (modalLoc.startsWith('A22:')) {
+    var sid = modalLoc.replace('A22:','');
+    var idx = area22Stacks.findIndex(function(s){return s.id===sid;});
+    if (idx>-1) area22Stacks.splice(idx,1);
+    var ii = inventory.findIndex(function(i){return i.id===sid&&i.loc==='AREA-22';});
+    if (ii>-1) inventory.splice(ii,1);
+  } else {
+    clearSecondaryItems(modalLoc);
+    store[modalLoc] = null;
+    var idx2 = inventory.findIndex(function(i){return i.loc===modalLoc;});
+    if (idx2>-1) inventory.splice(idx2,1);
+  }
+  closeModal(); renderAll(); renderInventory();
+}
+
+// ─── EBS LOCATOR CODES ───────────────────────────────────────────
+function toggleLocatorEditor(btn) {
+  var wrap = document.getElementById('locator-editor-wrap');
+  var chevron = document.getElementById('locator-editor-chevron');
+  var isOpen = wrap.style.display !== 'none';
+  if (isOpen) {
+    wrap.style.display = 'none';
+    chevron.textContent = '▼ expand';
+  } else {
+    wrap.style.display = 'block';
+    chevron.textContent = '▲ collapse';
+    renderLocatorEditor();
+  }
+}
+
+function renderLocatorEditor() {
+  var grid = document.getElementById('locator-code-grid');
+  var html = '';
+
+  // Stanchion sides
+  html += '<div class="locator-section-label">STANCHIONS</div>';
+  var order = orderedStanchions();
+  order.forEach(function(s) {
+    var label = s === 'BSU' ? 'B.SU' : 'Stan. ' + s;
+    var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+    sides.forEach(function(side) {
+      var id = s + side;
+      var code = LOCATOR_CODES[id] || '';
+      html += '<div class="locator-row">' +
+        '<div class="locator-slot-label">' + label + ' ' + side + '</div>' +
+        '<input class="locator-input' + (code?' has-value':'') + '" id="lc-' + id + '" type="text" placeholder="EBS locator code" value="' + code.replace(/"/g,'&quot;') + '">' +
+        '</div>';
+    });
+  });
+
+  // Spool racks
+  html += '<div class="locator-section-label">SPOOL RACKS</div>';
+  Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
+    SPOOL_SECTIONS[sec].forEach(function(rack) {
+      var rid = 'RACK-' + rack;
+      var code = LOCATOR_CODES[rid] || '';
+      html += '<div class="locator-row">' +
+        '<div class="locator-slot-label">Rack ' + rack + '</div>' +
+        '<input class="locator-input' + (code?' has-value':'') + '" id="lc-' + rid + '" type="text" placeholder="EBS locator code" value="' + code.replace(/"/g,'&quot;') + '">' +
+        '</div>';
+    });
+  });
+
+  grid.innerHTML = html;
+}
+
+function saveLocatorCodes() {
+  var inputs = document.querySelectorAll('#locator-code-grid .locator-input');
+  inputs.forEach(function(input) {
+    var slotId = input.id.replace('lc-', '');
+    var val = input.value.trim();
+    if (val) {
+      LOCATOR_CODES[slotId] = val;
+      input.classList.add('has-value');
+    } else {
+      delete LOCATOR_CODES[slotId];
+      input.classList.remove('has-value');
+    }
+  });
+  var status = document.getElementById('locator-save-status');
+  var count = Object.keys(LOCATOR_CODES).length;
+  status.textContent = '✓ Saved ' + count + ' locator code' + (count !== 1 ? 's' : '');
+  status.style.display = 'block';
+  setTimeout(function() { status.style.display = 'none'; }, 3000);
+}
+
+// Get EBS locator code for a slot, or null if not set
+function getLocatorCode(slotId) {
+  return LOCATOR_CODES[slotId] || null;
+}
+var csvRows = [];
+var csvHeaders = [];
+
+// RebarTrack fields the user can map CSV columns to
+var CSV_FIELDS = [
+  { key:'heat',     label:'Heat #' },
+  { key:'size',     label:'Bar Size' },
+  { key:'length',   label:'Length (ft)' },
+  { key:'bundles',  label:'Bundles / Coils' },
+  { key:'weight',   label:'Bundle Weight' },
+  { key:'ship',     label:'Ship Date' },
+  { key:'order',    label:'Order #' },
+  { key:'customer', label:'Customer' },
+  { key:'type',     label:'Product Type' },
+];
+
+function onCSVFileSelected(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('csv-file-name').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) { parseCSV(e.target.result); };
+  reader.readAsText(file);
+}
+
+function parseCSV(text) {
+  var lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) { showCSVError('File must have at least a header row and one data row.'); return; }
+
+  // Auto-detect delimiter — tab wins if present
+  var delim = lines[0].indexOf('\t') > -1 ? '\t' : ',';
+
+  function splitRow(row) {
+    var result = [], cur = '', inQ = false;
+    for (var i = 0; i < row.length; i++) {
+      var c = row[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  // ── SMART HEADER DETECTION ──
+  // EBS/TWS reports often have title rows, date rows, blank rows before the real header.
+  // We scan up to the first 20 rows looking for a row that looks like column headers:
+  // - Has multiple non-empty cells
+  // - Contains at least one keyword that suggests it's a data header
+  var HEADER_KEYWORDS = ['heat','size','bar','length','bundle','coil','qty','quantity',
+    'weight','ship','date','order','customer','client','grade','item','product','type',
+    'ht','len','wt','po','lot','schedule'];
+
+  var headerLineIdx = -1;
+  var scanLimit = Math.min(20, lines.length);
+  for (var i = 0; i < scanLimit; i++) {
+    var cols = splitRow(lines[i]);
+    var nonEmpty = cols.filter(function(c){ return c.trim() !== ''; });
+    if (nonEmpty.length < 2) continue; // too sparse to be a header
+    var rowText = lines[i].toLowerCase();
+    var hasKeyword = HEADER_KEYWORDS.some(function(kw){ return rowText.includes(kw); });
+    if (hasKeyword) { headerLineIdx = i; break; }
+  }
+
+  // If no keyword header found, fall back to first row with 3+ non-empty columns
+  if (headerLineIdx === -1) {
+    for (var j = 0; j < scanLimit; j++) {
+      var c2 = splitRow(lines[j]).filter(function(c){ return c.trim() !== ''; });
+      if (c2.length >= 3) { headerLineIdx = j; break; }
+    }
+  }
+
+  if (headerLineIdx === -1) { showCSVError('Could not find a header row. Make sure your CSV has column names.'); return; }
+
+  csvHeaders = splitRow(lines[headerLineIdx]).map(function(h){ return h.replace(/['"]/g,'').trim(); });
+
+  // ── SUBTOTAL / JUNK ROW DETECTION ──
+  // Skip rows that are: blank, look like report footers/totals, have too few columns,
+  // or are report title rows above the header we found.
+  var SKIP_PATTERNS = [/^total/i, /^sub.?total/i, /^grand.?total/i, /^report/i,
+    /^page\s*\d/i, /^date:/i, /^printed/i, /^run\s*by/i, /^---/, /^\*\*\*/];
+
+  csvRows = [];
+  for (var k = headerLineIdx + 1; k < lines.length; k++) {
+    var line = lines[k];
+    if (!line || line.trim() === '') continue; // blank
+
+    // Check against skip patterns on the full line
+    var shouldSkip = SKIP_PATTERNS.some(function(p){ return p.test(line.trim()); });
+    if (shouldSkip) continue;
+
+    var cols = splitRow(line);
+
+    // Skip rows that are mostly empty (fewer than 2 non-empty cells)
+    var filled = cols.filter(function(c){ return c.trim() !== ''; });
+    if (filled.length < 2) continue;
+
+    // Skip rows where all numeric columns are obviously totals
+    // (first cell contains "total" or "subtotal" case-insensitively)
+    if (/total/i.test(cols[0])) continue;
+
+    var obj = {};
+    csvHeaders.forEach(function(h, idx) { obj[h] = (cols[idx] || '').trim(); });
+    csvRows.push(obj);
+  }
+
+  if (csvRows.length === 0) { showCSVError('No data rows found after cleaning. Check that the file has actual data below the header row.'); return; }
+
+  renderCSVMapper();
+  renderCSVPreview();
+  document.getElementById('csv-preview-wrap').style.display = 'block';
+  document.getElementById('csv-import-status').style.display = 'none';
+
+  // Show a note if we skipped header rows
+  if (headerLineIdx > 0) {
+    var note = document.getElementById('csv-import-status');
+    note.className = 'csv-import-ok';
+    note.innerHTML = 'ℹ Skipped ' + headerLineIdx + ' report header row(s) — found data header on row ' + (headerLineIdx+1) + '. Found ' + csvRows.length + ' data rows.';
+    note.style.display = 'block';
+  }
+}
+
+function renderCSVMapper() {
+  var wrap = document.getElementById('csv-column-map');
+  var noMatch = '<option value="">— skip —</option>';
+  var html = '';
+  CSV_FIELDS.forEach(function(field) {
+    // Auto-detect best matching column
+    var autoMatch = '';
+    csvHeaders.forEach(function(h) {
+      var hl = h.toLowerCase();
+      if (!autoMatch) {
+        if (field.key === 'heat'     && (hl.includes('heat') || hl.includes('ht'))) autoMatch = h;
+        if (field.key === 'size'     && (hl.includes('size') || hl.includes('bar') || hl.includes('grade'))) autoMatch = h;
+        if (field.key === 'length'   && (hl.includes('length') || hl.includes('len') || hl.includes('ft'))) autoMatch = h;
+        if (field.key === 'bundles'  && (hl.includes('bundle') || hl.includes('coil') || hl.includes('qty') || hl.includes('quantity'))) autoMatch = h;
+        if (field.key === 'weight'   && (hl.includes('weight') || hl.includes('wt') || hl.includes('ton') || hl.includes('lbs'))) autoMatch = h;
+        if (field.key === 'ship'     && (hl.includes('ship') || hl.includes('date') || hl.includes('due'))) autoMatch = h;
+        if (field.key === 'order'    && (hl.includes('order') || hl.includes('ord') || hl.includes('po'))) autoMatch = h;
+        if (field.key === 'customer' && (hl.includes('customer') || hl.includes('client') || hl.includes('account'))) autoMatch = h;
+        if (field.key === 'type'     && (hl.includes('type') || hl.includes('product') || hl.includes('form'))) autoMatch = h;
+      }
+    });
+    html += '<div class="csv-map-row">' +
+      '<div class="csv-map-label">' + field.label + '</div>' +
+      '<select class="csv-map-select" id="csvmap-' + field.key + '">' +
+      noMatch +
+      csvHeaders.map(function(h) {
+        return '<option value="' + h.replace(/"/g,'&quot;') + '"' + (h === autoMatch ? ' selected' : '') + '>' + h + '</option>';
+      }).join('') +
+      '</select></div>';
+  });
+  wrap.innerHTML = html;
+}
+
+function renderCSVPreview() {
+  var preview = csvRows.slice(0, 5);
+  var html = '<table class="csv-preview-table"><thead><tr>' +
+    csvHeaders.map(function(h){ return '<th>'+h+'</th>'; }).join('') +
+    '</tr></thead><tbody>' +
+    preview.map(function(row){
+      return '<tr>' + csvHeaders.map(function(h){ return '<td>'+(row[h]||'')+'</td>'; }).join('') + '</tr>';
+    }).join('') +
+    '</tbody></table>';
+  document.getElementById('csv-preview-table').innerHTML = html;
+}
+
+function getCSVMap() {
+  var map = {};
+  CSV_FIELDS.forEach(function(f) {
+    var sel = document.getElementById('csvmap-' + f.key);
+    if (sel && sel.value) map[f.key] = sel.value;
+  });
+  return map;
+}
+
+function runCSVImport() {
+  var map = getCSVMap();
+  if (!map.size && !map.heat) {
+    showCSVError('Please map at least Bar Size or Heat # to a column.');
+    return;
+  }
+
+  var imported = 0, skipped = 0, errors = [];
+
+  csvRows.forEach(function(row, idx) {
+    try {
+      var size   = map.size     ? (row[map.size]||'').trim() : '';
+      var heat   = map.heat     ? (row[map.heat]||'').trim() : '';
+      var lenStr = map.length   ? (row[map.length]||'').trim() : '';
+      var bdl    = map.bundles  ? parseInt(row[map.bundles]) || 0 : 0;
+      var wtStr  = map.weight   ? (row[map.weight]||'').trim() : '';
+      var ship   = map.ship     ? (row[map.ship]||'').trim() : '';
+      var order  = map.order    ? (row[map.order]||'').trim() : '';
+      var cust   = map.customer ? (row[map.customer]||'').trim() : '';
+      var typeRaw= map.type     ? (row[map.type]||'').toLowerCase() : '';
+
+      if (!size && !heat) { skipped++; return; }
+
+      // Normalize bar size — add # if missing
+      if (size && !size.startsWith('#')) size = '#' + size;
+
+      // Parse length — handle ft-in formats like "20'6" or "20.5"
+      var lenNum = 0;
+      if (lenStr) {
+        if (lenStr.includes("'")) {
+          var parts = lenStr.replace('"','').split("'");
+          lenNum = (parseFloat(parts[0])||0) + ((parseFloat(parts[1])||0)/12);
+        } else {
+          lenNum = parseFloat(lenStr) || 0;
+        }
+      }
+
+      // Parse weight
+      var wtTons = 0, wtPerBdl = 0;
+      if (wtStr) {
+        var wtNum = parseFloat(wtStr.replace(/[^0-9.]/g,'')) || 0;
+        var wtLower = wtStr.toLowerCase();
+        if (wtLower.includes('lb') || wtLower.includes('lbs')) { wtTons = wtNum / 2000; }
+        else { wtTons = wtNum; } // assume tons
+        if (bdl > 0) wtPerBdl = wtTons / bdl;
+      }
+
+      // Determine type
+      var type = 'straight';
+      if (typeRaw.includes('spool') || typeRaw.includes('coil')) type = 'spool';
+      if (!lenNum && type === 'straight') type = 'spool'; // no length = coil
+
+      // Find best location using autoPickLoc
+      var loc = autoPickLoc(type, lenNum);
+      if (!loc) { skipped++; errors.push('Row '+(idx+1)+': no space found for '+size); return; }
+
+      var item = {
+        heat: heat, size: size || '#?',
+        length: lenNum ? String(lenNum) : '',
+        type: type, bundles: bdl || 1,
+        weightPerBundleTons: wtPerBdl,
+        weightTons: wtTons || (bdl * wtPerBdl),
+        spoolWeightLbs: 0,
+        ship: ship, order: order, customer: cust,
+        loc: loc, logged: 'imported'
+      };
+
+      store[loc] = item;
+      inventory.push(item);
+      imported++;
+    } catch(e) {
+      errors.push('Row '+(idx+1)+': ' + e.message);
+    }
+  });
+
+  var msg = '✓ Imported ' + imported + ' rows';
+  if (skipped) msg += ', skipped ' + skipped;
+  if (errors.length) msg += '\n⚠ ' + errors.slice(0,5).join('\n');
+
+  var statusEl = document.getElementById('csv-import-status');
+  statusEl.className = errors.length ? 'csv-import-err' : 'csv-import-ok';
+  statusEl.innerHTML = msg.replace(/\n/g,'<br>');
+  statusEl.style.display = 'block';
+
+  renderAll();
+  renderInventory();
+  updateBadges();
+}
+
+function clearCSVImport() {
+  csvRows = []; csvHeaders = [];
+  document.getElementById('csv-file-input').value = '';
+  document.getElementById('csv-file-name').textContent = 'Choose CSV file…';
+  document.getElementById('csv-preview-wrap').style.display = 'none';
+}
+
+function showCSVError(msg) {
+  var statusEl = document.getElementById('csv-import-status');
+  statusEl.className = 'csv-import-err';
+  statusEl.textContent = '⛔ ' + msg;
+  statusEl.style.display = 'block';
+  document.getElementById('csv-preview-wrap').style.display = 'block';
+}
+function suggestLocation() {
+  var type = document.getElementById('inp-type').value;
+  var size = document.getElementById('inp-size').value;
+  var length = getLengthDecimal();
+  var manualPick = document.getElementById('inp-location').value;
+
+  if (manualPick) {
+    suggestedLoc = manualPick;
+    document.getElementById('suggestion-loc').textContent = manualPick.replace('RACK-','RACK ');
+    document.getElementById('suggestion-reason').textContent = 'Manually selected location';
+    document.getElementById('suggestion-box').classList.add('active');
+    renderAll(); return;
+  }
+
+  if (type === 'spool') {
+    var pick = null;
+    var pickReason = '';
+    var secs = Object.keys(SPOOL_SECTIONS);
+
+    // Pass 1: prefer racks that already have the same bar size and have capacity
+    if (size) {
+      for (var i=0; i<secs.length && !pick; i++) {
+        SPOOL_SECTIONS[secs[i]].forEach(function(r) {
+          if (pick) return;
+          var rid = 'RACK-'+r;
+          var item = store[rid];
+          if (!item) return; // empty — skip in pass 1
+          if (item.size !== size) return; // wrong size
+          // Check capacity
+          var maxCap = RACK_MAX_SPOOLS[r];
+          if (maxCap && item.bundles >= maxCap) return; // full
+          pick = rid;
+          pickReason = 'Rack '+r+' — matches '+size+' already stored ('+(maxCap ? item.bundles+'/'+maxCap+' used' : item.bundles+' coils')+ ')';
+        });
+      }
+    }
+
+    // Pass 2: fallback to first empty rack
+    if (!pick) {
+      for (var i2=0; i2<secs.length && !pick; i2++) {
+        SPOOL_SECTIONS[secs[i2]].forEach(function(r) {
+          if (!pick && !store['RACK-'+r]) { pick='RACK-'+r; pickReason='Next available empty rack'; }
+        });
+      }
+    }
+
+    if (!pick) { alert('All spool racks are full.'); return; }
+    suggestedLoc = pick;
+    document.getElementById('suggestion-loc').textContent = pick.replace('RACK-','RACK ');
+    document.getElementById('suggestion-reason').textContent = pickReason;
+
+  } else {
+    var pick2 = null, reason = '';
+    var stanchionOrder = orderedStanchions();
+
+    // Pass 1: prefer a side that already has the same size + length and has ft remaining
+    if (size && length > 0) {
+      for (var si=0; si<stanchionOrder.length && !pick2; si++) {
+        var s = stanchionOrder[si];
+        var remaining = stanchionFtRemaining(s);
+        if (length > remaining) continue;
+        var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+        for (var j=0; j<sides.length && !pick2; j++) {
+          var id = s + sides[j];
+          var existing = store[id];
+          if (!existing) continue; // empty — skip pass 1
+          if (scrapSlots[id] || holdSlots[id] || redTagSlots[id]) continue;
+          // Check if same size and length
+          if (existing.size === size && parseFloat(existing.length) === length) {
+            pick2 = id;
+            var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
+            reason = lbl + ' ' + sides[j] + '-side — matches ' + size + ' ' + formatLength(String(length)) + ' already stored';
+          }
+        }
+      }
+    }
+
+    // Pass 2: fallback to first empty slot that fits
+    if (!pick2) {
+      for (var si2=0; si2<stanchionOrder.length && !pick2; si2++) {
+        var s2 = stanchionOrder[si2];
+        var remaining2 = stanchionFtRemaining(s2);
+        if (length > 0 && length > remaining2) continue;
+        var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
+        for (var j2=0; j2<sides2.length && !pick2; j2++) {
+          var id2 = s2 + sides2[j2];
+          if (store[id2]===null && !scrapSlots[id2] && !holdSlots[id2] && !redTagSlots[id2]) {
+            pick2 = id2;
+            var lbl2 = (s2==='BSU') ? 'B.SU' : 'Stanchion '+s2;
+            reason = lbl2 + ' ' + sides2[j2] + '-side — next available';
+            if (length > 0) reason += ' (' + stanchionFtUsed(s2) + 'ft used, ' + (stanchionFtUsed(s2)+length) + 'ft after)';
+          }
+        }
+      }
+    }
+
+    if (!pick2) { alert('No stanchion slots found that fit ' + length + 'ft.'); return; }
+    suggestedLoc = pick2;
+    document.getElementById('suggestion-loc').textContent = (pick2.startsWith('BSU') ? 'B.SU ' : 'STANCHION ') + pick2;
+    document.getElementById('suggestion-reason').textContent = reason;
+  }
+
+  document.getElementById('suggestion-box').classList.add('active');
+  renderAll();
+  setTimeout(function(){ var e=document.getElementById('slot-'+suggestedLoc); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); }, 100);
+}
+
+// ─── LOG RUN ─────────────────────────────────────────────────────
+function logRun() {
+  var locVal = document.getElementById('inp-location').value;
+  var type = document.getElementById('inp-type').value;
+  var size = document.getElementById('inp-size').value;
+  var length = getLengthDisplay(); // display string e.g. "20'6\""
+  var lenNum = getLengthDecimal(); // decimal feet e.g. 20.5
+  var bundles = document.getElementById('inp-bundles').value;
+
+  // Route to Area 22 if chosen
+  if (locVal==='AREA22'||suggestedLoc==='AREA22') {
+    document.getElementById('a22-type').value=type;
+    document.getElementById('a22-size').value=size;
+    document.getElementById('a22-length').value=lenNum || '';
+    document.getElementById('a22-bundles').value=bundles;
+    document.getElementById('a22-heat').value=document.getElementById('inp-heat').value.trim();
+    document.getElementById('a22-ship').value=document.getElementById('inp-ship').value;
+    document.getElementById('a22-order').value=document.getElementById('inp-order').value.trim();
+    document.getElementById('a22-customer').value=document.getElementById('inp-customer').value.trim();
+    // Pass spool weight if applicable
+    if (type==='spool') {
+      document.getElementById('a22-spool-weight').value = document.getElementById('inp-spool-weight').value;
+      document.getElementById('a22-spool-weight-group').style.display = 'block';
+    }
+    document.getElementById('a22-modal-overlay').classList.add('active');
+    return;
+  }
+
+  if (!size || !bundles) { alert('Please fill in Bar Size and Bundles/Coils.'); return; }
+  if (type==='straight' && !lenNum) { alert('Please enter a length for straight bar.'); return; }
+
+  // For spool, get weight from the fixed dropdown (lbs → tons)
+  var weightTons;
+  if (type === 'spool') {
+    var spoolLbs = parseFloat(document.getElementById('inp-spool-weight').value) || 0;
+    var spoolCoils = parseInt(bundles) || 0;
+    weightTons = (spoolLbs / 2000) * spoolCoils;
+  } else {
+    weightTons = runTotalTons();
+  }
+
+  // Dropdown selection takes priority over suggested location
+  var loc = locVal || suggestedLoc || autoPickLoc(type, lenNum);
+  if (!loc) { alert('No available location found.'); return; }
+
+  // If spool rack, enforce max spools cap
+  if (type==='spool' && loc.startsWith('RACK-')) {
+    var rackKey = loc.replace('RACK-','');
+    var maxCap = RACK_MAX_SPOOLS[rackKey];
+    if (maxCap) {
+      var existingCoils = store[loc] ? (store[loc].bundles || 0) : 0;
+      var newCoils = parseInt(bundles) || 0;
+      if (existingCoils + newCoils > maxCap) {
+        alert('⛔ Rack ' + rackKey + ' has a max of ' + maxCap + ' spools.\n' + existingCoils + ' already logged — only ' + (maxCap - existingCoils) + ' remaining.\n\nPlease choose a different rack or reduce the quantity.');
+        return;
+      }
+    }
+  }
+
+  // If stanchion side, enforce per-stanchion ft rule
+  if (type==='straight' && !loc.startsWith('RACK-')) {
+    var stanKey = loc.slice(0, -1);
+    var stanNum = parseInt(stanKey) || stanKey;
+    var maxFt = maxFtForStanchion(stanNum);
+    var usedFt = stanchionFtUsed(stanNum);
+    var remainFt = maxFt - usedFt;
+    if (lenNum > remainFt) {
+      alert('⛔ This run is '+lenNum+'ft but Stanchion '+stanNum+' only has '+remainFt.toFixed(1)+'ft remaining ('+usedFt+'ft used of '+maxFt+'ft max).\n\nPlease choose a different stanchion or side.');
+      return;
+    }
+  }
+
+  var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
+  var item = {
+    heat: document.getElementById('inp-heat').value.trim(),
+    size: size, length: lenNum ? String(lenNum) : '', type: type,
+    bundles: parseInt(bundles),
+    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getWeightInTons(),
+    weightTons: weightTons,
+    spoolWeightLbs: spoolLbsStored,
+    ship: document.getElementById('inp-ship').value,
+    order: document.getElementById('inp-order').value.trim(),
+    customer: document.getElementById('inp-customer').value.trim(),
+    loc: loc, logged: new Date().toLocaleTimeString()
+  };
+
+  store[loc]=item; inventory.push(item);
+  ['inp-heat','inp-bundles','inp-order','inp-ship','inp-customer','inp-weight'].forEach(function(id){document.getElementById(id).value='';});
+  clearLengthInputs();
+  document.getElementById('inp-size').value='';
+  document.getElementById('inp-location').value='';
+  document.getElementById('inp-spool-weight').value='';
+  document.getElementById('suggestion-box').classList.remove('active');
+  document.getElementById('length-hint').style.display='none';
+  suggestedLoc=null;
+
+  renderAll(); renderInventory();
+  openSection('map');
+  setTimeout(function(){var e=document.getElementById('slot-'+loc);if(e)e.scrollIntoView({behavior:'smooth',block:'center'});},150);
+}
+
+function autoPickLoc(type, lenNum) {
+  if (type==='spool') {
+    var found=null;
+    Object.keys(SPOOL_SECTIONS).forEach(function(sec){SPOOL_SECTIONS[sec].forEach(function(r){if(!found&&!store['RACK-'+r])found='RACK-'+r;});});
+    return found;
+  }
+  var order = orderedStanchions();
+  for (var si=0; si<order.length; si++) {
+    var s = order[si];
+    if (lenNum>0 && lenNum > stanchionFtRemaining(s)) continue;
+    var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+    for (var i=0;i<sides.length;i++) { var id=s+sides[i]; if(store[id]===null && !scrapSlots[id] && !holdSlots[id] && !redTagSlots[id])return id; }
+  }
+  return null;
+}
+
+// ─── TYPE CHANGE ─────────────────────────────────────────────────
+function onTypeChange() {
+  var type = document.getElementById('inp-type').value;
+  var lg = document.getElementById('length-group');
+  var wg = document.getElementById('weight-group');
+  var swg = document.getElementById('spool-weight-group');
+
+  // Update bar size options based on type
+  var sizeEl = document.getElementById('inp-size');
+  var currentSize = sizeEl.value;
+  var straightSizes = ['#3','#4','#5','#6','#7','#8','#9','#10','#11'];
+  var spoolSizes    = ['#3','#4','#5','#6','#7','#8'];
+  var sizes = type === 'spool' ? spoolSizes : straightSizes;
+  sizeEl.innerHTML = '<option value=""># Size</option>';
+  sizes.forEach(function(s) {
+    var opt = document.createElement('option');
+    opt.value = s; opt.textContent = s;
+    if (s === currentSize) opt.selected = true;
+    sizeEl.appendChild(opt);
+  });
+  // If current selection no longer valid for spool, clear it
+  if (type === 'spool' && ['#9','#10','#11'].indexOf(currentSize) > -1) sizeEl.value = '';
+
+  if (type === 'spool') {
+    lg.style.opacity = '0.4'; lg.style.pointerEvents = 'none';
+    wg.style.display = 'none';
+    swg.style.display = 'block';
+    clearLengthInputs();
+    document.getElementById('inp-weight').value = '';
+    document.getElementById('length-hint').style.display = 'none';
+    document.getElementById('weight-hint').style.display = 'none';
+  } else {
+    lg.style.opacity = '1'; lg.style.pointerEvents = 'auto';
+    wg.style.display = 'block';
+    swg.style.display = 'none';
+    document.getElementById('inp-spool-weight').value = '';
+  }
+  populateLocationDropdown(type);
+}
+
+function populateLocationDropdown(type) {
+  var sel = document.getElementById('inp-location');
+  sel.innerHTML = '<option value="">— Auto-suggest —</option>';
+  var a22opt = document.createElement('option'); a22opt.value='AREA22'; a22opt.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(a22opt);
+  if (type==='straight') {
+    var order = orderedStanchions();
+    order.forEach(function(s) {
+      var used=stanchionFtUsed(s); var maxFt=maxFtForStanchion(s); var rem=maxFt-used;
+      var label = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
+      var sidesToShow = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+      sidesToShow.forEach(function(side){
+        var id=s+side;
+        if (store[id]===null) {
+          var opt=document.createElement('option'); opt.value=id;
+          var statusLabel = scrapSlots[id]?' [SCRAP]' : holdSlots[id]?' [HOLD]' : redTagSlots[id]?' [RED TAG]' : ' ('+rem.toFixed(0)+'ft avail)';
+          var statusPrefix = scrapSlots[id]?'⬜ ' : holdSlots[id]?'🔵 ' : redTagSlots[id]?'🔴 ' : '';
+          opt.textContent = statusPrefix + label + ' ' + side + '-side' + statusLabel;
+          if (scrapSlots[id]||holdSlots[id]||redTagSlots[id]) opt.style.opacity='0.7';
+          sel.appendChild(opt);
+        }
+      });
+    });
+  } else {
+    Object.keys(SPOOL_SECTIONS).forEach(function(sec){
+      SPOOL_SECTIONS[sec].forEach(function(rack){
+        var rid='RACK-'+rack;
+        if (!store[rid]){var opt=document.createElement('option');opt.value=rid;opt.textContent='Rack '+rack;sel.appendChild(opt);}
+      });
+    });
+  }
+}
+
+// ─── INVENTORY ───────────────────────────────────────────────────
+var currentFilter = 'all';
+var currentSearch = '';
+
+function onInvSearch() {
+  currentSearch = (document.getElementById('inv-search').value || '').toLowerCase().trim();
+  document.getElementById('inv-search-clear').style.display = currentSearch ? 'block' : 'none';
+  renderInventory();
+}
+
+function clearInvSearch() {
+  document.getElementById('inv-search').value = '';
+  currentSearch = '';
+  document.getElementById('inv-search-clear').style.display = 'none';
+  renderInventory();
+}
+
+function filterInv(f,btn) {
+  currentFilter=f;
+  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+  btn.classList.add('active');
+  renderInventory();
+}
+
+function renderInventory() {
+  var list = document.getElementById('inventory-list');
+  if (!inventory.length) {
+    list.innerHTML = '<div class="empty-inv">No inventory logged yet.<br>Use the Log Run tab<br>to add product.</div>';
+    updateBadges(); return;
+  }
+  var items = inventory.slice();
+
+  // Apply type/urgency filter
+  if (currentFilter==='straight') items=items.filter(function(i){return i.type==='straight'&&i.loc!=='AREA-22';});
+  else if(currentFilter==='spool') items=items.filter(function(i){return i.type==='spool'&&i.loc!=='AREA-22';});
+  else if(currentFilter==='area22') items=items.filter(function(i){return i.loc==='AREA-22';});
+  else if(currentFilter==='urgent') items=items.filter(function(i){var d=getDaysToShip(i.ship);return d!==null&&d<=3;});
+
+  // Apply text search — matches size, heat, order, customer, location
+  if (currentSearch) {
+    items = items.filter(function(i) {
+      var haystack = [
+        i.size, i.heat, i.order, i.customer, i.loc,
+        i.length, i.type, i.side
+      ].join(' ').toLowerCase();
+      return haystack.indexOf(currentSearch) > -1;
+    });
+  }
+
+  items.sort(function(a,b){if(!a.ship)return 1;if(!b.ship)return -1;return new Date(a.ship)-new Date(b.ship);});
+
+  if (!items.length) {
+    list.innerHTML = '<div class="empty-inv">No items match'+(currentSearch?' "'+currentSearch+'"':'')+' this filter.</div>';
+    updateBadges(); return;
+  }
+
+  list.innerHTML = items.map(function(item) {
+    var days = getDaysToShip(item.ship);
+    var urgent = days !== null && days <= 2;
+    var isSpool = item.type === 'spool';
+    var isArea22 = item.loc === 'AREA-22';
+    var dispLoc = isArea22 ? ('AREA 22 — '+(item.side||'A')+'-Side '+(item.id||'')) : item.loc.replace('RACK-','RACK ');
+    var clickId = isArea22 ? (item.id||'') : item.loc;
+
+    // Product name line — size + length + type
+    var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' bundles');
+    // Optional info line
+    var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
+
+    return '<div class="inv-item'+(urgent?' urgent':isArea22?' area22-item':isSpool?' spool-item':'')+'" onclick="goToLoc(\''+clickId+'\','+isArea22+')">'+
+      // Product on top — bold, prominent
+      '<div class="inv-product">'+productLine+'</div>'+
+      // Location below product
+      '<div class="inv-location-row"><span class="inv-loc-label">📍</span><span class="inv-loc">'+dispLoc+'</span></div>'+
+      // Optional info line
+      (infoLine ? '<div class="inv-info-line">'+infoLine+'</div>' : '')+
+      // Tags row
+      '<div class="inv-meta">'+
+        '<span class="tag tag-size">'+item.size+'</span>'+
+        '<span class="tag '+(isSpool?'tag-spool':'tag-type')+'">'+(isSpool?'Spooled':'Straight')+'</span>'+
+        (isArea22?'<span class="tag tag-area22">Area 22</span>':'')+
+        (item.ship?'<span class="tag '+(urgent?'tag-urgent':'tag-ship')+'">'+(urgent?'🔴 ':'')+item.ship+' ('+days+'d)</span>':'')+
+      '</div>'+
+    '</div>';
+  }).join('');
+  updateBadges();
+}
+
+function goToLoc(locOrId,isArea22) {
+  openSection('map');
+  // Switch to correct map section tab
+  if (!isArea22) {
+    if (locOrId.startsWith('RACK-')) {
+      setMapSection('spool', document.getElementById('mst-spool'));
+    } else if (locOrId.startsWith('BSU') || (!isNaN(parseInt(locOrId)) && parseInt(locOrId) <= 3)) {
+      setMapSection('s1bsu', document.getElementById('mst-s1bsu'));
+    } else if (!isNaN(parseInt(locOrId)) && parseInt(locOrId) <= 21) {
+      setMapSection('s4_21', document.getElementById('mst-s4_21'));
+    } else if (!isNaN(parseInt(locOrId)) && parseInt(locOrId) === 22) {
+      setMapSection('s22', document.getElementById('mst-s22'));
+    } else if (locOrId === 'AREA-22' || locOrId.startsWith('S0') || locOrId.startsWith('S1')) {
+      setMapSection('s22', document.getElementById('mst-s22'));
+    } else {
+      setMapSection('s23_38', document.getElementById('mst-s23_38'));
+    }
+  } else {
+    setMapSection('s22', document.getElementById('mst-s22'));
+  }
+  setTimeout(function(){
+    if(isArea22){var e=document.getElementById('area22-block');if(e)e.scrollIntoView({behavior:'smooth',block:'center'});showA22StackModal(locOrId);}
+    else{var e2=document.getElementById('slot-'+locOrId);if(e2)e2.scrollIntoView({behavior:'smooth',block:'center'});if(store[locOrId]){modalLoc=locOrId;showModal(locOrId);}}
+  },200);
+}
+
+// ─── STATS & BADGES ───────────────────────────────────────────────
+function updateStats() {
+  var keys=Object.keys(store);
+  var total=keys.length;
+  var occ=keys.filter(function(k){return store[k]!==null;}).length;
+  document.getElementById('stat-occupied').textContent=occ+area22Stacks.length;
+  document.getElementById('stat-empty').textContent=total-occ;
+  document.getElementById('stat-bundles').textContent=inventory.reduce(function(s,i){return s+i.bundles;},0);
+  document.getElementById('stat-pct').textContent=Math.round(occ/total*100)+'%';
+}
+
+function updateBadges() {
+  // Map badge: occupied slots count
+  var occ = Object.keys(store).filter(function(k){return store[k]!==null;}).length + area22Stacks.length;
+  var mapBadge = document.getElementById('badge-map');
+  if (mapBadge) mapBadge.textContent = occ > 0 ? occ + ' occupied' : '';
+
+  // Inventory badge: total items
+  var invBadge = document.getElementById('badge-inventory');
+  if (invBadge) invBadge.textContent = inventory.length > 0 ? inventory.length + ' items' : '';
+}
+
+// ─── SLOT STATUS POPUP ───────────────────────────────────────────
+var ctxTargetSlot = null;
+
+function openSlotCtxMenu(id, x, y) {
+  if (id.startsWith('RACK-')) return;
+  ctxTargetSlot = id;
+  document.getElementById('ctx-slot-label').textContent = 'SLOT ' + id;
+
+  // Show C-side option for A or B slots on stanchions (not racks, not area22)
+  var csideItem = document.getElementById('ctx-cside-item');
+  var csideLabel = document.getElementById('ctx-cside-label');
+  var side = id.slice(-1); // last char
+  var stanKey = id.slice(0, -1); // everything before the side letter
+  var isStanchionSlot = (side === 'A' || side === 'B') && !id.startsWith('RACK-');
+  if (isStanchionSlot) {
+    csideItem.style.display = 'flex';
+    if (cSideEnabled[stanKey]) {
+      csideLabel.textContent = 'Remove C-Side';
+      csideItem.querySelector('.ctx-dot').style.background = '#3a3a3a';
+      csideItem.querySelector('.ctx-dot').style.borderColor = '#888';
+    } else {
+      csideLabel.textContent = 'Add C-Side';
+      csideItem.querySelector('.ctx-dot').style.background = 'var(--empty)';
+      csideItem.querySelector('.ctx-dot').style.borderColor = 'var(--accent)';
+      csideItem.querySelector('.ctx-dot').style.borderStyle = 'dashed';
+    }
+  } else {
+    csideItem.style.display = 'none';
+  }
+
+  var menu = document.getElementById('slot-ctx-menu');
+  var mw = 165, mh = 210;
+  var px = Math.min(x, window.innerWidth - mw - 8);
+  var py = Math.min(y, window.innerHeight - mh - 8);
+  menu.style.left = px + 'px';
+  menu.style.top  = py + 'px';
+  menu.classList.add('visible');
+}
+
+function closeSlotCtxMenu() {
+  document.getElementById('slot-ctx-menu').classList.remove('visible');
+  ctxTargetSlot = null;
+}
+
+function applySlotStatus(status) {
+  var id = ctxTargetSlot;
+  if (!id) return;
+
+  if (status === 'cside') {
+    var side = id.slice(-1);
+    var stanKey = id.slice(0, -1);
+    closeSlotCtxMenu();
+    if (cSideEnabled[stanKey]) {
+      disableCside(stanKey);
+    } else {
+      enableCside(stanKey);
+    }
+    return;
+  }
+
+  // Clear all statuses first
+  delete scrapSlots[id];
+  delete holdSlots[id];
+  delete redTagSlots[id];
+
+  var msg = '';
+  if (status === 'scrap')  { scrapSlots[id]  = true; msg = 'Slot ' + id + ' → SCRAP'; }
+  if (status === 'hold')   { holdSlots[id]   = true; msg = 'Slot ' + id + ' → HOLD'; }
+  if (status === 'redtag') { redTagSlots[id] = true; msg = 'Slot ' + id + ' → RED TAG'; }
+  if (status === 'clear')  { msg = 'Slot ' + id + ' — status cleared'; }
+
+  closeSlotCtxMenu();
+  showScrapToast(msg);
+  renderAll();
+}
+
+// Keep old toggleScrapSlot for any remaining references
+function toggleScrapSlot(id) {
+  openSlotCtxMenu(id, window.innerWidth/2, window.innerHeight/2);
+}
+
+// Close popup when clicking elsewhere
+document.addEventListener('click', function(e) {
+  var menu = document.getElementById('slot-ctx-menu');
+  if (menu && !menu.contains(e.target)) closeSlotCtxMenu();
+});
+document.addEventListener('touchstart', function(e) {
+  var menu = document.getElementById('slot-ctx-menu');
+  if (menu && menu.classList.contains('visible') && !menu.contains(e.target)) closeSlotCtxMenu();
+}, {passive: true});
+
+// ─── SCRAP SLOT TOGGLE (legacy) ──────────────────────────────────
+
+function showScrapToast(msg) {
+  var tt = document.getElementById('scrap-toast');
+  tt.textContent = msg;
+  tt.style.display = 'block';
+  clearTimeout(window._scrapTimer);
+  window._scrapTimer = setTimeout(function() { tt.style.display = 'none'; }, 2400);
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────
+function getDaysToShip(ship){if(!ship)return null;return Math.ceil((new Date(ship)-new Date())/86400000);}
+function offsetDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.toISOString().split('T')[0];}
+function el(tag,cls){var e=document.createElement(tag);if(cls)e.className=cls;return e;}
+
+// ─── INIT ────────────────────────────────────────────────────────
+document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+buildStore();
+seedWarehouse();
+populateLocationDropdown('straight');
+renderAll();
+renderInventory();
+
+function seedWarehouse() {
+  function straight(loc, size, length, bundles) {
+    var item = { heat:'', size:size, length:String(length), type:'straight',
+      bundles:bundles, weightPerBundleTons:2.1, weightTons:bundles*2.1,
+      ship:'', order:'', customer:'', loc:loc, logged:'sim' };
+    store[loc] = item; inventory.push(item);
+  }
+  function spool(loc, size, coils, spoolLbs) {
+    var item = { heat:'', size:size, length:'Coil', type:'spool',
+      bundles:coils, spoolWeightLbs:spoolLbs, weightPerBundleTons:spoolLbs/2000,
+      weightTons:(spoolLbs/2000)*coils, ship:'', order:'', customer:'', loc:loc, logged:'sim' };
+    store[loc] = item; inventory.push(item);
+  }
+
+  // ── STANCHIONS 1–3 & B.SU (max 70ft) ──
+  straight('1A','#8','60',14); straight('1B','#8','10',4);
+  straight('2A','#5','40',20);
+  // Stanchion 3 — empty
+  straight('BSUA','#4','40',18);
+
+  // ── STANCHIONS 4–21 (max 80ft) ──
+  straight('4A','#5','40',18); straight('4B','#5','40',16);
+  straight('5A','#6','60',12);
+  straight('6A','#8','40',10); straight('6B','#8','40',9);
+  // Stanchion 7 — empty
+  straight('8A','#4','40',18); straight('8B','#4','40',17);
+  straight('9A','#9','60',8);
+  straight('10A','#5','60',14); straight('10B','#5','20',6);
+  straight('11A','#6','40',16); straight('11B','#6','40',14);
+  straight('12A','#7','60',11);
+  straight('13A','#8','60',9);
+  straight('14A','#5','40',18); straight('14B','#5','40',17);
+  straight('15A','#3','40',30); straight('15B','#3','40',28);
+  straight('16A','#10','60',7);
+  straight('17A','#4','40',22); straight('17B','#4','40',20);
+  straight('18A','#6','60',13); straight('18B','#6','20',5);
+  // Stanchion 19 — empty
+  straight('20A','#5','60',15); straight('20B','#5','20',6);
+  straight('21A','#7','60',9);
+
+  // ── STANCHION 22 (Area 22) ──
+  var a22seed = [
+    {side:'A',type:'straight',size:'#5',length:'40',bundles:12},
+    {side:'A',type:'straight',size:'#6',length:'60',bundles:8},
+    {side:'A',type:'straight',size:'#4',length:'20',bundles:20},
+    {side:'B',type:'spool',size:'#4',length:'Coil',bundles:6,spoolWeightLbs:6800},
+    {side:'B',type:'straight',size:'#3',length:'20',bundles:25},
+    {side:'B',type:'straight',size:'#8',length:'40',bundles:10},
+  ];
+  a22seed.forEach(function(s) {
+    var stack = {
+      id:'S'+String(area22NextId++).padStart(2,'0'),
+      side:s.side, heat:'', size:s.size, length:s.length||'', type:s.type,
+      bundles:s.bundles, spoolWeightLbs:s.spoolWeightLbs||0,
+      weightPerBundleTons:(s.spoolWeightLbs||0)/2000,
+      weightTons:((s.spoolWeightLbs||0)/2000)*s.bundles,
+      ship:'', order:'', customer:'', loc:'AREA-22', logged:'sim'
+    };
+    area22Stacks.push(stack); inventory.push(stack);
+  });
+
+  // ── STANCHIONS 23–38 ──
+  straight('23A','#8','60',11);
+  straight('24A','#5','40',19); straight('24B','#5','40',17);
+  straight('25A','#6','60',13);
+  straight('26A','#7','40',10); straight('26B','#7','40',9);
+  // Stanchion 27 — empty
+  straight('28A','#9','60',7);
+  straight('29A','#5','60',16); straight('29B','#5','20',6);
+  straight('30A','#8','40',12); straight('30B','#8','40',11);
+  straight('31A','#6','60',14);
+  straight('32A','#7','60',9); straight('32B','#7','20',3);
+  straight('33A','#3','40',32); straight('33B','#3','40',30);
+  // Stanchion 34 — empty
+  straight('35A','#8','60',11); straight('35B','#8','20',4);
+  straight('36A','#4','40',20); straight('36B','#4','40',18);
+  straight('37A','#10','60',6);
+  straight('38A','#6','40',15); straight('38B','#6','40',13);
+
+  // ── SPOOL RACKS — nearly full ──
+  spool('RACK-1.1','#4',18,6800); spool('RACK-1.2','#4',20,6800);
+  spool('RACK-1.3','#5',15,9600); spool('RACK-1.4','#3',28,4000);
+  spool('RACK-1.5','#5',22,9600); spool('RACK-1.6','#4',19,6800);
+  spool('RACK-1.7','#3',30,4000); spool('RACK-1.8','#5',16,9600);
+  // 1.9 empty
+  spool('RACK-2.1','#4',25,6800); spool('RACK-2.2','#5',18,9600);
+  spool('RACK-2...','#3',1,4000);
+  spool('RACK-3.1','#3',38,4000); spool('RACK-3.2','#3',35,4000);
+  spool('RACK-3.3','#4',30,6800); spool('RACK-3.4','#4',28,6800);
+  spool('RACK-3.5','#5',22,9600); spool('RACK-3.6','#5',20,9600);
+  spool('RACK-4.1','#5',40,6800); spool('RACK-4.2','#4',38,6800);
+  spool('RACK-4.3','#5',38,6800); spool('RACK-4.4','#6',35,9600);
+  spool('RACK-4.5','#4',40,6800);
+  // 4.6 empty
+  spool('RACK-5.1','#6',40,9600); spool('RACK-5.2','#6',38,9600);
+  spool('RACK-5.3','#5',42,6800); spool('RACK-5.4','#4',40,6800);
+  // 5.5, 5.6 empty
+  spool('RACK-6.1','#4',40,6800); spool('RACK-6.2','#4',38,6800);
+  spool('RACK-6.3','#5',40,6800); spool('RACK-6.4','#5',38,6800);
+  spool('RACK-6.5','#3',36,4000); spool('RACK-6.6','#3',34,4000);
+  spool('RACK-6.7','#4',42,6800); spool('RACK-6.8','#5',36,9600);
+  spool('RACK-6.9','#4',35,6800);
+  // 6.10 empty
+  spool('RACK-7.1','#5',52,6800); spool('RACK-7.2','#5',50,6800);
+  spool('RACK-7.3','#4',48,6800); spool('RACK-7.4','#4',46,6800);
+  spool('RACK-7.5','#6',50,9600); spool('RACK-7.6','#6',48,9600);
+  spool('RACK-7.7','#5',54,6800); spool('RACK-7.8','#4',50,6800);
+  // 7.9, 7.10 empty
+
+  // A few status slots for realism
+  scrapSlots['2B'] = true;
+  holdSlots['13B'] = true;
+  redTagSlots['28B'] = true;
+}
+</script>
+
+</body>
+</html>
