@@ -802,15 +802,14 @@
           </div>
         </div>
 
-        <!-- ── FULL YARD IMPORT ── -->
-        <div style="margin-top:24px;border-top:2px solid var(--hot);padding-top:18px">
+        <!-- ── FULL INVENTORY IMPORT ── -->
+        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:18px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-            <span style="font-size:16px">⚠</span>
-            <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--hot)">FULL YARD IMPORT</span>
-            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--hot);background:#2a0a0a;border:1px solid var(--hot);padding:2px 6px;border-radius:3px;letter-spacing:1px">DESTRUCTIVE</span>
+            <span style="font-size:16px">🔄</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--accent)">FULL INVENTORY IMPORT</span>
           </div>
           <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
-            Upload an EBS <strong style="color:var(--text)">On-Hand Quantity</strong> report CSV to completely wipe and rebuild the entire floor map from scratch. All current inventory data will be erased before importing.<br><br>
+            Upload an EBS <strong style="color:var(--text)">On-Hand Quantity</strong> report CSV to rebuild the entire floor map from your latest EBS snapshot. This is the fastest way to sync RebarTrack with current inventory.<br><br>
             <strong style="color:var(--text)">Required columns:</strong> Locator, Description, PriQty &nbsp;|&nbsp; <strong style="color:var(--text)">Optional:</strong> LPN
           </div>
 
@@ -828,7 +827,7 @@
             </div>
             <div id="fyi-import-status" style="display:none;margin-top:10px"></div>
             <div style="display:flex;gap:10px;margin-top:14px">
-              <button class="btn" style="margin-top:0;background:var(--hot);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;border:none;border-radius:6px;padding:14px;cursor:pointer;flex:1" onclick="runFullYardImport()">⚠ WIPE &amp; REBUILD FROM EBS</button>
+              <button class="btn btn-primary" style="margin-top:0" onclick="runFullYardImport()">IMPORT FULL INVENTORY</button>
               <button class="btn-close-modal" onclick="clearFYI()">Clear</button>
             </div>
           </div>
@@ -3433,7 +3432,7 @@ function runFullYardImport() {
     return;
   }
 
-  if (!confirm('⚠ FULL YARD IMPORT\n\nThis will ERASE all current warehouse data and rebuild entirely from the EBS On-Hand CSV (' + fyiRows.length + ' rows).\n\nThis cannot be undone. Continue?')) return;
+  if (!confirm('Import Full Inventory from EBS?\n\nThis will replace the current floor map with ' + fyiRows.length + ' rows from the EBS On-Hand report.\n\nContinue?')) return;
 
   // ── WIPE ALL INVENTORY DATA ──
   Object.keys(store).forEach(function(k) {
