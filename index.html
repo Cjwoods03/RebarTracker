@@ -3198,12 +3198,14 @@ function runCSVImport() {
         if (!loc) { skipped++; errors.push('Row '+(idx+1)+': no space for '+size); return; }
       }
 
-      // Validate loc exists in store
+      // Validate loc exists in store — enable C-side inline if needed
       if (!store.hasOwnProperty(loc)) {
-        // C-side may need enabling
         if (loc.endsWith('C')) {
           var stanKey = loc.slice(0,-1);
-          enableCside(stanKey);
+          if (!cSideEnabled[stanKey]) {
+            cSideEnabled[stanKey] = true;
+            store[stanKey+'C'] = null;
+          }
         } else {
           skipped++; errors.push('Row '+(idx+1)+': unknown location "'+ebsLoc+'" → "'+loc+'"'); return;
         }
