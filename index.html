@@ -802,6 +802,38 @@
           </div>
         </div>
 
+        <!-- ── FULL YARD IMPORT ── -->
+        <div style="margin-top:24px;border-top:2px solid var(--hot);padding-top:18px">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+            <span style="font-size:16px">⚠</span>
+            <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--hot)">FULL YARD IMPORT</span>
+            <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--hot);background:#2a0a0a;border:1px solid var(--hot);padding:2px 6px;border-radius:3px;letter-spacing:1px">DESTRUCTIVE</span>
+          </div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
+            Upload an EBS <strong style="color:var(--text)">On-Hand Quantity</strong> report CSV to completely wipe and rebuild the entire floor map from scratch. All current inventory data will be erased before importing.<br><br>
+            <strong style="color:var(--text)">Required columns:</strong> Locator, Description, PriQty &nbsp;|&nbsp; <strong style="color:var(--text)">Optional:</strong> LPN
+          </div>
+
+          <label class="csv-upload-label" id="fyi-upload-label">
+            <input type="file" id="fyi-file-input" accept=".csv,.txt" style="display:none" onchange="onFYIFileSelected(this)">
+            <span class="csv-upload-icon">📂</span>
+            <span id="fyi-file-name">Choose EBS On-Hand CSV…</span>
+          </label>
+
+          <div id="fyi-preview-wrap" style="display:none">
+            <div id="fyi-col-status" style="margin-bottom:10px"></div>
+            <div style="margin-top:10px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px;overflow:hidden">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);padding:8px 12px;border-bottom:1px solid var(--border);letter-spacing:1px">PREVIEW (first 5 rows)</div>
+              <div id="fyi-preview-table" style="overflow-x:auto;padding:8px 12px"></div>
+            </div>
+            <div id="fyi-import-status" style="display:none;margin-top:10px"></div>
+            <div style="display:flex;gap:10px;margin-top:14px">
+              <button class="btn" style="margin-top:0;background:var(--hot);color:#fff;font-family:'Bebas Neue',sans-serif;font-size:20px;letter-spacing:2px;border:none;border-radius:6px;padding:14px;cursor:pointer;flex:1" onclick="runFullYardImport()">⚠ WIPE &amp; REBUILD FROM EBS</button>
+              <button class="btn-close-modal" onclick="clearFYI()">Clear</button>
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </div>
@@ -3276,6 +3308,260 @@ function showCSVError(msg) {
   statusEl.textContent = '⛔ ' + msg;
   statusEl.style.display = 'block';
   document.getElementById('csv-preview-wrap').style.display = 'block';
+}
+
+// ─── FULL YARD IMPORT ─────────────────────────────────────────────
+var fyiRows = [], fyiHeaders = [];
+
+function onFYIFileSelected(input) {
+  var file = input.files[0];
+  if (!file) return;
+  document.getElementById('fyi-file-name').textContent = file.name;
+  var reader = new FileReader();
+  reader.onload = function(e) { parseFYI(e.target.result); };
+  reader.readAsText(file);
+}
+
+function parseFYI(text) {
+  var lines = text.trim().split(/\r?\n/);
+  if (lines.length < 2) { showFYIError('File must have at least a header row and one data row.'); return; }
+
+  var delim = lines[0].indexOf('\t') > -1 ? '\t' : ',';
+
+  function splitRow(row) {
+    var result = [], cur = '', inQ = false;
+    for (var i = 0; i < row.length; i++) {
+      var c = row[i];
+      if (c === '"') { inQ = !inQ; }
+      else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
+      else { cur += c; }
+    }
+    result.push(cur.trim());
+    return result;
+  }
+
+  var HEADER_KEYWORDS = ['locator','lpn','description','priqty','qty','quantity','desc'];
+  var headerLineIdx = -1;
+  var scanLimit = Math.min(20, lines.length);
+  for (var i = 0; i < scanLimit; i++) {
+    var cols = splitRow(lines[i]);
+    if (cols.filter(function(c){ return c.trim() !== ''; }).length < 2) continue;
+    var rowText = lines[i].toLowerCase();
+    if (HEADER_KEYWORDS.some(function(kw){ return rowText.includes(kw); })) { headerLineIdx = i; break; }
+  }
+  if (headerLineIdx === -1) {
+    for (var j = 0; j < scanLimit; j++) {
+      if (splitRow(lines[j]).filter(function(c){ return c.trim() !== ''; }).length >= 3) { headerLineIdx = j; break; }
+    }
+  }
+  if (headerLineIdx === -1) { showFYIError('Could not find a header row. Make sure the CSV has column names.'); return; }
+
+  fyiHeaders = splitRow(lines[headerLineIdx]).map(function(h){ return h.replace(/['"]/g,'').trim(); });
+
+  var SKIP_PATTERNS = [/^total/i, /^sub.?total/i, /^grand.?total/i, /^report/i,
+    /^page\s*\d/i, /^date:/i, /^printed/i, /^run\s*by/i, /^---/, /^\*\*\*/];
+
+  fyiRows = [];
+  for (var k = headerLineIdx + 1; k < lines.length; k++) {
+    var line = lines[k];
+    if (!line || line.trim() === '') continue;
+    if (SKIP_PATTERNS.some(function(p){ return p.test(line.trim()); })) continue;
+    var colsK = splitRow(line);
+    if (colsK.filter(function(c){ return c.trim() !== ''; }).length < 2) continue;
+    if (/total/i.test(colsK[0])) continue;
+    var obj = {};
+    fyiHeaders.forEach(function(h, idx) { obj[h] = (colsK[idx] || '').trim(); });
+    fyiRows.push(obj);
+  }
+
+  if (fyiRows.length === 0) { showFYIError('No data rows found after cleaning. Check that the file has data below the header row.'); return; }
+
+  // Auto-detect columns and show status
+  var colMap = autoDetectFYICols();
+  var statusEl = document.getElementById('fyi-col-status');
+  var detected = [];
+  var missing = [];
+  [['locator','Locator'],['description','Description'],['weight','PriQty']].forEach(function(pair){
+    if (colMap[pair[0]]) detected.push(pair[1] + ' → "' + colMap[pair[0]] + '"');
+    else missing.push(pair[1]);
+  });
+  if (colMap.lpn) detected.push('LPN → "' + colMap.lpn + '"');
+
+  if (missing.length > 0) {
+    statusEl.className = 'csv-import-err';
+    statusEl.innerHTML = '⛔ Could not detect required columns: ' + missing.join(', ') +
+      '<br>Found headers: ' + fyiHeaders.join(', ');
+  } else {
+    statusEl.className = 'csv-import-ok';
+    statusEl.innerHTML = '✓ ' + fyiRows.length + ' rows loaded &nbsp;|&nbsp; ' + detected.join(' &nbsp;|&nbsp; ');
+  }
+  statusEl.style.display = 'block';
+
+  // Preview table
+  var preview = fyiRows.slice(0, 5);
+  var html = '<table class="csv-preview-table"><thead><tr>' +
+    fyiHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') +
+    '</tr></thead><tbody>' +
+    preview.map(function(row){
+      return '<tr>' + fyiHeaders.map(function(h){ return '<td>' + (row[h] || '') + '</td>'; }).join('') + '</tr>';
+    }).join('') + '</tbody></table>';
+  document.getElementById('fyi-preview-table').innerHTML = html;
+  document.getElementById('fyi-preview-wrap').style.display = 'block';
+  document.getElementById('fyi-import-status').style.display = 'none';
+}
+
+function autoDetectFYICols() {
+  var map = {};
+  fyiHeaders.forEach(function(h) {
+    var hl = h.toLowerCase().trim();
+    if (!map.locator && (hl === 'locator' || hl === 'locator code' || hl.includes('locator'))) map.locator = h;
+    if (!map.lpn && (hl === 'lpn' || hl.startsWith('lpn'))) map.lpn = h;
+    if (!map.description && (hl === 'description' || hl.includes('desc'))) map.description = h;
+    if (!map.weight && (hl === 'priqty' || hl.includes('priqty') || hl === 'qty' || hl.includes('quantity') || hl.includes('weight') || hl === 'wt')) map.weight = h;
+  });
+  return map;
+}
+
+function runFullYardImport() {
+  if (fyiRows.length === 0) { showFYIError('No data loaded. Choose a file first.'); return; }
+
+  var colMap = autoDetectFYICols();
+  if (!colMap.locator || !colMap.description || !colMap.weight) {
+    showFYIError('Cannot detect required columns (Locator, Description, PriQty). Check your CSV headers.');
+    return;
+  }
+
+  if (!confirm('⚠ FULL YARD IMPORT\n\nThis will ERASE all current warehouse data and rebuild entirely from the EBS On-Hand CSV (' + fyiRows.length + ' rows).\n\nThis cannot be undone. Continue?')) return;
+
+  // ── WIPE ALL INVENTORY DATA ──
+  Object.keys(store).forEach(function(k) {
+    if (k.endsWith('C')) delete store[k]; // remove C-side slots
+    else store[k] = null;                  // clear regular slots
+  });
+  storeExtra    = {};
+  inventory     = [];
+  area22Stacks  = [];
+  area22NextId  = 1;
+  scrapSlots    = {};
+  holdSlots     = {};
+  redTagSlots   = {};
+  reservedSlots = {};
+  Object.keys(cSideEnabled).forEach(function(k) { delete cSideEnabled[k]; });
+
+  var imported = 0, skipped = 0, errors = [];
+  var locationGroups = {};
+
+  fyiRows.forEach(function(row, idx) {
+    try {
+      var ebsLoc = (row[colMap.locator]     || '').trim();
+      var desc   = (row[colMap.description] || '').trim();
+      var wtStr  = (row[colMap.weight]      || '').trim();
+      var lpn    = colMap.lpn ? (row[colMap.lpn] || '').trim() : '';
+
+      if (!ebsLoc) { skipped++; errors.push('Row ' + (idx + 1) + ': empty locator'); return; }
+
+      var loc = parseEBSLocation(ebsLoc);
+      if (!loc) { skipped++; errors.push('Row ' + (idx + 1) + ': cannot parse locator "' + ebsLoc + '"'); return; }
+
+      // Parse description: size, grade, spec, length
+      var size = '', grade = '', spec = '', lenNum = 0;
+      if (desc) {
+        var sizeM = desc.match(/#(\d{1,2})\b/);
+        if (sizeM) size = '#' + sizeM[1];
+        var specM = desc.match(/A(615|706)/i);
+        if (specM) spec = 'A' + specM[1];
+        var gradeM = desc.match(/Gr(?:ade)?\s*(40|60|80)/i);
+        if (gradeM) grade = gradeM[1];
+        var lenM = desc.match(/(\d+)'(\d*)/);
+        if (lenM) {
+          lenNum = (parseFloat(lenM[1]) || 0) + ((parseFloat(lenM[2]) || 0) / 12);
+        }
+      }
+
+      // Parse weight — PriQty is lbs per LPN
+      var wtNum = parseFloat(wtStr.replace(/[^0-9.]/g, '')) || 0;
+      var wtPerLpn = wtNum > 100 ? wtNum / 2000 : wtNum; // lbs → tons
+
+      var type = /^SB\./i.test(ebsLoc) ? 'spool' : 'straight';
+
+      // Ensure slot exists — enable C-side if needed
+      if (!store.hasOwnProperty(loc)) {
+        if (loc.endsWith('C')) {
+          var stanKey = loc.slice(0, -1);
+          cSideEnabled[stanKey] = true;
+          store[loc] = null;
+        } else {
+          skipped++; errors.push('Row ' + (idx + 1) + ': unknown slot "' + loc + '"');
+          return;
+        }
+      }
+
+      // Accumulate by location — each row is one LPN = one bundle
+      if (!locationGroups[loc]) {
+        locationGroups[loc] = { size: size, grade: grade, spec: spec,
+          length: lenNum ? String(lenNum) : '', type: type, bundles: 0, wtTons: 0, lpns: [] };
+      }
+      var grp = locationGroups[loc];
+      grp.bundles += 1;
+      grp.wtTons  += wtPerLpn;
+      if (lpn) grp.lpns.push(lpn);
+      if (!grp.size   && size)  grp.size   = size;
+      if (!grp.grade  && grade) grp.grade  = grade;
+      if (!grp.spec   && spec)  grp.spec   = spec;
+      if (!grp.length && lenNum) grp.length = String(lenNum);
+
+    } catch(e) {
+      errors.push('Row ' + (idx + 1) + ': ' + e.message);
+    }
+  });
+
+  // Write to store
+  Object.keys(locationGroups).forEach(function(loc) {
+    var grp = locationGroups[loc];
+    var item = {
+      size: grp.size || '#?', length: grp.length, type: grp.type,
+      grade: grp.grade || '', spec: grp.spec || '',
+      bundles: grp.bundles,
+      weightPerBundleTons: grp.bundles > 0 ? grp.wtTons / grp.bundles : 0,
+      weightTons: grp.wtTons, spoolWeightLbs: 0,
+      heat: '', ship: '', order: '', customer: '',
+      lpns: grp.lpns.join(', '), loc: loc, logged: 'fyi'
+    };
+    store[loc] = item;
+    inventory.push(item);
+    imported++;
+  });
+
+  var totalBundles = Object.values(locationGroups).reduce(function(s, g) { return s + g.bundles; }, 0);
+  var msg = '✓ Full Yard Import complete — ' + imported + ' location' + (imported !== 1 ? 's' : '') +
+    ' built (' + totalBundles + ' bundles/LPNs)';
+  if (skipped) msg += ', ' + skipped + ' rows skipped';
+  if (errors.length) msg += '\n⚠ ' + errors.slice(0, 5).join('\n');
+
+  var statusEl = document.getElementById('fyi-import-status');
+  statusEl.className = (errors.length && imported === 0) ? 'csv-import-err' : 'csv-import-ok';
+  statusEl.innerHTML = msg.replace(/\n/g, '<br>');
+  statusEl.style.display = 'block';
+
+  saveData();
+  renderAll();
+  renderInventory();
+  updateBadges();
+}
+
+function clearFYI() {
+  fyiRows = []; fyiHeaders = [];
+  document.getElementById('fyi-file-input').value = '';
+  document.getElementById('fyi-file-name').textContent = 'Choose EBS On-Hand CSV…';
+  document.getElementById('fyi-preview-wrap').style.display = 'none';
+}
+
+function showFYIError(msg) {
+  document.getElementById('fyi-preview-wrap').style.display = 'block';
+  var statusEl = document.getElementById('fyi-import-status');
+  statusEl.className = 'csv-import-err';
+  statusEl.textContent = '⛔ ' + msg;
+  statusEl.style.display = 'block';
 }
 // ─── OPTIMIZER FILTERS ───────────────────────────────────────────
 var allOptMoves = [];
