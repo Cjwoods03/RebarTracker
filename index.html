@@ -714,13 +714,14 @@
           </label>
         </div>
         <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;padding:10px 12px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px">
-          <input type="checkbox" id="inp-secondary" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer">
+          <input type="checkbox" id="inp-secondary" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer" onchange="populateLocationDropdown(document.getElementById('inp-type').value)">
           <label for="inp-secondary" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);cursor:pointer;line-height:1.4">
             <strong style="color:var(--accent)">Log as secondary stack</strong><br>
             <span style="font-size:10px;color:var(--text-dim)">Adds on top of existing product in the chosen stanchion side</span>
           </label>
         </div>
         <button class="btn btn-suggest" onclick="suggestLocation()">⚡ Suggest Location</button>
+        <button class="btn btn-suggest" style="color:#4ab8ff;border-color:#4ab8ff" onclick="openSplitFromForm()">⇌ Split Sides</button>
         <button class="btn btn-primary" onclick="logRun()">LOG RUN TO WAREHOUSE</button>
       </div>
     </div>
@@ -4313,16 +4314,50 @@ function ofSetMode(mode) {
   document.getElementById('of-tab-sp').classList.toggle('active', mode === 'split');
   document.getElementById('of-ov-panel').style.display = mode === 'overflow' ? 'block' : 'none';
   document.getElementById('of-sp-panel').style.display = mode === 'split' ? 'block' : 'none';
+  // Counter is only meaningful in overflow mode
+  document.getElementById('of-counter').style.display = mode === 'overflow' ? 'block' : 'none';
   if (mode === 'overflow') {
     ofRefreshCounter();
     ofRefreshPlacements();
     ofRefreshOverflowDropdown();
   } else {
-    // Pre-fill split bundle input with total
+    // Pre-fill split bundle input with total bundles from form or overflow carry-over
     var inp = document.getElementById('of-sp-bdl');
     if (!inp.value) inp.value = _of.totalBundles || '';
     ofSpBdlChange();
   }
+}
+
+// Opens the split modal directly from the log run form without requiring overflow
+function openSplitFromForm() {
+  var type = document.getElementById('inp-type').value;
+  if (type !== 'straight') { alert('Split mode is only available for straight bar.'); return; }
+  var size   = document.getElementById('inp-size').value;
+  var lenNum = getLengthDecimal();
+  var grade  = document.getElementById('inp-grade').value;
+  var spec   = document.getElementById('inp-spec').value;
+  if (!size || !lenNum) { alert('Please enter Bar Size and Length before opening Split mode.'); return; }
+  var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+  _of.item = {
+    heat: document.getElementById('inp-heat').value.trim(),
+    size: size, length: String(lenNum), type: 'straight',
+    grade: grade, spec: spec,
+    weightPerBundleTons: getCalcBdlTons(),
+    spoolWeightLbs: 0,
+    ship: document.getElementById('inp-ship').value,
+    order: document.getElementById('inp-order').value.trim(),
+    customer: document.getElementById('inp-customer').value.trim(),
+    _totalBundles: bundles
+  };
+  _of.totalBundles = bundles;
+  _of.remaining = bundles;
+  _of.placements = [];
+  _of.splitPair = null;
+  document.getElementById('of-modal-title').textContent = 'Split Sides';
+  document.getElementById('of-sp-bdl').value = bundles || '';
+  ofPopulateSplitStanDropdown();
+  ofSetMode('split');
+  document.getElementById('of-modal-overlay').classList.add('active');
 }
 
 function ofRefreshCounter() {
@@ -5137,6 +5172,13 @@ function populateLocationDropdown(type) {
   sel.innerHTML = '<option value="">— Auto-suggest —</option>';
   var a22opt = document.createElement('option'); a22opt.value='AREA22'; a22opt.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(a22opt);
   if (type==='straight') {
+    var isSecondary = document.getElementById('inp-secondary').checked;
+    // Read current form values so incompatible occupied slots can be identified
+    var curSize  = document.getElementById('inp-size').value;
+    var curLen   = getLengthDecimal();
+    var curGrade = document.getElementById('inp-grade').value;
+    var curSpec  = document.getElementById('inp-spec').value;
+
     var order = orderedStanchions();
     order.forEach(function(s) {
       // Skip free-stack zones (e.g. stanchion 1, 22) — open floor areas, not grid slots
@@ -5151,9 +5193,19 @@ function populateLocationDropdown(type) {
         var statusTag = scrapSlots[id]?' [SCRAP]' : holdSlots[id]?' [HOLD]' : redTagSlots[id]?' [RED TAG]' : reservedSlots[id]?' [RESERVED]' : '';
         var existing = store[id];
         if (existing) {
-          // Occupied — show existing product and remaining stanchion footage
           var prodInfo = existing.size + ' ' + formatLength(String(existing.length||'')) + ' (' + existing.bundles + ' bdl)';
-          opt.textContent = statusPrefix + label + ' ' + side + '-side — ' + prodInfo + statusTag + ' · ' + rem.toFixed(0) + 'ft avail';
+          // Check whether the occupying product matches what's being logged
+          var isSameProduct = curSize && existing.size === curSize &&
+            (!curLen   || parseFloat(existing.length) === curLen) &&
+            (!curGrade || !existing.grade || existing.grade === curGrade) &&
+            (!curSpec  || !existing.spec  || existing.spec  === curSpec);
+          if (!isSameProduct && !isSecondary) {
+            // Incompatible and not stacking — disable so user can't accidentally pick it
+            opt.textContent = '⊗ ' + statusPrefix + label + ' ' + side + '-side — ' + prodInfo + statusTag;
+            opt.disabled = true;
+          } else {
+            opt.textContent = statusPrefix + label + ' ' + side + '-side — ' + prodInfo + statusTag + ' · ' + rem.toFixed(0) + 'ft avail';
+          }
         } else {
           // Empty
           opt.textContent = statusPrefix + label + ' ' + side + '-side' + statusTag + ' (' + rem.toFixed(0) + 'ft avail)';
