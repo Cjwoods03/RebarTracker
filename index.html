@@ -1198,6 +1198,10 @@
 
     <!-- ── SPLIT PANEL ── -->
     <div id="of-sp-panel" style="display:none">
+      <div id="of-sp-product" style="background:var(--steel-light);border-radius:6px;padding:8px 12px;margin-bottom:12px;font-family:'IBM Plex Mono',monospace;font-size:12px;border:1px solid var(--border)">
+        <span style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px">Splitting product</span>
+        <span id="of-sp-product-text" style="color:var(--text)">—</span>
+      </div>
       <label class="of-label">Stanchion</label>
       <select class="of-sel" id="of-sp-stan" onchange="ofSpStanChange()"></select>
       <label class="of-label">Side pair</label>
@@ -4377,19 +4381,17 @@ function ofSetMode(mode) {
   }
 }
 
-// Opens the split modal directly from the log run form without requiring overflow
+// Opens the split modal directly from the log run form — always opens regardless of form state
 function openSplitFromForm() {
-  var type = document.getElementById('inp-type').value;
-  if (type !== 'straight') { alert('Split mode is only available for straight bar.'); return; }
   var size   = document.getElementById('inp-size').value;
   var lenNum = getLengthDecimal();
   var grade  = document.getElementById('inp-grade').value;
   var spec   = document.getElementById('inp-spec').value;
-  if (!size || !lenNum) { alert('Please enter Bar Size and Length before opening Split mode.'); return; }
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+
   _of.item = {
     heat: document.getElementById('inp-heat').value.trim(),
-    size: size, length: String(lenNum), type: 'straight',
+    size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
     grade: grade, spec: spec,
     weightPerBundleTons: getCalcBdlTons(),
     spoolWeightLbs: 0,
@@ -4402,6 +4404,17 @@ function openSplitFromForm() {
   _of.remaining = bundles;
   _of.placements = [];
   _of.splitPair = null;
+
+  // Product context line — show what's being split (partial info is fine)
+  var productParts = [];
+  if (size) productParts.push(size);
+  if (lenNum) productParts.push(formatLength(String(lenNum)));
+  if (grade) productParts.push('Gr' + grade);
+  if (spec) productParts.push(spec);
+  var productText = productParts.length ? productParts.join(' · ') : 'Fill in bar size and length in the form';
+  document.getElementById('of-sp-product-text').textContent = productText;
+  document.getElementById('of-sp-product-text').style.color = productParts.length >= 2 ? 'var(--text)' : 'var(--warn)';
+
   document.getElementById('of-modal-title').textContent = 'Split Sides';
   document.getElementById('of-sp-bdl').value = bundles || '';
   ofPopulateSplitStanDropdown();
