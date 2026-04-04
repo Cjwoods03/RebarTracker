@@ -671,7 +671,12 @@
         </div>
         <div class="form-group" id="weight-group">
           <label>Pieces per Bundle</label>
-          <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="calcBundleWeight()">
+          <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onPiecesInput()">
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:4px;display:block">BUNDLE WEIGHT (LBS) — calculates pieces</label>
+            <input type="number" id="inp-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcPiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+            <div id="bdl-wt-hint" style="display:none;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);padding:5px 8px;background:#0d1f10;border-radius:5px;border:1px solid var(--border)"></div>
+          </div>
           <div id="weight-calc" style="display:none;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 10px;background:#0d1f10;border:1px solid var(--border);border-radius:6px;line-height:1.8"></div>
         </div>
         <div style="margin: 14px 0 10px; border-top: 1px solid var(--border); padding-top: 12px;">
@@ -1497,6 +1502,50 @@ function getCalcBdlTons() {
   var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
   if (!lbsPerFt || !lenNum || !pieces) return 0;
   return (lbsPerFt * lenNum * pieces) / 2000;
+}
+
+// Called when pieces/bundle is typed directly — clear the bundle-weight derived hint
+function onPiecesInput() {
+  var hint = document.getElementById('bdl-wt-hint');
+  if (hint) hint.style.display = 'none';
+  calcBundleWeight();
+}
+
+// Called when bundle weight is entered — back-calculates pieces/bundle and fills the field
+function calcPiecesFromWeight() {
+  var size     = document.getElementById('inp-size').value;
+  var lenNum   = getLengthDecimal();
+  var bdlWt    = parseFloat(document.getElementById('inp-bdl-wt').value) || 0;
+  var hint     = document.getElementById('bdl-wt-hint');
+
+  if (!bdlWt) {
+    hint.style.display = 'none';
+    calcBundleWeight();
+    return;
+  }
+  if (!size || !lenNum) {
+    hint.textContent = '⚠ Enter bar size and length first';
+    hint.style.color = 'var(--warn)';
+    hint.style.display = 'block';
+    return;
+  }
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (!lbsPerFt) {
+    hint.textContent = '⚠ No weight data for ' + size;
+    hint.style.color = 'var(--warn)';
+    hint.style.display = 'block';
+    return;
+  }
+
+  var lbsPerPiece = lbsPerFt * lenNum;
+  var pieces = Math.round(bdlWt / lbsPerPiece);
+  if (pieces < 1) pieces = 1;
+
+  document.getElementById('inp-pieces').value = pieces;
+  hint.style.color = 'var(--accent)';
+  hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + pieces + ' pc/bdl calculated';
+  hint.style.display = 'block';
+  calcBundleWeight();
 }
 
 function calcBundleWeight() {
@@ -4696,10 +4745,11 @@ function ofCancel() {
 }
 
 function ofClearLogForm() {
-  ['inp-heat', 'inp-bundles', 'inp-pieces', 'inp-order', 'inp-ship', 'inp-customer'].forEach(function(id) {
+  ['inp-heat', 'inp-bundles', 'inp-pieces', 'inp-bdl-wt', 'inp-order', 'inp-ship', 'inp-customer'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
+  var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
   clearLengthInputs();
   ['inp-size', 'inp-grade', 'inp-spec', 'inp-location'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
@@ -5091,8 +5141,9 @@ function logRun() {
 
   if (isReserve) reservedSlots[loc] = true;
 
-  ['inp-heat','inp-bundles','inp-pieces','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
+  ['inp-heat','inp-bundles','inp-pieces','inp-bdl-wt','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
+  var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
   clearLengthInputs();
   document.getElementById('inp-size').value='';
   document.getElementById('inp-grade').value='';
@@ -5156,6 +5207,8 @@ function onTypeChange() {
     swg.style.display = 'block';
     clearLengthInputs();
     document.getElementById('inp-pieces').value = '';
+    document.getElementById('inp-bdl-wt').value = '';
+    var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
     var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
     document.getElementById('length-hint').style.display = 'none';
   } else {
