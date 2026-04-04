@@ -421,6 +421,26 @@
   ::-webkit-scrollbar { width: 4px; }
   ::-webkit-scrollbar-track { background: var(--steel); }
   ::-webkit-scrollbar-thumb { background: var(--iron); border-radius: 2px; }
+
+  /* OVERFLOW / SPLIT MODAL */
+  .of-modal-inner { background: var(--steel-mid); border-top: 2px solid var(--accent); border-radius: 16px 16px 0 0; padding: 20px 20px 44px; width: 100%; max-width: 600px; max-height: 92vh; overflow-y: auto; animation: slideUp 0.25s ease; }
+  .of-tab-bar { display: flex; gap: 0; margin-bottom: 14px; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; }
+  .of-tab { flex: 1; padding: 9px 0; font-family: 'IBM Plex Mono', monospace; font-size: 11px; letter-spacing: 1.5px; border: none; cursor: pointer; transition: background 0.15s, color 0.15s; }
+  .of-tab.active { background: var(--accent); color: #fff; }
+  .of-tab:not(.active) { background: var(--steel-light); color: var(--text-dim); }
+  .of-counter { background: var(--steel-light); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--text-dim); text-align: center; }
+  .of-big { font-family: 'Bebas Neue', sans-serif; font-size: 26px; line-height: 1; }
+  .of-placement-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 9px; background: var(--steel-light); border-radius: 5px; margin-bottom: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+  .of-sel { width: 100%; padding: 9px 8px; background: var(--steel-light); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; margin-bottom: 8px; }
+  .of-num-inp { width: 100%; padding: 9px; background: var(--steel-light); color: var(--text); border: 1px solid var(--border); border-radius: 6px; font-family: 'Bebas Neue', sans-serif; font-size: 26px; text-align: center; box-sizing: border-box; }
+  .of-btn-add { width: 100%; padding: 10px; background: var(--steel-light); color: var(--accent); border: 1px solid var(--accent); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 1px; cursor: pointer; margin-bottom: 8px; }
+  .of-btn-done { width: 100%; padding: 12px; background: var(--accent); color: #fff; border: none; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 13px; letter-spacing: 2px; cursor: pointer; }
+  .of-btn-done:disabled { opacity: 0.35; cursor: default; }
+  .of-btn-cancel { width: 100%; padding: 10px; margin-top: 10px; background: transparent; color: var(--text-dim); border: 1px solid var(--border); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; }
+  .of-pair-btn { display: inline-block; margin: 0 5px 6px 0; padding: 8px 16px; background: var(--steel-light); color: var(--text-dim); border: 1px solid var(--border); border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.15s; }
+  .of-pair-btn.selected { background: var(--iron); color: var(--text); border-color: var(--accent); }
+  .of-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
+  .of-preview { background: var(--steel-light); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
 </style>
 </head>
 <body>
@@ -1134,6 +1154,55 @@
       <button class="btn btn-primary" style="margin-top:0;background:#4ab8ff;color:#001540" onclick="document.getElementById('transfer-modal-overlay').dataset.mode==='secondary'?confirmSecondaryTransfer():confirmTransfer()">CONFIRM TRANSFER</button>
       <button class="btn-close-modal" onclick="closeTransferModal()">Cancel</button>
     </div>
+  </div>
+</div>
+
+<!-- OVERFLOW / SPLIT MODAL -->
+<div class="modal-overlay" id="of-modal-overlay">
+  <div class="of-modal-inner">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="of-modal-title">Multi-Stanchion Placement</div>
+
+    <!-- Mode tabs -->
+    <div class="of-tab-bar">
+      <button class="of-tab active" id="of-tab-ov" onclick="ofSetMode('overflow')">OVERFLOW</button>
+      <button class="of-tab" id="of-tab-sp" onclick="ofSetMode('split')">SPLIT</button>
+    </div>
+
+    <!-- Running counter -->
+    <div class="of-counter">
+      <span class="of-big" id="of-placed-num" style="color:var(--accent)">0</span>
+      <span> placed &nbsp;·&nbsp; </span>
+      <span class="of-big" id="of-remain-num" style="color:var(--hot)">0</span>
+      <span> remaining &nbsp;·&nbsp; </span>
+      <span class="of-big" id="of-total-num" style="color:var(--text)">0</span>
+      <span> total</span>
+    </div>
+
+    <!-- ── OVERFLOW PANEL ── -->
+    <div id="of-ov-panel">
+      <div id="of-placements" style="max-height:160px;overflow-y:auto;margin-bottom:10px"></div>
+      <label class="of-label">Next stanchion side</label>
+      <select class="of-sel" id="of-slot-sel" onchange="ofSlotSelChange()"></select>
+      <label class="of-label">Bundles to place here</label>
+      <input class="of-num-inp" type="number" id="of-bdl-inp" min="1" oninput="ofBdlChange()" style="margin-bottom:10px">
+      <button class="of-btn-add" id="of-add-btn" onclick="ofAddPlacement()">+ ADD TO STANCHION</button>
+      <button class="of-btn-done" id="of-done-btn" onclick="ofFinalize()" disabled>✓ DONE — COMMIT ALL</button>
+    </div>
+
+    <!-- ── SPLIT PANEL ── -->
+    <div id="of-sp-panel" style="display:none">
+      <label class="of-label">Stanchion</label>
+      <select class="of-sel" id="of-sp-stan" onchange="ofSpStanChange()"></select>
+      <label class="of-label">Side pair</label>
+      <div id="of-sp-pairs" style="margin-bottom:10px"></div>
+      <label class="of-label">Total bundles</label>
+      <input class="of-num-inp" type="number" id="of-sp-bdl" min="1" oninput="ofSpBdlChange()" style="margin-bottom:10px">
+      <div id="of-sp-preview" class="of-preview" style="display:none"></div>
+      <button class="of-btn-done" id="of-sp-confirm" onclick="ofConfirmSplit()" disabled>✓ CONFIRM SPLIT</button>
+    </div>
+
+    <button class="of-btn-cancel" onclick="ofCancel()">CANCEL</button>
   </div>
 </div>
 
@@ -2214,6 +2283,17 @@ function buildModalRows(item, isSpool, days) {
   if (item.customer) rows += mrow('Customer', item.customer);
   if (item.ship) rows += mrow('Ship Date', item.ship + (days!==null?' ('+days+'d)':''));
   rows += mrow('Logged', item.logged);
+  // Split pair note
+  if (item.splitPairedWith) {
+    var pairKey = item.splitPairedWith.slice(0, -1);
+    var pairSide = item.splitPairedWith.slice(-1);
+    var pairLbl = (pairKey === 'BSU') ? 'B.SU' : 'Stan ' + pairKey;
+    rows += '<div class="modal-row" style="border-left:2px solid var(--warn);padding-left:8px;flex-direction:column;align-items:flex-start;gap:2px">' +
+      '<span class="modal-key" style="font-size:9px;text-transform:uppercase;letter-spacing:1px">Split Pair</span>' +
+      '<span style="color:var(--warn);font-family:\'IBM Plex Mono\',monospace;font-size:12px">Paired with ' + pairLbl + ' ' + pairSide + '-side' +
+        (item.splitTotal ? ' · ' + item.splitTotal + ' bdl combined' : '') + '</span>' +
+    '</div>';
+  }
   // Show EBS locator code if mapped
   var ebsCode = item.loc ? getLocatorCode(item.loc) : null;
   if (ebsCode) rows += mrow('EBS Locator', '<span style="color:var(--accent);font-family:\'IBM Plex Mono\',monospace">' + ebsCode + '</span>');
@@ -4191,6 +4271,411 @@ function executeOptimizerMove(idx) {
   displayOptimizerResults(suggestions);
 }
 
+// ─── OVERFLOW / SPLIT MODAL ──────────────────────────────────────
+var _of = {
+  mode: 'overflow',
+  item: null,         // item template — all fields except bundles/loc/weightTons
+  totalBundles: 0,
+  remaining: 0,
+  placements: [],     // [{loc, bundles}]
+  splitPair: null,    // ['A','B'] etc. for split mode
+};
+
+// Entry point called from logRun when bundle count exceeds side capacity
+function ofOpen(itemTemplate, firstLoc) {
+  _of.item = itemTemplate;
+  _of.totalBundles = itemTemplate._totalBundles;
+  _of.placements = [];
+  _of.splitPair = null;
+
+  // Pre-populate first slot up to its capacity
+  if (firstLoc) {
+    var fk = firstLoc.slice(0, -1);
+    var fk2 = parseInt(fk) || fk;
+    var fCap = stanchionCapacity[fk2];
+    var fMax = fCap ? fCap.maxBundlesPerSide : _of.totalBundles;
+    var fEx = store[firstLoc];
+    var fUsed = fEx ? (fEx.bundles || 0) : 0;
+    var fFirst = Math.min(_of.totalBundles, fMax - fUsed);
+    if (fFirst > 0) _of.placements.push({ loc: firstLoc, bundles: fFirst });
+  }
+  _of.remaining = _of.totalBundles - _of.placements.reduce(function(s, p) { return s + p.bundles; }, 0);
+
+  document.getElementById('of-modal-title').textContent = 'Multi-Stanchion Placement';
+  ofSetMode('overflow');
+  ofPopulateSplitStanDropdown();
+  document.getElementById('of-modal-overlay').classList.add('active');
+}
+
+function ofSetMode(mode) {
+  _of.mode = mode;
+  document.getElementById('of-tab-ov').classList.toggle('active', mode === 'overflow');
+  document.getElementById('of-tab-sp').classList.toggle('active', mode === 'split');
+  document.getElementById('of-ov-panel').style.display = mode === 'overflow' ? 'block' : 'none';
+  document.getElementById('of-sp-panel').style.display = mode === 'split' ? 'block' : 'none';
+  if (mode === 'overflow') {
+    ofRefreshCounter();
+    ofRefreshPlacements();
+    ofRefreshOverflowDropdown();
+  } else {
+    // Pre-fill split bundle input with total
+    var inp = document.getElementById('of-sp-bdl');
+    if (!inp.value) inp.value = _of.totalBundles || '';
+    ofSpBdlChange();
+  }
+}
+
+function ofRefreshCounter() {
+  var placed = _of.totalBundles - _of.remaining;
+  document.getElementById('of-placed-num').textContent = placed;
+  document.getElementById('of-remain-num').textContent = _of.remaining;
+  document.getElementById('of-total-num').textContent = _of.totalBundles;
+  var doneBtn = document.getElementById('of-done-btn');
+  doneBtn.disabled = _of.remaining !== 0;
+}
+
+function ofRefreshPlacements() {
+  var el = document.getElementById('of-placements');
+  if (!_of.placements.length) { el.innerHTML = ''; return; }
+  var html = '';
+  _of.placements.forEach(function(p, i) {
+    var sk = p.loc.slice(0, -1);
+    var sd = p.loc.slice(-1);
+    var lbl = (sk === 'BSU') ? 'B.SU' : 'Stan ' + sk;
+    html += '<div class="of-placement-row">' +
+      '<span style="color:var(--accent)">' + lbl + ' ' + sd + '-side</span>' +
+      '<span style="color:var(--text)">' + p.bundles + ' bdl</span>' +
+      '<button onclick="ofRemovePlacement(' + i + ')" style="background:none;border:none;color:var(--hot);cursor:pointer;font-size:14px;padding:0 4px">✕</button>' +
+      '</div>';
+  });
+  el.innerHTML = html;
+}
+
+function ofRemovePlacement(idx) {
+  _of.remaining += _of.placements.splice(idx, 1)[0].bundles;
+  ofRefreshCounter();
+  ofRefreshPlacements();
+  ofRefreshOverflowDropdown();
+}
+
+function ofRefreshOverflowDropdown() {
+  var sel = document.getElementById('of-slot-sel');
+  sel.innerHTML = '<option value="">— Pick stanchion side —</option>';
+  if (_of.remaining <= 0) { sel.disabled = true; document.getElementById('of-bdl-inp').value = ''; return; }
+  sel.disabled = false;
+
+  var item = _of.item;
+  var lenNum = parseFloat(item.length) || 0;
+  var used = {};
+  _of.placements.forEach(function(p) { used[p.loc] = true; });
+
+  orderedStanchions().forEach(function(s) {
+    var capData = stanchionCapacity[s];
+    if (capData && capData.freeStack) return;
+    var sides = cSideEnabled[s] ? ['A', 'B', 'C'] : ['A', 'B'];
+    sides.forEach(function(side) {
+      var id = s + side;
+      if (used[id]) return;
+      if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) return;
+      var existing = store[id];
+      if (existing) {
+        // Only allow if same product (bundle merge)
+        var same = existing.size === item.size &&
+          parseFloat(existing.length) === lenNum &&
+          (!item.grade || !existing.grade || existing.grade === item.grade) &&
+          (!item.spec  || !existing.spec  || existing.spec  === item.spec);
+        if (!same) return;
+      } else {
+        // Empty — check footage
+        if (lenNum > 0 && lenNum > stanchionFtRemaining(s)) return;
+      }
+      var maxBdl = capData ? capData.maxBundlesPerSide : 99999;
+      var usedBdl = existing ? (existing.bundles || 0) : 0;
+      var availBdl = maxBdl - usedBdl;
+      if (availBdl <= 0) return;
+
+      var lbl = (s === 'BSU') ? 'B.SU' : 'Stanchion ' + s;
+      var ftRem = stanchionFtRemaining(s).toFixed(0);
+      var desc = lbl + ' ' + side + '-side';
+      desc += existing
+        ? ' — ' + existing.size + ' ' + formatLength(String(existing.length || '')) + ' (' + usedBdl + ' bdl) · ' + availBdl + ' cap remain'
+        : ' — empty · ' + ftRem + 'ft avail · ' + availBdl + ' cap';
+      var opt = document.createElement('option');
+      opt.value = id;
+      opt.textContent = desc;
+      sel.appendChild(opt);
+    });
+  });
+  ofSlotSelChange();
+}
+
+function ofSlotSelChange() {
+  var id = document.getElementById('of-slot-sel').value;
+  var inp = document.getElementById('of-bdl-inp');
+  if (!id) { inp.value = ''; return; }
+  var sk = id.slice(0, -1);
+  var sk2 = parseInt(sk) || sk;
+  var capData = stanchionCapacity[sk2];
+  var maxBdl = capData ? capData.maxBundlesPerSide : 99999;
+  var existing = store[id];
+  var usedBdl = existing ? (existing.bundles || 0) : 0;
+  inp.value = Math.min(_of.remaining, maxBdl - usedBdl);
+  ofBdlChange();
+}
+
+function ofBdlChange() {
+  var val = parseInt(document.getElementById('of-bdl-inp').value) || 0;
+  var addBtn = document.getElementById('of-add-btn');
+  addBtn.style.opacity = (val > 0 && val <= _of.remaining) ? '1' : '0.5';
+}
+
+function ofAddPlacement() {
+  var id = document.getElementById('of-slot-sel').value;
+  var bdl = parseInt(document.getElementById('of-bdl-inp').value) || 0;
+  if (!id) { alert('Please select a stanchion side.'); return; }
+  if (bdl <= 0) { alert('Enter a bundle count greater than zero.'); return; }
+  if (bdl > _of.remaining) { alert('Bundle count (' + bdl + ') exceeds remaining (' + _of.remaining + ').'); return; }
+
+  var sk = id.slice(0, -1);
+  var sk2 = parseInt(sk) || sk;
+  var capData = stanchionCapacity[sk2];
+  var maxBdl = capData ? capData.maxBundlesPerSide : 99999;
+  var existing = store[id];
+  var usedBdl = existing ? (existing.bundles || 0) : 0;
+  if (bdl + usedBdl > maxBdl) {
+    alert('⛔ Only ' + (maxBdl - usedBdl) + ' bundle spaces available on ' + id + '.');
+    return;
+  }
+
+  _of.placements.push({ loc: id, bundles: bdl });
+  _of.remaining -= bdl;
+  ofRefreshCounter();
+  ofRefreshPlacements();
+  ofRefreshOverflowDropdown();
+  document.getElementById('of-bdl-inp').value = '';
+}
+
+function ofFinalize() {
+  if (_of.remaining !== 0) return;
+  var item = _of.item;
+  var bdlTons = item.weightPerBundleTons || 0;
+
+  _of.placements.forEach(function(p) {
+    var newItem = {
+      heat: item.heat, size: item.size, length: item.length, type: item.type,
+      grade: item.grade, spec: item.spec, bundles: p.bundles,
+      weightPerBundleTons: bdlTons, weightTons: bdlTons * p.bundles,
+      spoolWeightLbs: 0, ship: item.ship, order: item.order,
+      customer: item.customer, loc: p.loc, logged: new Date().toLocaleTimeString()
+    };
+    var existing = store[p.loc];
+    var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length);
+    if (isMerge) {
+      existing.bundles += p.bundles;
+      existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
+      var inv = inventory.find(function(i) { return i.loc === p.loc && i.size === item.size; });
+      if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons; }
+      else inventory.push(newItem);
+    } else {
+      store[p.loc] = newItem;
+      inventory.push(newItem);
+    }
+  });
+
+  var summary = _of.placements.map(function(p) {
+    var sk = p.loc.slice(0, -1);
+    return (sk === 'BSU' ? 'B.SU' : 'Stan ' + sk) + ' ' + p.loc.slice(-1) + ': ' + p.bundles + ' bdl';
+  }).join(' | ');
+  showScrapToast('✓ ' + _of.totalBundles + ' bdl — ' + summary);
+
+  document.getElementById('of-modal-overlay').classList.remove('active');
+  ofClearLogForm();
+  renderAll(); renderInventory(); saveData();
+}
+
+// ── SPLIT MODE ───────────────────────────────────────────────────
+
+function ofPopulateSplitStanDropdown() {
+  var sel = document.getElementById('of-sp-stan');
+  sel.innerHTML = '<option value="">— Select stanchion —</option>';
+  orderedStanchions().forEach(function(s) {
+    var capData = stanchionCapacity[s];
+    if (capData && capData.freeStack) return;
+    var opt = document.createElement('option');
+    opt.value = String(s);
+    opt.textContent = (s === 'BSU') ? 'B.SU' : 'Stanchion ' + s;
+    sel.appendChild(opt);
+  });
+}
+
+function ofSpStanChange() {
+  _of.splitPair = null;
+  ofSpRenderPairs();
+  ofSpBdlChange();
+}
+
+function ofSpRenderPairs() {
+  var stanStr = document.getElementById('of-sp-stan').value;
+  var el = document.getElementById('of-sp-pairs');
+  el.innerHTML = '';
+  if (!stanStr) return;
+  var s = isNaN(parseInt(stanStr)) ? stanStr : parseInt(stanStr);
+  var item = _of.item;
+  var lenNum = parseFloat(item.length) || 0;
+
+  var allPairs = [['A', 'B']];
+  if (cSideEnabled[s]) { allPairs.push(['B', 'C']); allPairs.push(['A', 'C']); }
+
+  var validPairs = allPairs.filter(function(pair) {
+    return pair.every(function(side) {
+      var id = s + side;
+      if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) return false;
+      var ex = store[id];
+      if (!ex) {
+        // Empty — check footage
+        return lenNum === 0 || lenNum <= stanchionFtRemaining(s);
+      }
+      return ex.size === item.size && parseFloat(ex.length) === lenNum &&
+        (!item.grade || !ex.grade || ex.grade === item.grade) &&
+        (!item.spec  || !ex.spec  || ex.spec  === item.spec);
+    });
+  });
+
+  if (!validPairs.length) {
+    el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--hot);padding:6px 0">No valid pairs — both sides must be empty or hold matching product.</div>';
+    return;
+  }
+
+  validPairs.forEach(function(pair) {
+    var btn = document.createElement('button');
+    btn.className = 'of-pair-btn';
+    btn.textContent = pair[0] + '+' + pair[1];
+    btn.dataset.pair = pair.join(',');
+    btn.onclick = function() {
+      document.querySelectorAll('.of-pair-btn').forEach(function(b) { b.classList.remove('selected'); });
+      btn.classList.add('selected');
+      _of.splitPair = pair;
+      ofSpBdlChange();
+    };
+    el.appendChild(btn);
+  });
+
+  // Auto-select first valid pair
+  el.querySelector('.of-pair-btn').click();
+}
+
+function ofSpBdlChange() {
+  var bdl = parseInt(document.getElementById('of-sp-bdl').value) || 0;
+  var preview = document.getElementById('of-sp-preview');
+  var confirmBtn = document.getElementById('of-sp-confirm');
+  if (!_of.splitPair || bdl <= 0) {
+    preview.style.display = 'none';
+    confirmBtn.disabled = true;
+    return;
+  }
+
+  var stanStr = document.getElementById('of-sp-stan').value;
+  if (!stanStr) { preview.style.display = 'none'; return; }
+  var s = isNaN(parseInt(stanStr)) ? stanStr : parseInt(stanStr);
+
+  var half1 = Math.ceil(bdl / 2);
+  var half2 = Math.floor(bdl / 2);
+  var id1 = s + _of.splitPair[0];
+  var id2 = s + _of.splitPair[1];
+  var lbl = (s === 'BSU') ? 'B.SU' : 'Stan ' + s;
+
+  var capData = stanchionCapacity[s];
+  var maxBdl = capData ? capData.maxBundlesPerSide : 99999;
+  var ex1 = store[id1]; var ex2 = store[id2];
+  var used1 = ex1 ? (ex1.bundles || 0) : 0;
+  var used2 = ex2 ? (ex2.bundles || 0) : 0;
+  var ok1 = (half1 + used1) <= maxBdl;
+  var ok2 = (half2 + used2) <= maxBdl;
+
+  preview.innerHTML =
+    '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Split Preview</div>' +
+    '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
+      '<span style="color:' + (ok1 ? 'var(--accent)' : 'var(--hot)') + '">' + lbl + ' ' + _of.splitPair[0] + '-side</span>' +
+      '<span style="color:var(--text)">' + half1 + ' bdl' + (ex1 ? ' (+' + used1 + ' existing)' : '') + (ok1 ? '' : ' ⛔ OVER CAP') + '</span>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:space-between">' +
+      '<span style="color:' + (ok2 ? 'var(--accent)' : 'var(--hot)') + '">' + lbl + ' ' + _of.splitPair[1] + '-side</span>' +
+      '<span style="color:var(--text)">' + half2 + ' bdl' + (ex2 ? ' (+' + used2 + ' existing)' : '') + (ok2 ? '' : ' ⛔ OVER CAP') + '</span>' +
+    '</div>';
+  preview.style.display = 'block';
+
+  var valid = ok1 && ok2;
+  confirmBtn.disabled = !valid;
+}
+
+function ofConfirmSplit() {
+  var stanStr = document.getElementById('of-sp-stan').value;
+  var bdl = parseInt(document.getElementById('of-sp-bdl').value) || 0;
+  if (!stanStr || !_of.splitPair || bdl <= 0) return;
+  var s = isNaN(parseInt(stanStr)) ? stanStr : parseInt(stanStr);
+  var id1 = s + _of.splitPair[0];
+  var id2 = s + _of.splitPair[1];
+  var half1 = Math.ceil(bdl / 2);
+  var half2 = Math.floor(bdl / 2);
+  var item = _of.item;
+  var bdlTons = item.weightPerBundleTons || 0;
+
+  function placeOrMerge(loc, count, pairedWith) {
+    var newItem = {
+      heat: item.heat, size: item.size, length: item.length, type: item.type,
+      grade: item.grade, spec: item.spec, bundles: count,
+      weightPerBundleTons: bdlTons, weightTons: bdlTons * count,
+      spoolWeightLbs: 0, ship: item.ship, order: item.order,
+      customer: item.customer, loc: loc, logged: new Date().toLocaleTimeString(),
+      splitPairedWith: pairedWith, splitTotal: bdl
+    };
+    var existing = store[loc];
+    var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length);
+    if (isMerge) {
+      existing.bundles += count;
+      existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
+      existing.splitPairedWith = pairedWith;
+      existing.splitTotal = bdl;
+      var inv = inventory.find(function(i) { return i.loc === loc && i.size === item.size; });
+      if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons; inv.splitPairedWith = pairedWith; inv.splitTotal = bdl; }
+      else inventory.push(newItem);
+    } else {
+      store[loc] = newItem;
+      inventory.push(newItem);
+    }
+  }
+
+  placeOrMerge(id1, half1, id2);
+  placeOrMerge(id2, half2, id1);
+
+  var lbl = (s === 'BSU') ? 'B.SU' : 'Stan ' + s;
+  showScrapToast('✓ Split: ' + lbl + ' ' + _of.splitPair[0] + '-side ' + half1 + ' bdl + ' + _of.splitPair[1] + '-side ' + half2 + ' bdl');
+
+  document.getElementById('of-modal-overlay').classList.remove('active');
+  ofClearLogForm();
+  renderAll(); renderInventory(); saveData();
+}
+
+function ofCancel() {
+  document.getElementById('of-modal-overlay').classList.remove('active');
+}
+
+function ofClearLogForm() {
+  ['inp-heat', 'inp-bundles', 'inp-pieces', 'inp-order', 'inp-ship', 'inp-customer'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
+  clearLengthInputs();
+  ['inp-size', 'inp-grade', 'inp-spec', 'inp-location'].forEach(function(id) {
+    var el = document.getElementById(id); if (el) el.value = '';
+  });
+  var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
+  var ss = document.getElementById('inp-secondary'); if (ss) ss.checked = false;
+  var sb = document.getElementById('suggestion-box'); if (sb) sb.classList.remove('active');
+  var lh = document.getElementById('length-hint'); if (lh) lh.style.display = 'none';
+  suggestedLoc = null;
+}
+
 function suggestLocation() {
   var type = document.getElementById('inp-type').value;
   var size = document.getElementById('inp-size').value;
@@ -4507,6 +4992,35 @@ function logRun() {
       var remainFt = maxFt - usedFt;
       if (lenNum > remainFt) {
         alert('⛔ This run is '+lenNum+'ft but Stanchion '+stanNum+' only has '+remainFt.toFixed(1)+'ft remaining ('+usedFt+'ft used of '+maxFt+'ft max).\n\nPlease choose a different stanchion or side.');
+        return;
+      }
+    }
+  }
+
+  // Bundle capacity check — intercept with overflow modal if this run exceeds side capacity
+  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE' &&
+      !document.getElementById('inp-secondary').checked) {
+    var ofStanKey = loc.slice(0, -1);
+    var ofStanNum = parseInt(ofStanKey) || ofStanKey;
+    var ofCap = stanchionCapacity[ofStanNum];
+    if (ofCap && !ofCap.freeStack && ofCap.maxBundlesPerSide) {
+      var ofExisting = store[loc];
+      var ofUsedBdl = ofExisting ? (ofExisting.bundles || 0) : 0;
+      var ofNewBdl = parseInt(bundles) || 0;
+      if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
+        // Build item template and hand off to overflow modal
+        var ofTemplate = {
+          heat: document.getElementById('inp-heat').value.trim(),
+          size: size, length: lenNum ? String(lenNum) : '', type: type,
+          grade: grade, spec: spec,
+          weightPerBundleTons: getCalcBdlTons(),
+          spoolWeightLbs: 0,
+          ship: document.getElementById('inp-ship').value,
+          order: document.getElementById('inp-order').value.trim(),
+          customer: document.getElementById('inp-customer').value.trim(),
+          _totalBundles: ofNewBdl
+        };
+        ofOpen(ofTemplate, loc);
         return;
       }
     }
