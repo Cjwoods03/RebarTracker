@@ -596,7 +596,7 @@
         <div class="form-row">
           <div class="form-group">
             <label>Bar Size</label>
-            <select id="inp-size">
+            <select id="inp-size" onchange="calcBundleWeight()">
               <option value=""># Size</option>
               <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
               <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
@@ -606,11 +606,11 @@
             <label>Length</label>
             <div style="display:flex;gap:6px;align-items:center">
               <div style="flex:1;position:relative">
-                <input type="number" id="inp-length-ft" placeholder="ft" min="0" max="80" inputmode="numeric" oninput="onLengthChange()" style="width:100%;padding-right:28px">
+                <input type="number" id="inp-length-ft" placeholder="ft" min="0" max="80" inputmode="numeric" oninput="onLengthChange();calcBundleWeight()" style="width:100%;padding-right:28px">
                 <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">ft</span>
               </div>
               <div style="flex:1;position:relative">
-                <input type="number" id="inp-length-in" placeholder="in" min="0" max="11" inputmode="numeric" oninput="onLengthChange()" style="width:100%;padding-right:28px">
+                <input type="number" id="inp-length-in" placeholder="in" min="0" max="11" inputmode="numeric" oninput="onLengthChange();calcBundleWeight()" style="width:100%;padding-right:28px">
                 <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">in</span>
               </div>
             </div>
@@ -638,7 +638,7 @@
         <div id="length-hint" style="display:none"></div>
         <div class="form-group">
           <label>Bundles / Coils</label>
-          <input type="number" id="inp-bundles" placeholder="qty" min="1" inputmode="numeric">
+          <input type="number" id="inp-bundles" placeholder="qty" min="1" inputmode="numeric" oninput="calcBundleWeight()">
         </div>
         <div class="form-group" id="spool-weight-group" style="display:none">
           <label>Coil Weight</label>
@@ -650,15 +650,9 @@
           </select>
         </div>
         <div class="form-group" id="weight-group">
-          <label>Bundle Weight <span style="font-size:9px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace">(per bundle)</span></label>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="number" id="inp-weight" placeholder="e.g. 2.5" min="0" step="any" inputmode="decimal" style="flex:1" oninput="onWeightChange()">
-            <div class="unit-toggle">
-              <button class="unit-btn active" id="unit-tons" onclick="setWeightUnit('tons',this)">TONS</button>
-              <button class="unit-btn" id="unit-lbs" onclick="setWeightUnit('lbs',this)">LBS</button>
-            </div>
-          </div>
-          <div id="weight-hint" style="display:none;margin-top:5px"></div>
+          <label>Pieces per Bundle</label>
+          <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="calcBundleWeight()">
+          <div id="weight-calc" style="display:none;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 10px;background:#0d1f10;border:1px solid var(--border);border-radius:6px;line-height:1.8"></div>
         </div>
         <div style="margin: 14px 0 10px; border-top: 1px solid var(--border); padding-top: 12px;">
           <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL FIELDS</div>
@@ -870,6 +864,31 @@
               style="flex:1;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none">
             <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">tons per stanchion</span>
           </div>
+        </div>
+
+        <!-- Product Capacity Calculator -->
+        <div style="margin-bottom:16px;padding:12px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📦 Product Capacity Calculator</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bar Size</div>
+              <select id="cap-calc-size" onchange="runCapCalc()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;box-sizing:border-box">
+                <option value="">—</option>
+                <option>#3</option><option>#4</option><option>#5</option>
+                <option>#6</option><option>#7</option><option>#8</option>
+                <option>#9</option><option>#10</option><option>#11</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Length (ft)</div>
+              <input type="number" id="cap-calc-length" placeholder="e.g. 20" min="1" inputmode="decimal" oninput="runCapCalc()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;box-sizing:border-box">
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Pc / Bundle</div>
+              <input type="number" id="cap-calc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="runCapCalc()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;box-sizing:border-box">
+            </div>
+          </div>
+          <div id="cap-calc-result"></div>
         </div>
 
         <button class="btn btn-primary" style="margin-top:0;width:100%" onclick="runOptimizer()">⚡ ANALYZE &amp; SUGGEST MOVES</button>
@@ -1241,6 +1260,41 @@ var STANCHION_MAX_FT_OVERRIDES = { 2:70, 3:70, 'BSU':70 };
 // Edit these to match your EBS locator configuration
 var LOCATOR_CODES = {};
 
+// ─── REBAR WEIGHT TABLE ──────────────────────────────────────────
+// Standard lbs per linear foot (ASTM A615/A706)
+var REBAR_LBS_PER_FT = {
+  '#3': 0.376, '#4': 0.668, '#5': 1.043, '#6': 1.502,
+  '#7': 2.044, '#8': 2.670, '#9': 3.400, '#10': 4.303, '#11': 5.313
+};
+
+// ─── STANCHION PHYSICAL CAPACITY ────────────────────────────────
+// widthIn: usable width in inches
+// heightCapIn: max stack height in inches
+// bundlesAcross: bundles per layer (width direction)
+// layersHigh: max layers stacked
+// maxBundlesPerSide: confirmed max bundles per A/B/C side
+// freeStack: true for open zones with no grid capacity (stanchions 1 & 22)
+var stanchionCapacity = (function() {
+  var cap = {};
+  function set(keys, data) { keys.forEach(function(k){ cap[k] = data; }); }
+
+  set([1, 22], { freeStack: true });
+  set([2, 3, 'BSU'], { widthIn:113, heightCapIn: 84, bundlesAcross:13, layersHigh:16, maxBundlesPerSide:208 });
+  set([4, 5],        { widthIn:120, heightCapIn:156, bundlesAcross:14, layersHigh:29, maxBundlesPerSide:406 });
+  set([6, 7, 8],     { widthIn:240, heightCapIn:156, bundlesAcross:25, layersHigh:29, maxBundlesPerSide:725 });
+  set([9, 10, 11],   { widthIn:144, heightCapIn:156, bundlesAcross:14, layersHigh:29, maxBundlesPerSide:406 });
+  set([12, 13],      { widthIn:120, heightCapIn:156, bundlesAcross:11, layersHigh:29, maxBundlesPerSide:319 });
+  set([14,15,16,17,18], { widthIn:96, heightCapIn:156, bundlesAcross:9, layersHigh:29, maxBundlesPerSide:261 });
+  set([19],          { widthIn:120, heightCapIn:156, bundlesAcross:11, layersHigh:29, maxBundlesPerSide:319 });
+  set([20, 21],      { widthIn: 96, heightCapIn:156, bundlesAcross: 9, layersHigh:29, maxBundlesPerSide:261 });
+  set([23,24,25,26,27,28,29], { widthIn:96, heightCapIn:156, bundlesAcross:9, layersHigh:29, maxBundlesPerSide:261 });
+  set([30],          { widthIn:180, heightCapIn:180, bundlesAcross:17, layersHigh:33, maxBundlesPerSide:561 });
+  set([31, 32],      { widthIn:144, heightCapIn:180, bundlesAcross:14, layersHigh:33, maxBundlesPerSide:462 });
+  set([33,34,35,36,37,38], { widthIn:96, heightCapIn:180, bundlesAcross:9, layersHigh:33, maxBundlesPerSide:297 });
+
+  return cap;
+}());
+
 function maxFtForStanchion(stanKey) {
   var k = (typeof stanKey === 'number') ? stanKey : stanKey;
   return STANCHION_MAX_FT_OVERRIDES[k] !== undefined ? STANCHION_MAX_FT_OVERRIDES[k] : MAX_STANCHION_FT;
@@ -1364,44 +1418,47 @@ function tonUsageColor(tons, max) {
   return '#27c06e';
 }
 
-var currentWeightUnit = 'tons'; // 'tons' | 'lbs'
-
-function setWeightUnit(unit, btn) {
-  currentWeightUnit = unit;
-  document.querySelectorAll('.unit-btn').forEach(function(b){ b.classList.remove('active'); });
-  btn.classList.add('active');
-  onWeightChange();
+// ─── BUNDLE WEIGHT AUTO-CALC ─────────────────────────────────────
+// Returns per-bundle weight in tons from size + length + pieces/bundle
+function getCalcBdlTons() {
+  var size    = document.getElementById('inp-size').value;
+  var lenNum  = getLengthDecimal();
+  var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (!lbsPerFt || !lenNum || !pieces) return 0;
+  return (lbsPerFt * lenNum * pieces) / 2000;
 }
 
-// Convert entered weight to tons regardless of unit
-function getWeightInTons() {
-  var raw = parseFloat(document.getElementById('inp-weight').value);
-  if (isNaN(raw) || raw <= 0) return 0;
-  return currentWeightUnit === 'lbs' ? raw / 2000 : raw;
-}
+function calcBundleWeight() {
+  var type    = document.getElementById('inp-type').value;
+  var calcEl  = document.getElementById('weight-calc');
+  if (!calcEl) return;
+  if (type !== 'straight') { calcEl.style.display = 'none'; return; }
 
-// Total tons this run will add to a slot
-function runTotalTons() {
+  var size    = document.getElementById('inp-size').value;
+  var lenNum  = getLengthDecimal();
+  var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
-  return bundles * getWeightInTons();
-}
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
 
-function onWeightChange() {
-  var type = document.getElementById('inp-type').value;
-  if (type !== 'straight') { document.getElementById('weight-hint').style.display='none'; return; }
-  var hintEl = document.getElementById('weight-hint');
-  var wt = getWeightInTons();
-  var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
-  if (wt <= 0 || bundles <= 0) { hintEl.style.display='none'; return; }
+  if (!lbsPerFt || !lenNum || !pieces) { calcEl.style.display = 'none'; return; }
 
-  var totalTons = bundles * wt;
-  hintEl.style.display = 'block';
+  var barLbs    = lbsPerFt * lenNum;
+  var bdlLbs    = barLbs * pieces;
+  var bdlTons   = bdlLbs / 2000;
+  var totalLbs  = bdlLbs * bundles;
+  var totalTons = bdlTons * bundles;
 
-  // Show total tons for this run
-  var perBdl = wt.toFixed(currentWeightUnit==='lbs'?1:3);
-  var unit = currentWeightUnit === 'lbs' ? ' lbs/bdl → ' : 't/bdl → ';
-  hintEl.className = 'length-hint ok';
-  hintEl.textContent = '✓ ' + perBdl + unit + totalTons.toFixed(2) + 't total for this run';
+  var html =
+    '<span style="color:var(--text-dim)">⚖ ' + size + ' × ' + formatLength(String(lenNum)) + ' × ' + pieces + ' pc/bdl</span><br>' +
+    '<span style="color:var(--text-dim)">Bar: ' + barLbs.toFixed(1) + ' lbs</span> &nbsp;·&nbsp; ' +
+    '<strong style="color:var(--safe)">Bundle: ' + bdlLbs.toFixed(0) + ' lbs (' + bdlTons.toFixed(3) + 't)</strong>';
+  if (bundles > 0) {
+    html += '<br><strong style="color:var(--accent)">Total (' + bundles + ' bdl): ' +
+      totalLbs.toFixed(0) + ' lbs / ' + totalTons.toFixed(2) + 't</strong>';
+  }
+  calcEl.innerHTML = html;
+  calcEl.style.display = 'block';
 }
 
 // Interpolate fill color green→amber→red based on 0–1 pct
@@ -1882,6 +1939,30 @@ function makeSlot(id, side) {
   });
 
   div.addEventListener('click', function() { if (!didLongPress) onSlotClick(id); });
+
+  // ── Capacity fill indicator ──────────────────────────────────────
+  // Only for stanchion slots (not racks or CYCLE), and only when occupied
+  if (!id.startsWith('RACK-') && id !== 'CYCLE') {
+    var stanKey = id.slice(0, -1); // strip side letter → stanchion key
+    var capData = stanchionCapacity[stanKey];
+    if (capData && !capData.freeStack && capData.maxBundlesPerSide) {
+      var allSlotItems = slotAllItems(id);
+      if (allSlotItems.length > 0) {
+        var totalBdl = allSlotItems.reduce(function(s, i) { return s + (i.bundles || 0); }, 0);
+        if (totalBdl > 0) {
+          var capPct = totalBdl / capData.maxBundlesPerSide;
+          var capColor = capPct >= 0.9 ? '#e84040' : capPct >= 0.75 ? '#f5a623' : '#27c06e';
+          var barTrack = el('div', '');
+          barTrack.style.cssText = 'position:absolute;bottom:0;left:0;right:0;height:3px;background:rgba(0,0,0,0.3);border-radius:0 0 4px 4px;overflow:hidden';
+          var barFill = el('div', '');
+          barFill.style.cssText = 'height:100%;width:' + Math.min(capPct * 100, 100).toFixed(1) + '%;background:' + capColor + ';transition:width 0.3s';
+          barTrack.appendChild(barFill);
+          div.appendChild(barTrack);
+        }
+      }
+    }
+  }
+
   return div;
 }
 
@@ -2812,6 +2893,68 @@ function initOptimizerPanel() {
   renderOptimizerRules();
 }
 
+function runCapCalc() {
+  var size   = document.getElementById('cap-calc-size').value;
+  var lenFt  = parseFloat(document.getElementById('cap-calc-length').value) || 0;
+  var pieces = parseInt(document.getElementById('cap-calc-pieces').value) || 0;
+  var out    = document.getElementById('cap-calc-result');
+  if (!out) return;
+  if (!size || !lenFt || !pieces) { out.innerHTML = ''; return; }
+
+  var lbsPerFt  = REBAR_LBS_PER_FT[size] || 0;
+  var barLbs    = lbsPerFt * lenFt;
+  var bdlLbs    = barLbs * pieces;
+  var bdlTons   = bdlLbs / 2000;
+
+  // Cross-section: baseline 20 pc → 9 in wide × 5.5 in tall
+  var BDL_WIDTH_IN = 9;
+  var bdlHeightIn  = 5.5 * (pieces / 20);
+
+  var order = orderedStanchions();
+
+  var html =
+    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;padding:8px 10px;background:var(--steel);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;line-height:1.9">' +
+    '<span style="color:var(--text-dim)">Bar: ' + barLbs.toFixed(1) + ' lbs</span> &nbsp;&middot;&nbsp; ' +
+    '<strong style="color:var(--safe)">Bundle: ' + bdlLbs.toFixed(0) + ' lbs (' + bdlTons.toFixed(3) + 't)</strong> &nbsp;&middot;&nbsp; ' +
+    '<span style="color:var(--text-dim)">Cross-section: ' + BDL_WIDTH_IN + '&Prime; &times; ' + bdlHeightIn.toFixed(2) + '&Prime;</span>' +
+    '</div>' +
+    '<div style="overflow-x:auto">' +
+    '<table style="width:100%;border-collapse:collapse;font-family:\'IBM Plex Mono\',monospace;font-size:10px">' +
+    '<thead><tr style="color:var(--text-dim);border-bottom:1px solid var(--border)">' +
+    '<th style="text-align:left;padding:5px 6px;font-weight:normal;white-space:nowrap">STANCHION</th>' +
+    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">ACROSS</th>' +
+    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">LAYERS</th>' +
+    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">MAX BDLS/SIDE</th>' +
+    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">MAX TONS/SIDE</th>' +
+    '</tr></thead><tbody>';
+
+  order.forEach(function(s) {
+    var capData = stanchionCapacity[s];
+    var label   = s === 'BSU' ? 'B.SU' : 'Stan ' + s;
+    var rowBorder = 'border-bottom:1px solid rgba(0,48,128,0.4)';
+    if (!capData || capData.freeStack) {
+      html += '<tr style="' + rowBorder + '">' +
+        '<td style="padding:5px 6px;color:var(--text)">' + label + '</td>' +
+        '<td colspan="4" style="padding:5px 6px;color:var(--text-dim);text-align:right">—</td></tr>';
+      return;
+    }
+    var across  = Math.floor(capData.widthIn / BDL_WIDTH_IN);
+    var layers  = bdlHeightIn > 0 ? Math.floor(capData.heightCapIn / bdlHeightIn) : 0;
+    var maxBdl  = across * layers;
+    var maxTons = maxBdl * bdlTons;
+    html += '<tr style="' + rowBorder + '">' +
+      '<td style="padding:5px 6px;color:var(--text)">' + label + '</td>' +
+      '<td style="padding:5px 6px;text-align:right;color:var(--text-dim)">' + across + '</td>' +
+      '<td style="padding:5px 6px;text-align:right;color:var(--text-dim)">' + layers + '</td>' +
+      '<td style="padding:5px 6px;text-align:right;color:var(--accent);font-weight:bold">' + maxBdl + '</td>' +
+      '<td style="padding:5px 6px;text-align:right;color:var(--safe)">' + maxTons.toFixed(1) + 't</td>' +
+      '</tr>';
+  });
+
+  html += '</tbody></table></div>';
+  out.innerHTML = html;
+}
+
 function toggleLocatorEditor(btn) {
   var wrap = document.getElementById('locator-editor-wrap');
   var chevron = document.getElementById('locator-editor-chevron');
@@ -3127,8 +3270,9 @@ function runCSVImport() {
       // Grade and spec extracted from description
       var gradeSpec = { grade: '', spec: '' };
 
-      // ── Parse size/length/grade/spec from EBS description field ──
+      // ── Parse size/length/grade/spec/pieces from EBS description field ──
       // Example: "REBAR #8 A615 Gr60/M31 40'0 6001-1000 lbs"
+      var descPieces = 0;
       if (size && size.length > 5) {
         var desc = size;
         // Extract bar size: #3 through #11
@@ -3147,6 +3291,10 @@ function runCSVImport() {
           var descFt = parseFloat(lenMatch[1]) || 0;
           if (descFt > 0) lenStr = lenMatch[0];
         }
+        // Extract piece count: "20 PC", "20PCS", "x20", "20 PIECES", "20 EA"
+        var pcMatch = desc.match(/\b(\d+)\s*(?:PC|PCS|PIECES?|EA|EACH)\b/i) ||
+                      desc.match(/[×x]\s*(\d+)\b/i);
+        if (pcMatch) descPieces = parseInt(pcMatch[1]) || 0;
       }
 
       // Normalize bar size
@@ -3163,13 +3311,15 @@ function runCSVImport() {
         }
       }
 
-      // Parse weight — PriQty in EBS is lbs per bundle
+      // Weight: calculate from size × length × pieces/bundle when available;
+      // fall back to PriQty column value
       var wtTons = 0, wtPerBdl = 0;
-      if (wtStr) {
+      var csvLbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+      if (csvLbsPerFt && lenNum > 0 && descPieces > 0) {
+        wtPerBdl = (csvLbsPerFt * lenNum * descPieces) / 2000;
+      } else if (wtStr) {
         var wtNum = parseFloat(wtStr.replace(/[^0-9.]/g,'')) || 0;
         var wtLower = wtStr.toLowerCase();
-        // PriQty is always lbs; also catch explicit lb/lbs labels
-        // If the mapped column is PriQty or value is >100 assume lbs (tons would be <20)
         if (wtLower.includes('lb') || wtLower.includes('lbs') || wtNum > 100) {
           wtPerBdl = wtNum / 2000; // convert lbs to tons
         } else {
@@ -3464,8 +3614,8 @@ function runFullYardImport() {
       var loc = parseEBSLocation(ebsLoc);
       if (!loc) { skipped++; errors.push('Row ' + (idx + 1) + ': cannot parse locator "' + ebsLoc + '"'); return; }
 
-      // Parse description: size, grade, spec, length
-      var size = '', grade = '', spec = '', lenNum = 0;
+      // Parse description: size, grade, spec, length, piece count
+      var size = '', grade = '', spec = '', lenNum = 0, fyiPieces = 0;
       if (desc) {
         var sizeM = desc.match(/#(\d{1,2})\b/);
         if (sizeM) size = '#' + sizeM[1];
@@ -3477,11 +3627,22 @@ function runFullYardImport() {
         if (lenM) {
           lenNum = (parseFloat(lenM[1]) || 0) + ((parseFloat(lenM[2]) || 0) / 12);
         }
+        // Extract piece count: "20 PC", "20PCS", "x20", "20 EA"
+        var fyiPcM = desc.match(/\b(\d+)\s*(?:PC|PCS|PIECES?|EA|EACH)\b/i) ||
+                     desc.match(/[×x]\s*(\d+)\b/i);
+        if (fyiPcM) fyiPieces = parseInt(fyiPcM[1]) || 0;
       }
 
-      // Parse weight — PriQty is lbs per LPN
-      var wtNum = parseFloat(wtStr.replace(/[^0-9.]/g, '')) || 0;
-      var wtPerLpn = wtNum > 100 ? wtNum / 2000 : wtNum; // lbs → tons
+      // Weight: calculate from size × length × pieces when available;
+      // fall back to PriQty column (lbs per LPN)
+      var fyiLbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+      var wtPerLpn = 0;
+      if (fyiLbsPerFt && lenNum > 0 && fyiPieces > 0) {
+        wtPerLpn = (fyiLbsPerFt * lenNum * fyiPieces) / 2000;
+      } else {
+        var wtNum = parseFloat(wtStr.replace(/[^0-9.]/g, '')) || 0;
+        wtPerLpn = wtNum > 100 ? wtNum / 2000 : wtNum; // lbs → tons
+      }
 
       var type = /^SB\./i.test(ebsLoc) ? 'spool' : 'straight';
 
@@ -3636,6 +3797,12 @@ var OPTIMIZER_BUILT_IN_RULES = [
     id: 'defrag',
     label: 'Defragment sparse stanchions',
     desc: 'If a stanchion is using less than 25% of its capacity and a nearby stanchion could absorb it, suggest consolidating.',
+    enabled: true
+  },
+  {
+    id: 'over_capacity',
+    label: 'Over Physical Capacity',
+    desc: 'Flag any stanchion side where the current bundle count exceeds the confirmed per-side maximum from physical measurements. Suggests the best available destination with room to absorb the excess.',
     enabled: true
   }
 ];
@@ -3833,6 +4000,61 @@ function runOptimizer() {
               from: s+side, to: s2+side2
             });
           });
+        });
+      });
+    });
+  }
+
+  // ── RULE: Over Physical Capacity ─────────────────────────────
+  if (ruleEnabled('over_capacity')) {
+    order.forEach(function(s) {
+      var capData = stanchionCapacity[s];
+      if (!capData || capData.freeStack || !capData.maxBundlesPerSide) return;
+      var maxBdl = capData.maxBundlesPerSide;
+      var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+      sides.forEach(function(side) {
+        var slotId = s + side;
+        var allItems = slotAllItems(slotId);
+        if (allItems.length === 0) return;
+        var totalBdl = allItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
+        if (totalBdl <= maxBdl) return;
+        var overBdl = totalBdl - maxBdl;
+        var item = store[slotId];
+        if (!item) return;
+        var itemLen = parseFloat(item.length) || 0;
+        // Find best destination: most remaining bundle capacity, footage fits, empty or matching product
+        var bestDest = null, bestRem = 0;
+        order.forEach(function(s2) {
+          if (s2 === s) return;
+          var destCapData = stanchionCapacity[s2];
+          if (!destCapData || destCapData.freeStack || !destCapData.maxBundlesPerSide) return;
+          var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
+          sides2.forEach(function(side2) {
+            var destId = s2 + side2;
+            var destItem = store[destId];
+            var isMerge = destItem && destItem.size === item.size && parseFloat(destItem.length) === itemLen;
+            if (destItem && !isMerge) return; // occupied with different product
+            var destItems = slotAllItems(destId);
+            var destBdl = destItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
+            var destRem = destCapData.maxBundlesPerSide - destBdl;
+            if (destRem < overBdl) return;
+            if (!isMerge && itemLen > 0 && itemLen > stanchionFtRemaining(s2)) return;
+            if (destRem > bestRem) { bestRem = destRem; bestDest = destId; }
+          });
+        });
+        suggestions.push({
+          priority: 'high',
+          moveType: 'straight',
+          ruleType: 'consolidate',
+          rule: 'Over Physical Capacity',
+          desc: stanLabel(s) + ' ' + side + '-side is over capacity: ' + totalBdl + '/' + maxBdl + ' bundles (' + overBdl + ' over)',
+          detail: bestDest
+            ? 'Move ' + overBdl + ' excess bundles \u2192 ' + stanLabel(bestDest.slice(0,-1)) + ' ' + bestDest.slice(-1) + '-side (' + bestRem + ' spots available)'
+            : 'No suitable destination found \u2014 manual redistribution required',
+          reason: item.size + (itemLen > 0 ? ' ' + formatLength(String(itemLen)) : '') + ' \u00b7 ' + totalBdl + ' bundles vs max ' + maxBdl,
+          gain: overBdl + ' bundles over \u2014 resolve to free capacity',
+          from: slotId,
+          to: bestDest || slotId
         });
       });
     });
@@ -4157,7 +4379,8 @@ function logRun() {
     var spoolCoils = parseInt(bundles) || 0;
     weightTons = (spoolLbs / 2000) * spoolCoils;
   } else {
-    weightTons = runTotalTons();
+    var bdlTons = getCalcBdlTons();
+    weightTons = bdlTons * (parseInt(bundles) || 0);
   }
 
   // Dropdown selection takes priority over suggested location
@@ -4232,7 +4455,7 @@ function logRun() {
       showScrapToast('✓ ' + totalCoils + ' coils logged to ' + placements[0].loc.replace('RACK-','Rack ')); saveData();
     }
 
-    ['inp-heat','inp-bundles','inp-order','inp-ship','inp-customer','inp-weight'].forEach(function(id){document.getElementById(id).value='';});
+    ['inp-heat','inp-bundles','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
     clearLengthInputs();
     document.getElementById('inp-size').value='';
     document.getElementById('inp-grade').value='';
@@ -4273,7 +4496,7 @@ function logRun() {
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
     bundles: parseInt(bundles),
-    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getWeightInTons(),
+    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
     spoolWeightLbs: spoolLbsStored,
     ship: document.getElementById('inp-ship').value,
@@ -4297,7 +4520,8 @@ function logRun() {
 
   if (isReserve) reservedSlots[loc] = true;
 
-  ['inp-heat','inp-bundles','inp-order','inp-ship','inp-customer','inp-weight'].forEach(function(id){document.getElementById(id).value='';});
+  ['inp-heat','inp-bundles','inp-pieces','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
+  var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
   clearLengthInputs();
   document.getElementById('inp-size').value='';
   document.getElementById('inp-grade').value='';
@@ -4360,9 +4584,9 @@ function onTypeChange() {
     wg.style.display = 'none';
     swg.style.display = 'block';
     clearLengthInputs();
-    document.getElementById('inp-weight').value = '';
+    document.getElementById('inp-pieces').value = '';
+    var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
     document.getElementById('length-hint').style.display = 'none';
-    document.getElementById('weight-hint').style.display = 'none';
   } else {
     lg.style.opacity = '1'; lg.style.pointerEvents = 'auto';
     wg.style.display = 'block';
@@ -4776,6 +5000,7 @@ function saveData() {
         reservedSlots:encodeObj(reservedSlots),
         cSideEnabled: encodeObj(cSideEnabled),
         LOCATOR_CODES:encodeObj(LOCATOR_CODES),
+        stanchionCapacity: stanchionCapacity,
         savedAt: new Date().toISOString()
       };
       updateSaveIndicator('saving…', '#f5a623');
@@ -4826,6 +5051,7 @@ function loadData(callback) {
       redTagSlots   = decodeObj(payload.redTagSlots   || {});
       reservedSlots = decodeObj(payload.reservedSlots || {});
       LOCATOR_CODES = decodeObj(payload.LOCATOR_CODES || {});
+      if (payload.stanchionCapacity) stanchionCapacity = payload.stanchionCapacity;
       var ago = payload.savedAt ? new Date(payload.savedAt).toLocaleTimeString() : '';
       updateSaveIndicator('loaded ✓ ' + ago, '#336633');
       callback(true);
@@ -4849,6 +5075,7 @@ function exportBackup() {
       scrapSlots: scrapSlots, holdSlots: holdSlots,
       redTagSlots: redTagSlots, reservedSlots: reservedSlots,
       cSideEnabled: cSideEnabled, LOCATOR_CODES: LOCATOR_CODES,
+      stanchionCapacity: stanchionCapacity,
       savedAt: new Date().toISOString()
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
