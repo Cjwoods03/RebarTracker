@@ -5403,7 +5403,7 @@ function renderInventory() {
   if (currentFilter==='straight') items=items.filter(function(i){return i.type==='straight'&&i.loc!=='AREA-22';});
   else if(currentFilter==='spool') items=items.filter(function(i){return i.type==='spool'&&i.loc!=='AREA-22';});
   else if(currentFilter==='area22') items=items.filter(function(i){return i.loc==='AREA-22';});
-  else if(currentFilter==='urgent') items=items.filter(function(i){var d=getDaysToShip(i.ship);return d!==null&&d<=3;});
+  else if(currentFilter==='urgent') items=items.filter(function(i){var d=getDaysToShip(i.ship);return d!==null&&d<=2;});
 
   // Apply text search — matches size, heat, order, customer, location
   if (currentSearch) {
@@ -5658,7 +5658,7 @@ function showScrapToast(msg) {
 }
 
 // ─── HELPERS ─────────────────────────────────────────────────────
-function getDaysToShip(ship){if(!ship)return null;return Math.ceil((new Date(ship)-new Date())/86400000);}
+function getDaysToShip(ship){if(!ship)return null;return Math.ceil((new Date(ship+'T12:00:00')-new Date())/86400000);}
 function offsetDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.toISOString().split('T')[0];}
 function el(tag,cls){var e=document.createElement(tag);if(cls)e.className=cls;return e;}
 
