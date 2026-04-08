@@ -1379,8 +1379,7 @@ var stanchionCapacity = (function() {
 }());
 
 function maxFtForStanchion(stanKey) {
-  var k = (typeof stanKey === 'number') ? stanKey : stanKey;
-  return STANCHION_MAX_FT_OVERRIDES[k] !== undefined ? STANCHION_MAX_FT_OVERRIDES[k] : MAX_STANCHION_FT;
+  return STANCHION_MAX_FT_OVERRIDES[stanKey] !== undefined ? STANCHION_MAX_FT_OVERRIDES[stanKey] : MAX_STANCHION_FT;
 }
 var SPOOL_SECTIONS = {
   1:['1.1','1.2','1.3','1.4','1.5','1.6','1.7','1.8','1.9'],
@@ -4294,15 +4293,19 @@ function ruleEnabled(id) {
 }
 
 function displayOptimizerResults(suggestions) {
+  // Keep allOptMoves and _optimizerSuggestions in sync so filters stay valid
+  // after executeOptimizerMove removes a suggestion and calls back here.
+  allOptMoves = suggestions;
+  window._optimizerSuggestions = suggestions;
+
   var resultsWrap = document.getElementById('opt-results');
   var summary = document.getElementById('opt-summary');
-  var list = document.getElementById('opt-move-list');
   resultsWrap.style.display = 'block';
 
   if (suggestions.length === 0) {
     summary.textContent = '✓ Warehouse is well optimized — no moves suggested.';
     summary.style.color = 'var(--safe)';
-    list.innerHTML = '';
+    document.getElementById('opt-move-list').innerHTML = '';
     return;
   }
 
@@ -4315,21 +4318,7 @@ function displayOptimizerResults(suggestions) {
     (medCount  ? ' · ' + medCount  + ' medium' : '') +
     (lowCount  ? ' · ' + lowCount  + ' low' : '');
 
-  list.innerHTML = suggestions.map(function(s, idx) {
-    var priColor = s.priority === 'high' ? '#6dd46d' : s.priority === 'medium' ? '#d4c46d' : '#8888cc';
-    return '<div class="opt-move-card">' +
-      '<div class="opt-move-header">' +
-        '<span class="opt-move-label">' + s.rule + '</span>' +
-        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:' + priColor + '">' + s.priority.toUpperCase() + '</span>' +
-      '</div>' +
-      '<div class="opt-move-desc">' + s.desc + '</div>' +
-      '<div class="opt-move-detail">' + s.detail + '</div>' +
-      '<button class="opt-move-btn" onclick="executeOptimizerMove(' + idx + ')">EXECUTE MOVE</button>' +
-      '</div>';
-  }).join('');
-
-  // Store suggestions for execute
-  window._optimizerSuggestions = suggestions;
+  renderOptMoveList();
 }
 
 function executeOptimizerMove(idx) {
