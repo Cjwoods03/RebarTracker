@@ -5552,11 +5552,7 @@ function applySlotStatus(status) {
     return;
   }
 
-  // Clear all statuses first
-  delete scrapSlots[id];
-  delete holdSlots[id];
-  delete redTagSlots[id];
-  // Note: unreserve handled separately — doesn't clear other statuses
+  // Unreserve handled separately — does NOT clear scrap/hold/redTag statuses
   if (status === 'unreserve') {
     delete reservedSlots[id];
     closeSlotCtxMenu();
@@ -5564,6 +5560,11 @@ function applySlotStatus(status) {
     renderAll();
     return;
   }
+
+  // For scrap/hold/redtag/clear: replace whichever status was active
+  delete scrapSlots[id];
+  delete holdSlots[id];
+  delete redTagSlots[id];
 
   var msg = '';
   if (status === 'scrap')  { scrapSlots[id]  = true; msg = 'Slot ' + id + ' → SCRAP'; }
