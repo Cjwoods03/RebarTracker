@@ -1800,7 +1800,7 @@ function renderVertical(wrap) {
     if (s === 22) {
       if (sec.includeArea22) {
         var tr22 = document.createElement('tr');
-        var td22 = document.createElement('td'); td22.colSpan = colSpanCount + 1; td22.style.padding = '4px 0';
+        var td22 = document.createElement('td'); td22.colSpan = colSpanCount; td22.style.padding = '4px 0';
         td22.appendChild(buildArea22Block());
         tr22.appendChild(td22);
         tbody.appendChild(tr22);
@@ -1861,7 +1861,14 @@ function renderHorizontal(wrap) {
   var horizWrap = el('div','horiz-wrap');
   var sideLabels = el('div','horiz-side-labels');
   sideLabels.appendChild(el('div','horiz-side-num-spacer'));
-  ['A','B'].forEach(function(side) {
+  // Check if any stanchion in the current view has C-side enabled
+  var hasCside = false;
+  for (var _cs = sec.min; _cs <= sec.max; _cs++) {
+    if (cSideEnabled[_cs]) { hasCside = true; break; }
+  }
+  if (!hasCside && sec.includeBSU && cSideEnabled['BSU']) hasCside = true;
+  var sides = hasCside ? ['A','B','C'] : ['A','B'];
+  sides.forEach(function(side) {
     var lbl = el('div','horiz-side-label'); lbl.textContent = side; sideLabels.appendChild(lbl);
   });
   horizWrap.appendChild(sideLabels);
@@ -5526,10 +5533,12 @@ function updateStats() {
   var keys=Object.keys(store);
   var total=keys.length;
   var occ=keys.filter(function(k){return store[k]!==null;}).length;
-  document.getElementById('stat-occupied').textContent=occ+area22Stacks.length;
-  document.getElementById('stat-empty').textContent=total-occ;
+  var occupiedAll = occ + area22Stacks.length;
+  var totalAll = total + area22Stacks.length;
+  document.getElementById('stat-occupied').textContent = occupiedAll;
+  document.getElementById('stat-empty').textContent = total - occ;
   document.getElementById('stat-bundles').textContent=inventory.reduce(function(s,i){return s+i.bundles;},0);
-  document.getElementById('stat-pct').textContent=Math.round(occ/total*100)+'%';
+  document.getElementById('stat-pct').textContent = totalAll > 0 ? Math.round(occupiedAll / totalAll * 100) + '%' : '0%';
 }
 
 function updateBadges() {
