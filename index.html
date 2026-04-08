@@ -2473,6 +2473,7 @@ function openEditModal(type, idx) {
   var lenDec = parseFloat(item.length) || 0;
   var lenFt = Math.floor(lenDec);
   var lenIn = Math.round((lenDec - lenFt) * 12);
+  if (lenIn >= 12) { lenFt += 1; lenIn -= 12; } // rounding can produce 12in
 
   document.getElementById('edit-slot-info').innerHTML =
     '<strong style="color:var(--text)">Editing:</strong> ' + modalLoc +
@@ -2880,20 +2881,27 @@ function confirmTransfer() {
   var destItem2 = store[dest];
 
   if (destItem2) {
-    // Only allow merge if same size, length (float), grade, and spec
+    // Only allow merge if same size, length (float), and compatible grade/spec
+    // Treat empty grade/spec as "unknown" — permissive match (same as logRun)
+    var gradeOk = !destItem2.grade || !srcItem.grade || destItem2.grade === srcItem.grade;
+    var specOk  = !destItem2.spec  || !srcItem.spec  || destItem2.spec  === srcItem.spec;
     if (destItem2.size !== srcItem.size || parseFloat(destItem2.length) !== parseFloat(srcItem.length) ||
-        destItem2.grade !== srcItem.grade || destItem2.spec !== srcItem.spec) {
+        !gradeOk || !specOk) {
       hint.className = 'length-hint over';
       hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge identical product (same size, length, grade, spec).';
       hint.style.display = 'block';
       return;
     }
-    // Merge — add bundles to existing
+    // Merge — add bundles to existing; fill in blank grade/spec from source
     destItem2.bundles += srcItem.bundles;
     if (destItem2.weightPerBundleTons) destItem2.weightTons = destItem2.weightPerBundleTons * destItem2.bundles;
+    if (!destItem2.grade && srcItem.grade) destItem2.grade = srcItem.grade;
+    if (!destItem2.spec  && srcItem.spec)  destItem2.spec  = srcItem.spec;
     // Update inventory record for dest
     var di = inventory.find(function(i){ return i.uid === destItem2.uid; });
-    if (di) { di.bundles = destItem2.bundles; di.weightTons = destItem2.weightTons; }
+    if (di) { di.bundles = destItem2.bundles; di.weightTons = destItem2.weightTons;
+              if (!di.grade && srcItem.grade) di.grade = srcItem.grade;
+              if (!di.spec  && srcItem.spec)  di.spec  = srcItem.spec; }
   } else {
     // Move to empty slot
     var moved = JSON.parse(JSON.stringify(srcItem));
@@ -4548,12 +4556,17 @@ function ofFinalize() {
     };
     var existing = store[p.loc];
     var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-                  existing.grade === item.grade && existing.spec === item.spec;
+                  (!existing.grade || !item.grade || existing.grade === item.grade) &&
+                  (!existing.spec  || !item.spec  || existing.spec  === item.spec);
     if (isMerge) {
       existing.bundles += p.bundles;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
+      if (!existing.grade && item.grade) existing.grade = item.grade;
+      if (!existing.spec  && item.spec)  existing.spec  = item.spec;
       var inv = inventory.find(function(i) { return i.uid === existing.uid; });
-      if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons; }
+      if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons;
+                 if (!inv.grade && item.grade) inv.grade = item.grade;
+                 if (!inv.spec  && item.spec)  inv.spec  = item.spec; }
       else inventory.push(newItem);
     } else {
       store[p.loc] = newItem;
@@ -4693,14 +4706,20 @@ function ofConfirmSplit() {
     var existing = store[loc];
     var isMerge = existing && item.size && existing.size === item.size &&
       parseFloat(existing.length) === parseFloat(item.length) &&
-      existing.grade === item.grade && existing.spec === item.spec;
+      (!existing.grade || !item.grade || existing.grade === item.grade) &&
+      (!existing.spec  || !item.spec  || existing.spec  === item.spec);
     if (isMerge) {
       existing.bundles += count;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
+      if (!existing.grade && item.grade) existing.grade = item.grade;
+      if (!existing.spec  && item.spec)  existing.spec  = item.spec;
       existing.splitPairedWith = pairedWith;
       existing.splitTotal = bdl;
       var inv = inventory.find(function(i) { return i.uid === existing.uid; });
-      if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons; inv.splitPairedWith = pairedWith; inv.splitTotal = bdl; }
+      if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons;
+                 if (!inv.grade && item.grade) inv.grade = item.grade;
+                 if (!inv.spec  && item.spec)  inv.spec  = item.spec;
+                 inv.splitPairedWith = pairedWith; inv.splitTotal = bdl; }
       else inventory.push(newItem);
     } else {
       store[loc] = newItem;
