@@ -1460,12 +1460,18 @@ function enableCside(stanKey) {
 
 // Remove C-side for a stanchion — removes from store (only if empty)
 function disableCside(stanKey) {
-  if (store[stanKey+'C']) {
-    showScrapToast('⛔ Clear ' + stanKey + 'C first before removing C-side'); saveData();
+  var cSlot = stanKey + 'C';
+  if (store[cSlot]) {
+    showScrapToast('⛔ Clear ' + cSlot + ' first before removing C-side'); saveData();
+    return;
+  }
+  // Also guard against orphaned secondaries on the C-side
+  if (storeExtra[cSlot] && storeExtra[cSlot].length > 0) {
+    showScrapToast('⛔ Clear secondary items from ' + cSlot + ' first'); saveData();
     return;
   }
   delete cSideEnabled[stanKey];
-  delete store[stanKey+'C'];
+  delete store[cSlot];
   renderAll();
   showScrapToast(stanKey + ' C-side removed'); saveData();
 }
