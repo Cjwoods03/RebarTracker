@@ -1640,6 +1640,7 @@ function formatLength(lenStr) {
   if (isNaN(dec)) return lenStr;
   var ft = Math.floor(dec);
   var inches = Math.round((dec - ft) * 12);
+  if (inches >= 12) { ft += 1; inches -= 12; } // rounding can produce 12in
   if (inches === 0) return ft + 'ft';
   return ft + 'ft ' + inches + 'in';
 }
