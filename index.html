@@ -2213,6 +2213,12 @@ function showA22StackModal(stackId) {
   document.getElementById('modal-info').innerHTML = buildModalRows(stack, isSpool, days);
   document.getElementById('modal-qty-row').style.display = 'flex';
   document.getElementById('modal-qty-val').value = stack.bundles;
+  // Area 22 stacks don't support secondary items or primary edit via modal
+  var addBtn = document.getElementById('btn-add-secondary');
+  var editBtn = document.getElementById('btn-edit-primary');
+  if (addBtn) addBtn.style.display = 'none';
+  if (editBtn) editBtn.style.display = 'none';
+  document.getElementById('modal-secondary-list').innerHTML = '';
   modalLoc = 'A22:'+stackId;
   document.getElementById('modal-overlay').classList.add('active');
 }
@@ -2795,7 +2801,11 @@ function confirmSecondaryTransfer() {
 }
 
 function openTransferModal() {
-  if (!modalLoc || modalLoc.startsWith('A22:')) return; // Area 22 not supported yet
+  if (!modalLoc) return;
+  if (modalLoc.startsWith('A22:')) {
+    showScrapToast('Area 22 transfers: clear this stack and re-log to a different location.');
+    return;
+  }
   var item = store[modalLoc];
   if (!item) return;
 
