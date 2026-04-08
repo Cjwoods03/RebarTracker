@@ -3483,15 +3483,21 @@ function runCSVImport() {
     // If slot already has product, check if same or different
     if (store[loc] && store[loc] !== null) {
       var existing = store[loc];
+      var csvGradeOk = !existing.grade || !item.grade || existing.grade === item.grade;
+      var csvSpecOk  = !existing.spec  || !item.spec  || existing.spec  === item.spec;
       if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-          existing.grade === item.grade && existing.spec === item.spec) {
-        // Same product — merge bundles
+          csvGradeOk && csvSpecOk) {
+        // Same product — merge bundles; fill in blank grade/spec from import
         existing.bundles += grp.bundles;
         existing.weightTons = (existing.weightTons||0) + grp.wtTons;
+        if (!existing.grade && item.grade) existing.grade = item.grade;
+        if (!existing.spec  && item.spec)  existing.spec  = item.spec;
         if (lpnStr) existing.lpns = ((existing.lpns||'') + (existing.lpns?', ':'') + lpnStr).trim();
         // Sync inventory record
         var ei = inventory.find(function(i){ return i.uid === existing.uid; });
-        if (ei) { ei.bundles = existing.bundles; ei.weightTons = existing.weightTons; ei.lpns = existing.lpns; }
+        if (ei) { ei.bundles = existing.bundles; ei.weightTons = existing.weightTons; ei.lpns = existing.lpns;
+                  if (!ei.grade && item.grade) ei.grade = item.grade;
+                  if (!ei.spec  && item.spec)  ei.spec  = item.spec; }
       } else {
         // Different product — add as secondary stack
         if (!storeExtra[loc]) storeExtra[loc] = [];
