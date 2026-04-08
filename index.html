@@ -1470,36 +1470,6 @@ function disableCside(stanKey) {
   showScrapToast(stanKey + ' C-side removed'); saveData();
 }
 
-// ─── TON CAPACITY ────────────────────────────────────────────────
-var MAX_TONS_PER_SIDE = 750; // tons — max per individual stanchion side (A, B, or C)
-
-// Returns total tons on a single slot (side)
-function slotTons(item) {
-  if (!item || !item.weightTons) return 0;
-  return item.weightTons;
-}
-
-// Returns total tons on a stanchion across A, B, C (all sides combined)
-function stanchionTonsUsed(stanNum) {
-  var total = 0;
-  ['A','B','C'].forEach(function(side) {
-    total += slotTons(store[stanNum+side]);
-  });
-  return total;
-}
-
-// Returns tons used on one specific side
-function sideTonsUsed(slotId) {
-  return slotTons(store[slotId]);
-}
-
-function tonUsageColor(tons, max) {
-  var pct = tons / max;
-  if (pct >= 1) return '#e84040';
-  if (pct >= 0.75) return '#e8a020';
-  return '#27c06e';
-}
-
 // ─── BUNDLE WEIGHT AUTO-CALC ─────────────────────────────────────
 // Returns per-bundle weight in tons from size + length + pieces/bundle
 function getCalcBdlTons() {
@@ -1587,38 +1557,6 @@ function calcBundleWeight() {
   calcEl.style.display = 'block';
 }
 
-// Interpolate fill color green→amber→red based on 0–1 pct
-function fillColor(pct) {
-  if (pct <= 0) return null;
-  // 0→0.5 : green (#00B04F) → amber (#f5a623)
-  // 0.5→1  : amber (#f5a623) → red (#e84040)
-  var r, g, b;
-  if (pct <= 0.5) {
-    var t = pct / 0.5;
-    r = Math.round(0   + t * (245 - 0));
-    g = Math.round(176 + t * (166 - 176));
-    b = Math.round(79  + t * (35  - 79));
-  } else {
-    var t2 = (pct - 0.5) / 0.5;
-    r = Math.round(245 + t2 * (232 - 245));
-    g = Math.round(166 + t2 * (64  - 166));
-    b = Math.round(35  + t2 * (64  - 35));
-  }
-  return 'rgb('+r+','+g+','+b+')';
-}
-
-// Build the slot background: rising fill from bottom
-function slotFillStyle(pct, isScrap) {
-  if (isScrap) return '';
-  if (pct <= 0) return '';
-  var clampPct = Math.min(pct, 1);
-  var color = fillColor(clampPct);
-  var fillH = Math.round(clampPct * 100);
-  var dimColor = 'rgba(' + color.slice(4,-1) + ',0.18)';
-  // gradient: bottom fillH% is the fill color (dim), above is transparent
-  return 'background: linear-gradient(to top, '+dimColor+' 0%, '+dimColor+' '+fillH+'%, transparent '+fillH+'%, transparent 100%); border-color: '+color+';';
-}
-
 // ─── ORDERED STANCHION LIST ─────────────────────────────────────
 // Returns all stanchion keys in visual order (1, 2, 3, BSU, 4 ... 38)
 function orderedStanchions() {
@@ -1666,14 +1604,6 @@ function stanchionFtUsed(stanNum) {
 // Returns remaining feet on a stanchion
 function stanchionFtRemaining(stanNum) {
   return maxFtForStanchion(stanNum) - stanchionFtUsed(stanNum);
-}
-
-// Returns usage color for a stanchion
-function usageColor(used) {
-  var pct = used / MAX_STANCHION_FT;
-  if (pct >= 1) return '#e84040';
-  if (pct >= 0.8) return '#e8a020';
-  return '#27c06e';
 }
 
 // ─── LENGTH HELPERS ──────────────────────────────────────────────
@@ -1979,8 +1909,6 @@ function makeSlot(id, side) {
   if (isReserved) div.classList.add('reserved-slot');
   div.id = 'slot-'+id;
   var item = store[id];
-
-  // Ton fill gradient removed — keeping slots plain for now
 
   if (isScrap) {
     div.innerHTML = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;font-weight:900;color:#cc0000;letter-spacing:1px;line-height:1">SCRAP</div>';
