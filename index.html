@@ -4163,26 +4163,31 @@ function runOptimizer() {
         var item = store[s+side];
         if (!item) return;
         var lenItem = parseFloat(item.length) || 0;
-        // Find a target stanchion that could absorb it
-        order.forEach(function(s2) {
-          if (s2 === s) return;
+        // Find the FIRST viable target — one suggestion per source side (avoid combinatorial explosion)
+        var bestDefragDest = null;
+        order.some(function(s2) {
+          if (s2 === s) return false;
           var rem2 = stanchionFtRemaining(s2);
-          if (lenItem > rem2) return;
+          if (lenItem > rem2) return false;
           var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
-          sides2.forEach(function(side2) {
-            if (!slotAvailable(s2+side2)) return;
-            suggestions.push({
-              priority: 'low',
-              moveType: item.type || 'straight',
-              ruleType: 'consolidate',
-              rule: 'Defragment',
-              desc: 'Consolidate ' + item.size + ' ' + formatLength(item.length) + ' from ' + stanLabel(s) + ' ' + side + '-side → ' + stanLabel(s2) + ' ' + side2 + '-side',
-              detail: stanLabel(s) + ' is only ' + Math.round(usedFt/maxFt*100) + '% full — freeing it opens a stanchion',
-              gain: 'Opens stanchion ' + s,
-              from: s+side, to: s2+side2
-            });
+          return sides2.some(function(side2) {
+            if (!slotAvailable(s2+side2)) return false;
+            bestDefragDest = s2+side2;
+            return true; // stop after first match
           });
         });
+        if (bestDefragDest) {
+          suggestions.push({
+            priority: 'low',
+            moveType: item.type || 'straight',
+            ruleType: 'consolidate',
+            rule: 'Defragment',
+            desc: 'Consolidate ' + item.size + ' ' + formatLength(item.length) + ' from ' + stanLabel(s) + ' ' + side + '-side → ' + stanLabel(bestDefragDest.slice(0,-1)) + ' ' + bestDefragDest.slice(-1) + '-side',
+            detail: stanLabel(s) + ' is only ' + Math.round(usedFt/maxFt*100) + '% full — freeing it opens a stanchion',
+            gain: 'Opens stanchion ' + s,
+            from: s+side, to: bestDefragDest
+          });
+        }
       });
     });
   }
@@ -4241,6 +4246,16 @@ function runOptimizer() {
           to: bestDest || slotId
         });
       });
+    });
+  }
+
+  // Apply maxWt filter — exclude suggestions where the item's weight exceeds the limit
+  if (maxWt) {
+    suggestions = suggestions.filter(function(s) {
+      var srcItem = store[s.from];
+      if (!srcItem) return true; // keep if unknown
+      var wt = srcItem.weightTons || (srcItem.weightPerBundleTons ? srcItem.weightPerBundleTons * (srcItem.bundles || 1) : 0);
+      return wt <= maxWt;
     });
   }
 
