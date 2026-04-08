@@ -3331,10 +3331,10 @@ function renderCSVMapper() {
 function renderCSVPreview() {
   var preview = csvRows.slice(0, 5);
   var html = '<table class="csv-preview-table"><thead><tr>' +
-    csvHeaders.map(function(h){ return '<th>'+h+'</th>'; }).join('') +
+    csvHeaders.map(function(h){ return '<th>'+escHtml(h)+'</th>'; }).join('') +
     '</tr></thead><tbody>' +
     preview.map(function(row){
-      return '<tr>' + csvHeaders.map(function(h){ return '<td>'+(row[h]||'')+'</td>'; }).join('') + '</tr>';
+      return '<tr>' + csvHeaders.map(function(h){ return '<td>'+escHtml(row[h]||'')+'</td>'; }).join('') + '</tr>';
     }).join('') +
     '</tbody></table>';
   document.getElementById('csv-preview-table').innerHTML = html;
@@ -3561,7 +3561,7 @@ function runCSVImport() {
       var csvSpecOk  = !existing.spec  || !item.spec  || existing.spec  === item.spec;
       if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
           csvGradeOk && csvSpecOk) {
-        // Same product — merge bundles; fill in blank grade/spec from import
+        // Same product — merge bundles; fill in blank grade/spec from import (not a new item)
         existing.bundles += grp.bundles;
         existing.weightTons = (existing.weightTons||0) + grp.wtTons;
         if (!existing.grade && item.grade) existing.grade = item.grade;
@@ -3577,12 +3577,13 @@ function runCSVImport() {
         if (!storeExtra[loc]) storeExtra[loc] = [];
         storeExtra[loc].push(item);
         inventory.push(item);
+        imported++; // count new secondary items only
       }
     } else {
       store[loc] = item;
       inventory.push(item);
+      imported++; // count new primary items only
     }
-    imported++;
   });
 
   var msg = '✓ Imported ' + imported + ' location' + (imported!==1?'s':'');
@@ -3709,10 +3710,10 @@ function parseFYI(text) {
   // Preview table
   var preview = fyiRows.slice(0, 5);
   var html = '<table class="csv-preview-table"><thead><tr>' +
-    fyiHeaders.map(function(h){ return '<th>' + h + '</th>'; }).join('') +
+    fyiHeaders.map(function(h){ return '<th>' + escHtml(h) + '</th>'; }).join('') +
     '</tr></thead><tbody>' +
     preview.map(function(row){
-      return '<tr>' + fyiHeaders.map(function(h){ return '<td>' + (row[h] || '') + '</td>'; }).join('') + '</tr>';
+      return '<tr>' + fyiHeaders.map(function(h){ return '<td>' + escHtml(row[h] || '') + '</td>'; }).join('') + '</tr>';
     }).join('') + '</tbody></table>';
   document.getElementById('fyi-preview-table').innerHTML = html;
   document.getElementById('fyi-preview-wrap').style.display = 'block';
@@ -3755,6 +3756,8 @@ function runFullYardImport() {
   holdSlots     = {};
   redTagSlots   = {};
   reservedSlots = {};
+  Object.keys(LOCATOR_CODES).forEach(function(k) { delete LOCATOR_CODES[k]; });
+  suggestedLoc  = null;
   Object.keys(cSideEnabled).forEach(function(k) { delete cSideEnabled[k]; });
 
   var imported = 0, skipped = 0, errors = [];
@@ -5514,6 +5517,8 @@ function renderInventory() {
 
     // Product name line — size + length + type
     var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' bundles');
+    // Grade/spec line
+    var gradeSpec = [item.grade ? 'Gr'+item.grade : '', item.spec || ''].filter(Boolean).join(' ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
 
@@ -5528,6 +5533,8 @@ function renderInventory() {
       '<div class="inv-meta">'+
         '<span class="tag tag-size">'+item.size+'</span>'+
         '<span class="tag '+(isSpool?'tag-spool':'tag-type')+'">'+(isSpool?'Spooled':'Straight')+'</span>'+
+        (gradeSpec ? '<span class="tag" style="background:var(--steel-light);color:var(--text-dim)">'+gradeSpec+'</span>' : '')+
+        (item.weightTons ? '<span class="tag" style="background:var(--steel-light);color:var(--text-dim)">'+item.weightTons.toFixed(2)+'t</span>' : '')+
         (isArea22?'<span class="tag tag-area22">Area 22</span>':'')+
         (item.ship?'<span class="tag '+(urgent?'tag-urgent':'tag-ship')+'">'+(urgent?'🔴 ':'')+item.ship+' ('+days+'d)</span>':'')+
       '</div>'+
@@ -5559,7 +5566,7 @@ function goToLoc(locOrId,isArea22) {
     setMapSection('s22', document.getElementById('mst-s22'));
   }
   setTimeout(function(){
-    if(isArea22){var e=document.getElementById('area22-block');if(e)e.scrollIntoView({behavior:'smooth',block:'center'});showA22StackModal(locOrId);}
+    if(isArea22){var e=document.getElementById('area22-block');if(e)e.scrollIntoView({behavior:'smooth',block:'center'});if(locOrId)showA22StackModal(locOrId);}
     else{var e2=document.getElementById('slot-'+locOrId);if(e2)e2.scrollIntoView({behavior:'smooth',block:'center'});if(store[locOrId]){modalLoc=locOrId;showModal(locOrId);}}
   },200);
 }
