@@ -2323,7 +2323,7 @@ function showModal(id) {
 
   renderSecondaryList(id);
 
-  var isStanchion = !id.startsWith('RACK-');
+  var isStanchion = !id.startsWith('RACK-') && id !== 'CYCLE';
   var addBtn = document.getElementById('btn-add-secondary');
   var editBtn = document.getElementById('btn-edit-primary');
   if (addBtn) addBtn.style.display = isStanchion ? 'block' : 'none';
@@ -2519,6 +2519,8 @@ function confirmEdit() {
   if (newGrade !== undefined) item.grade = newGrade;
   if (newSpec  !== undefined) item.spec  = newSpec;
   item.bundles = newBundles;
+  if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
+  else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
   if (newHeat)  item.heat    = newHeat;
   if (newLen > 0) item.length = String(newLen);
 
@@ -2592,6 +2594,25 @@ function confirmAddSecondary() {
   var secSpec  = document.getElementById('sec-spec').value;
   if (!secGrade) { alert('Please select a Grade (40, 60, or 80).'); return; }
   if (!secSpec)  { alert('Please select a Spec (A615 or A706).'); return; }
+
+  // Footage check: if this secondary is longer than the current longest item on
+  // this side, it would increase stanchionFtUsed. Ensure it fits within the max.
+  if (lenDecimal > 0) {
+    var stanKey3 = modalLoc.slice(0, -1);
+    var allOnSide3 = slotAllItems(modalLoc);
+    var curMaxOnSide = allOnSide3.reduce(function(m, i) {
+      return Math.max(m, parseFloat(i.length) || 0);
+    }, 0);
+    if (lenDecimal > curMaxOnSide) {
+      // This secondary would increase the stanchion footage used
+      var footageIncrease = lenDecimal - curMaxOnSide;
+      var remaining3 = stanchionFtRemaining(stanKey3);
+      if (footageIncrease > remaining3) {
+        alert('⛔ This secondary item (' + lenDecimal + 'ft) is longer than the current longest bar on this side (' + curMaxOnSide + 'ft) and would exceed the stanchion capacity.\n\nOnly ' + remaining3.toFixed(1) + 'ft remaining.');
+        return;
+      }
+    }
+  }
 
   var secWtPerBdl = getSecWeightInTons();
   var newItem = {
