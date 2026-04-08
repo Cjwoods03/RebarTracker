@@ -1805,6 +1805,7 @@ function switchTab(name, btn) {
 function renderAll() {
   var wrap = document.getElementById('map-wrap');
   wrap.innerHTML = '';
+  wrap.style.padding = '';
   if (currentMapSection === 'spool') {
     renderSpoolRacks(wrap);
   } else if (currentMapSection === 'cycle') {
@@ -2263,8 +2264,9 @@ function makeRackSlot(rid, rack) {
     var isOver = maxSpools && usedSpools > maxSpools;
     div.classList.add(isOver ? 'occupied-urgent' : (days!==null&&days<=2?'occupied-urgent':'occupied'));
 
-    // Fill background based on capacity
-    if (maxSpools && pct > 0) {
+    // Fill background based on capacity — skip when urgent (CSS class takes priority)
+    var isUrgent = isOver || (days !== null && days <= 2);
+    if (maxSpools && pct > 0 && !isUrgent) {
       var fc = rackFillColor(pct);
       var dim = 'rgba('+fc+',0.2)';
       div.style.background = 'linear-gradient(to top,'+dim+' 0%,'+dim+' '+Math.round(pct*100)+'%,transparent '+Math.round(pct*100)+'%,transparent 100%)';
@@ -2845,8 +2847,9 @@ function openTransferModal() {
         var opt = document.createElement('option');
         opt.value = id;
         if (existing) {
-          if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length)) {
-            // Same product — always allow merge (no footage added, just bundles)
+          if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
+              existing.grade === item.grade && existing.spec === item.spec) {
+            // Same product (size + length + grade + spec) — allow merge (no footage added, just bundles)
             opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
             opt.style.fontWeight = 'bold';
           } else {
@@ -2898,7 +2901,8 @@ function confirmTransfer() {
     var destItem0 = store[dest];
     // If destination already has the same product, this is a bundle merge — no footage is added
     // so no ft check needed. Only check ft when moving to an empty slot or different stanchion.
-    var isMerge = destItem0 && destItem0.size === srcItem.size && parseFloat(destItem0.length) === parseFloat(srcItem.length);
+    var isMerge = destItem0 && destItem0.size === srcItem.size && parseFloat(destItem0.length) === parseFloat(srcItem.length) &&
+                  destItem0.grade === srcItem.grade && destItem0.spec === srcItem.spec;
     if (!isMerge) {
       var length = parseFloat(srcItem.length) || 0;
       var destStan = dest.slice(0, -1);
@@ -2931,10 +2935,11 @@ function confirmTransfer() {
   var destItem2 = store[dest];
 
   if (destItem2) {
-    // Only allow merge if same size AND same length
-    if (destItem2.size !== srcItem.size || destItem2.length !== srcItem.length) {
+    // Only allow merge if same size, length (float), grade, and spec
+    if (destItem2.size !== srcItem.size || parseFloat(destItem2.length) !== parseFloat(srcItem.length) ||
+        destItem2.grade !== srcItem.grade || destItem2.spec !== srcItem.spec) {
       hint.className = 'length-hint over';
-      hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge matching product.';
+      hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge identical product (same size, length, grade, spec).';
       hint.style.display = 'block';
       return;
     }
@@ -2994,46 +2999,6 @@ function clearSlot() {
 }
 
 // ─── SPACE OPTIMIZER ─────────────────────────────────────────────
-var optimizerRules = [
-  'Group same size + length + grade + spec onto the same stanchion',
-  'Pair short runs (<40ft) on A+B of same stanchion to reach 80ft',
-  'Avoid splitting matching product across non-adjacent stanchions',
-];
-
-function renderOptimizerRules() {
-  var list = document.getElementById('opt-rules-list');
-  if (!list) return;
-  if (optimizerRules.length === 0) {
-    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim)">No rules yet. Add one below.</div>';
-    return;
-  }
-  list.innerHTML = optimizerRules.map(function(r, i) {
-    return '<div class="opt-rule-row">' +
-      '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--accent);min-width:18px">' + (i+1) + '.</span>' +
-      '<span class="opt-rule-text">' + r + '</span>' +
-      '<button class="opt-rule-del" onclick="deleteOptimizerRule(' + i + ')">✕</button>' +
-      '</div>';
-  }).join('');
-}
-
-function addOptimizerRule() {
-  var inp = document.getElementById('opt-new-rule');
-  var val = inp.value.trim();
-  if (!val) return;
-  optimizerRules.push(val);
-  inp.value = '';
-  renderOptimizerRules();
-}
-
-function deleteOptimizerRule(idx) {
-  optimizerRules.splice(idx, 1);
-  renderOptimizerRules();
-}
-
-// Called when optimizer section opens
-function initOptimizerPanel() {
-  renderOptimizerRules();
-}
 
 function runCapCalc() {
   var size   = document.getElementById('cap-calc-size').value;
@@ -3360,19 +3325,24 @@ function parseEBSLocation(raw) {
 
   // Spool: starts with SB.
   if (/^SB\./i.test(s)) {
-    var rackPart = s.replace(/^SB\./i, '').replace(/\.+$/, '');
-    // Section 3 paired racks — map individual to paired slot
+    // Strip prefix and optional trailing side suffix (.A / .B)
+    var rackPart = s.replace(/^SB\./i, '').replace(/\.[AB]$/i, '').replace(/\.+$/, '');
+    // Section 3 paired racks — map individual rack to paired slot
     if (rackPart === '3.1' || rackPart === '3.2') return 'RACK-3.1-2';
     if (rackPart === '3.3' || rackPart === '3.4') return 'RACK-3.3-4';
     if (rackPart === '3.5' || rackPart === '3.6') return 'RACK-3.5-6';
     return 'RACK-' + rackPart;
   }
 
-  // Straight bar: B{stanchion}.{side}…
+  // Straight bar: B{stanchion}.{side}… — strip leading zeros from stanchion number
   var straightMatch = s.match(/^B([A-Z0-9]+)\.([ABC])\.*/i);
   if (straightMatch) {
-    var stan = straightMatch[1].toUpperCase();
+    var stanRaw = straightMatch[1].toUpperCase();
     var side = straightMatch[2].toUpperCase();
+    // Stanchion 22 is the Area 22 open stacking zone
+    if (stanRaw === '22' || parseInt(stanRaw, 10) === 22) return 'AREA-22';
+    // 'BSU' is a named stanchion; numeric stanchions may be zero-padded (B05 → 5)
+    var stan = (stanRaw === 'SU') ? 'BSU' : (isNaN(parseInt(stanRaw, 10)) ? stanRaw : String(parseInt(stanRaw, 10)));
     return stan + side;
   }
 
@@ -3789,6 +3759,25 @@ function runFullYardImport() {
 
       var type = /^SB\./i.test(ebsLoc) ? 'spool' : 'straight';
 
+      // Area 22: each LPN becomes its own stack
+      if (loc === 'AREA-22') {
+        var a22stack = {
+          uid: genUid(),
+          id: 'S' + String(area22NextId++).padStart(2, '0'),
+          side: 'A',
+          heat: '', ship: '', order: '', customer: '',
+          size: size || '#?', length: lenNum ? String(lenNum) : '', type: type,
+          grade: grade || '', spec: spec || '',
+          bundles: 1, weightTons: wtPerLpn, weightPerBundleTons: wtPerLpn,
+          spoolWeightLbs: 0,
+          lpns: lpn || '', loc: 'AREA-22', logged: 'fyi'
+        };
+        area22Stacks.push(a22stack);
+        inventory.push(a22stack);
+        imported++;
+        return;
+      }
+
       // Ensure slot exists — enable C-side if needed
       if (!store.hasOwnProperty(loc)) {
         if (loc.endsWith('C')) {
@@ -3833,9 +3822,27 @@ function runFullYardImport() {
       heat: '', ship: '', order: '', customer: '',
       lpns: grp.lpns.join(', '), loc: loc, logged: 'fyi'
     };
-    store[loc] = item;
-    inventory.push(item);
-    imported++;
+    if (store[loc]) {
+      var ex = store[loc];
+      if (ex.size === item.size && ex.grade === item.grade && ex.spec === item.spec) {
+        // Same product — merge bundle counts
+        ex.bundles += item.bundles;
+        ex.weightTons += item.weightTons;
+        ex.weightPerBundleTons = ex.bundles > 0 ? ex.weightTons / ex.bundles : 0;
+        var merged = inventory.find(function(i) { return i.uid === ex.uid; });
+        if (merged) { merged.bundles = ex.bundles; merged.weightTons = ex.weightTons; merged.weightPerBundleTons = ex.weightPerBundleTons; }
+      } else {
+        // Different product — push as secondary
+        if (!storeExtra[loc]) storeExtra[loc] = [];
+        storeExtra[loc].push(item);
+        inventory.push(item);
+        imported++;
+      }
+    } else {
+      store[loc] = item;
+      inventory.push(item);
+      imported++;
+    }
   });
 
   var totalBundles = Object.values(locationGroups).reduce(function(s, g) { return s + g.bundles; }, 0);
@@ -3882,20 +3889,24 @@ function filterOptMoves(group, val, btn) {
 }
 
 function renderOptMoveList() {
-  var filtered = allOptMoves.filter(function(m) {
-    if (optFilters.priority !== 'all' && m.priority !== optFilters.priority) return false;
-    if (optFilters.moveType !== 'all' && m.moveType !== optFilters.moveType) return false;
-    if (optFilters.ruleType !== 'all' && m.ruleType !== optFilters.ruleType) return false;
-    return true;
+  // Build filtered list while preserving original indices (needed for executeOptimizerMove)
+  var filteredWithIdx = [];
+  allOptMoves.forEach(function(m, origIdx) {
+    if (optFilters.priority !== 'all' && m.priority !== optFilters.priority) return;
+    if (optFilters.moveType !== 'all' && m.moveType !== optFilters.moveType) return;
+    if (optFilters.ruleType !== 'all' && m.ruleType !== optFilters.ruleType) return;
+    filteredWithIdx.push({ m: m, origIdx: origIdx });
   });
   var listEl = document.getElementById('opt-move-list');
-  if (filtered.length === 0) {
+  if (filteredWithIdx.length === 0) {
     listEl.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);padding:12px 0">No moves match this filter.</div>';
     return;
   }
   var priorityColors = { high:'#e84040', medium:'#f5a623', low:'#27c06e' };
   var priorityLabels = { high:'🔴 HIGH', medium:'🟡 MED', low:'🟢 LOW' };
-  listEl.innerHTML = filtered.map(function(m, i) {
+  listEl.innerHTML = filteredWithIdx.map(function(entry, i) {
+    var m = entry.m;
+    var origIdx = entry.origIdx;
     var pc = priorityColors[m.priority]||'var(--text-dim)';
     var pl = priorityLabels[m.priority]||m.priority.toUpperCase();
     return '<div class="opt-move-card">' +
@@ -3909,8 +3920,9 @@ function renderOptMoveList() {
       '</div>' +
       '<div class="opt-move-desc">'+m.desc+'</div>' +
       '<div class="opt-move-desc" style="color:var(--accent);margin-top:2px">'+m.detail+'</div>' +
-      '<div class="opt-move-reason">'+m.reason+'</div>' +
-      (m.gain?'<div class="opt-move-gain">'+m.gain+'</div>':'') +
+      (m.reason ? '<div class="opt-move-reason">'+m.reason+'</div>' : '') +
+      (m.gain ? '<div class="opt-move-gain">'+m.gain+'</div>' : '') +
+      '<button class="opt-move-btn" onclick="executeOptimizerMove('+origIdx+')">EXECUTE MOVE</button>' +
       '</div>';
   }).join('');
 }
@@ -4301,17 +4313,24 @@ function executeOptimizerMove(idx) {
   var suggestions = window._optimizerSuggestions || [];
   var s = suggestions[idx];
   if (!s) return;
+  // Guard: over_capacity rule can produce from===to when no destination found
+  if (s.from === s.to || !s.to) { showScrapToast('⛔ No valid destination — re-run the optimizer.'); return; }
   var srcItem = store[s.from];
   if (!srcItem) { alert('Source slot is now empty — re-run the optimizer.'); return; }
   var destItem = store[s.to];
   if (destItem) {
-    // Merge — same product check
-    if (destItem.size === srcItem.size && parseFloat(destItem.length) === parseFloat(srcItem.length)) {
+    // Merge — same product check (size + length + grade + spec)
+    if (destItem.size === srcItem.size && parseFloat(destItem.length) === parseFloat(srcItem.length) &&
+        destItem.grade === srcItem.grade && destItem.spec === srcItem.spec) {
       destItem.bundles += srcItem.bundles;
       destItem.weightTons = (destItem.weightTons||0) + (srcItem.weightTons||0);
+      var di = inventory.find(function(i){ return i.uid && destItem.uid && i.uid === destItem.uid; });
+      if (di) { di.bundles = destItem.bundles; di.weightTons = destItem.weightTons; }
     } else {
       if (!storeExtra[s.to]) storeExtra[s.to] = [];
-      storeExtra[s.to].push(JSON.parse(JSON.stringify(srcItem)));
+      var secCopy = JSON.parse(JSON.stringify(srcItem));
+      secCopy.loc = s.to;
+      storeExtra[s.to].push(secCopy);
       inventory.push(storeExtra[s.to][storeExtra[s.to].length-1]);
     }
   } else {
@@ -4321,9 +4340,11 @@ function executeOptimizerMove(idx) {
     store[s.to] = moved;
     inventory.push(moved);
   }
-  // Clear source
+  // Clear source (secondaries + primary)
+  clearSecondaryItems(s.from);
   store[s.from] = null;
-  var srcIdx = inventory.findIndex(function(i){ return i === srcItem; });
+  var srcUid = srcItem.uid;
+  var srcIdx = inventory.findIndex(function(i){ return i.uid && srcUid && i.uid === srcUid; });
   if (srcIdx > -1) inventory.splice(srcIdx, 1);
 
   showScrapToast('✓ Moved: ' + s.from + ' → ' + s.to); saveData();
@@ -5413,7 +5434,9 @@ function goToLoc(locOrId,isArea22) {
   openSection('map');
   // Switch to correct map section tab
   if (!isArea22) {
-    if (locOrId.startsWith('RACK-')) {
+    if (locOrId === 'CYCLE') {
+      setMapSection('cycle', document.getElementById('mst-cycle'));
+    } else if (locOrId.startsWith('RACK-')) {
       setMapSection('spool', document.getElementById('mst-spool'));
     } else if (locOrId.startsWith('BSU') || (!isNaN(parseInt(locOrId)) && parseInt(locOrId) <= 3)) {
       setMapSection('s1bsu', document.getElementById('mst-s1bsu'));
@@ -5609,10 +5632,16 @@ function updateSaveIndicator(msg, color) {
 // Firebase keys can't contain . - # $ / [ ]
 // Encode: RACK-1.1 → RACK_1_1, BSUA → BSUA (safe already)
 function fbEncode(key) {
-  return key.replace(/-/g, '__DASH__').replace(/\./g, '__DOT__');
+  return key.replace(/-/g, '__DASH__').replace(/\./g, '__DOT__')
+            .replace(/#/g, '__HASH__').replace(/\$/g, '__DOLLAR__')
+            .replace(/\[/g, '__LB__').replace(/\]/g, '__RB__')
+            .replace(/\?/g, '__QM__').replace(/\//g, '__SL__');
 }
 function fbDecode(key) {
-  return key.replace(/__DASH__/g, '-').replace(/__DOT__/g, '.');
+  return key.replace(/__DASH__/g, '-').replace(/__DOT__/g, '.')
+            .replace(/__HASH__/g, '#').replace(/__DOLLAR__/g, '$')
+            .replace(/__LB__/g, '[').replace(/__RB__/g, ']')
+            .replace(/__QM__/g, '?').replace(/__SL__/g, '/');
 }
 function encodeObj(obj) {
   if (!obj || typeof obj !== 'object') return obj;
@@ -5788,8 +5817,8 @@ function checkAdminPin() {
     document.getElementById('admin-pin-input').style.borderColor = 'var(--safe)';
     // Auto-hide after 30 seconds if not used
     setTimeout(function() {
-      var btn = document.getElementById('btn-clear-all-data');
-      if (btn) btn.style.display = 'none';
+      var btnWrap = document.getElementById('btn-clear-all-data-wrap');
+      if (btnWrap) btnWrap.style.display = 'none';
       var inp = document.getElementById('admin-pin-input');
       if (inp) {
         inp.placeholder = 'Admin PIN to unlock reset';
@@ -5809,12 +5838,14 @@ function checkAdminPin() {
 
 function clearSavedData() {
   if (!confirm('This will clear ALL warehouse data for ALL devices. Are you sure?')) return;
-  // Re-hide the button after use
-  var btn = document.getElementById('btn-clear-all-data');
-  if (btn) btn.style.display = 'none';
+  // Re-hide the button wrap after use
+  var btnWrap = document.getElementById('btn-clear-all-data-wrap');
+  if (btnWrap) btnWrap.style.display = 'none';
   if (!db) { alert('Not connected to Firebase.'); return; }
   db.ref(FB_PATH).remove().then(function() {
     location.reload();
+  }).catch(function(err) {
+    alert('Clear failed: ' + err.message);
   });
 }
 
