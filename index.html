@@ -969,11 +969,11 @@
           <button class="inv-search-clear" id="inv-search-clear" onclick="clearInvSearch()" style="display:none">✕</button>
         </div>
         <div class="inv-filter">
-          <button class="filter-btn active" onclick="filterInv('all',this)">All</button>
-          <button class="filter-btn" onclick="filterInv('straight',this)">Straight</button>
-          <button class="filter-btn" onclick="filterInv('spool',this)">Spooled</button>
-          <button class="filter-btn" onclick="filterInv('area22',this)">Area 22</button>
-          <button class="filter-btn" onclick="filterInv('urgent',this)">🔴 Soon</button>
+          <button class="filter-btn inv-filter-btn active" onclick="filterInv('all',this)">All</button>
+          <button class="filter-btn inv-filter-btn" onclick="filterInv('straight',this)">Straight</button>
+          <button class="filter-btn inv-filter-btn" onclick="filterInv('spool',this)">Spooled</button>
+          <button class="filter-btn inv-filter-btn" onclick="filterInv('area22',this)">Area 22</button>
+          <button class="filter-btn inv-filter-btn" onclick="filterInv('urgent',this)">🔴 Soon</button>
         </div>
         <div id="inventory-list"><div class="empty-inv">No inventory logged yet.<br>Use the Log Run tab<br>to add product.</div></div>
       </div>
@@ -1202,10 +1202,10 @@
         <span style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;display:block;margin-bottom:2px">Splitting product</span>
         <span id="of-sp-product-text" style="color:var(--text)">—</span>
       </div>
-      <label class="of-label">Stanchion</label>
-      <select class="of-sel" id="of-sp-stan" onchange="ofSpStanChange()"></select>
-      <label class="of-label">Side pair</label>
-      <div id="of-sp-pairs" style="margin-bottom:10px"></div>
+      <label class="of-label">First location</label>
+      <select class="of-sel" id="of-sp-loc1" onchange="ofSpLocChange()"></select>
+      <label class="of-label">Second location</label>
+      <select class="of-sel" id="of-sp-loc2" onchange="ofSpLocChange()"></select>
       <label class="of-label">Total bundles</label>
       <input class="of-num-inp" type="number" id="of-sp-bdl" min="1" oninput="ofSpBdlChange()" style="margin-bottom:10px">
       <div id="of-sp-preview" class="of-preview" style="display:none"></div>
@@ -1330,6 +1330,9 @@
 
 <script>
 // ─── DATA ────────────────────────────────────────────────────────
+function genUid() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
 var STANCHION_COUNT = 38;
 var MAX_STANCHION_FT = 80; // default
 var STANCHION_MAX_FT_OVERRIDES = { 2:70, 3:70, 'BSU':70 };
@@ -2178,6 +2181,7 @@ function addToArea22() {
   if (!size || !bundles) { alert('Please fill in Bar Size and Bundles/Coils.'); return; }
   var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a22-spool-weight').value)||0) : 0;
   var stack = {
+    uid: genUid(),
     id: 'S'+String(area22NextId++).padStart(2,'0'),
     side: side,
     heat: document.getElementById('a22-heat').value.trim(),
@@ -2576,7 +2580,7 @@ function confirmEdit() {
   if (newLen > 0) item.length = String(newLen);
 
   // Sync inventory reference
-  var invIdx = inventory.findIndex(function(i){ return i === item; });
+  var invIdx = inventory.findIndex(function(i){ return i.uid && item.uid && i.uid === item.uid; });
   if (invIdx > -1) inventory[invIdx] = item;
 
   closeEditModal();
@@ -2648,6 +2652,7 @@ function confirmAddSecondary() {
 
   var secWtPerBdl = getSecWeightInTons();
   var newItem = {
+    uid: genUid(),
     size: size, length: lenDecimal ? String(lenDecimal) : '', type: 'straight',
     grade: secGrade, spec: secSpec,
     bundles: bundles,
@@ -2678,7 +2683,7 @@ function removeSecondaryItem(slotId, idx) {
   extras.splice(idx, 1);
   if (extras.length === 0) delete storeExtra[slotId];
   // Remove from inventory
-  var ii = inventory.findIndex(function(i) { return i === removed; });
+  var ii = inventory.findIndex(function(i) { return i.uid && removed.uid && i.uid === removed.uid; });
   if (ii > -1) inventory.splice(ii, 1);
   renderAll();
   renderInventory();
@@ -2690,7 +2695,7 @@ function removeSecondaryItem(slotId, idx) {
 function clearSecondaryItems(slotId) {
   var extras = storeExtra[slotId] || [];
   extras.forEach(function(ei) {
-    var ii = inventory.findIndex(function(i){ return i === ei; });
+    var ii = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
     if (ii > -1) inventory.splice(ii, 1);
   });
   delete storeExtra[slotId];
@@ -2759,7 +2764,7 @@ function confirmSecondaryTransfer() {
     inventory.push(moved);
   } else {
     storeExtra[dest].push(moved);
-    var ii = inventory.findIndex(function(i){ return i === ei; });
+    var ii = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
     if (ii > -1) inventory[ii] = moved;
   }
 
@@ -2767,7 +2772,7 @@ function confirmSecondaryTransfer() {
   extras.splice(secTransferIdx, 1);
   if (extras.length === 0) delete storeExtra[secTransferSlot];
   // Remove original inventory reference (new one was pushed in the if/else above)
-  var srcInvIdx = inventory.findIndex(function(i){ return i === ei; });
+  var srcInvIdx = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
   if (srcInvIdx > -1) inventory.splice(srcInvIdx, 1);
 
   var fromSlot = secTransferSlot;
@@ -2948,10 +2953,13 @@ function confirmTransfer() {
     inventory.push(moved);
   }
 
-  // Clear source
+  // Clear source — remove secondary items first, then wipe primary
+  clearSecondaryItems(modalLoc);
   store[modalLoc] = null;
-  var srcIdx = inventory.findIndex(function(i){ return i.loc === modalLoc; });
-  if (srcIdx > -1) inventory.splice(srcIdx, 1);
+  // Remove ALL inventory entries for this slot (primary may be loc-matched)
+  for (var _si = inventory.length - 1; _si >= 0; _si--) {
+    if (inventory[_si].loc === modalLoc) inventory.splice(_si, 1);
+  }
 
   var fromId = modalLoc;
   closeTransferModal();
@@ -3526,6 +3534,7 @@ function runCSVImport() {
     var grp = locationGroups[loc];
     var lpnStr = grp.lpns.length > 0 ? grp.lpns.join(', ') : '';
     var item = {
+      uid: genUid(),
       heat: grp.heat,
       size: grp.size || '#?',
       length: grp.length,
@@ -3815,6 +3824,7 @@ function runFullYardImport() {
   Object.keys(locationGroups).forEach(function(loc) {
     var grp = locationGroups[loc];
     var item = {
+      uid: genUid(),
       size: grp.size || '#?', length: grp.length, type: grp.type,
       grade: grp.grade || '', spec: grp.spec || '',
       bundles: grp.bundles,
@@ -4559,6 +4569,7 @@ function ofFinalize() {
 
   _of.placements.forEach(function(p) {
     var newItem = {
+      uid: genUid(),
       heat: item.heat, size: item.size, length: item.length, type: item.type,
       grade: item.grade, spec: item.spec, bundles: p.bundles,
       weightPerBundleTons: bdlTons, weightTons: bdlTons * p.bundles,
@@ -4591,134 +4602,116 @@ function ofFinalize() {
 }
 
 // ── SPLIT MODE ───────────────────────────────────────────────────
+// Fill one split location dropdown, excluding the other's current selection
+function ofFillSplitSel(selId, excludeId) {
+  var sel = document.getElementById(selId);
+  var prev = sel.value;
+  sel.innerHTML = '<option value="">— Pick location —</option>';
+  var item = _of.item || {};
+  var lenNum = parseFloat(item.length) || 0;
 
-function ofPopulateSplitStanDropdown() {
-  var sel = document.getElementById('of-sp-stan');
-  sel.innerHTML = '<option value="">— Select stanchion —</option>';
   orderedStanchions().forEach(function(s) {
     var capData = stanchionCapacity[s];
     if (capData && capData.freeStack) return;
-    var opt = document.createElement('option');
-    opt.value = String(s);
-    opt.textContent = (s === 'BSU') ? 'B.SU' : 'Stanchion ' + s;
-    sel.appendChild(opt);
-  });
-}
-
-function ofSpStanChange() {
-  _of.splitPair = null;
-  ofSpRenderPairs();
-  ofSpBdlChange();
-}
-
-function ofSpRenderPairs() {
-  var stanStr = document.getElementById('of-sp-stan').value;
-  var el = document.getElementById('of-sp-pairs');
-  el.innerHTML = '';
-  if (!stanStr) return;
-  var s = isNaN(parseInt(stanStr)) ? stanStr : parseInt(stanStr);
-  var item = _of.item;
-  var lenNum = parseFloat(item.length) || 0;
-
-  var allPairs = [['A', 'B']];
-  if (cSideEnabled[s]) { allPairs.push(['B', 'C']); allPairs.push(['A', 'C']); }
-
-  var validPairs = allPairs.filter(function(pair) {
-    return pair.every(function(side) {
+    var sides = cSideEnabled[s] ? ['A', 'B', 'C'] : ['A', 'B'];
+    sides.forEach(function(side) {
       var id = s + side;
-      if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) return false;
-      var ex = store[id];
-      if (!ex) {
+      if (id === excludeId) return;
+      if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) return;
+      var lbl = (s === 'BSU') ? 'B.SU' : 'Stanchion ' + s;
+      var existing = store[id];
+      var opt = document.createElement('option');
+      opt.value = id;
+      if (existing) {
+        // Allow only matching product (merge) — skip different product
+        var isSame = item.size && existing.size === item.size &&
+          (!lenNum || parseFloat(existing.length) === lenNum) &&
+          (!item.grade || !existing.grade || existing.grade === item.grade) &&
+          (!item.spec  || !existing.spec  || existing.spec  === item.spec);
+        if (!isSame) return;
+        opt.textContent = '★ ' + lbl + ' ' + side + '-side — ' + existing.size + ' ' +
+          formatLength(String(existing.length || '')) + ' (' + existing.bundles + ' bdl) MERGE';
+      } else {
         // Empty — check footage
-        return lenNum === 0 || lenNum <= stanchionFtRemaining(s);
+        if (lenNum > 0 && lenNum > stanchionFtRemaining(s)) return;
+        opt.textContent = lbl + ' ' + side + '-side (' + stanchionFtRemaining(s).toFixed(0) + 'ft avail)';
       }
-      return ex.size === item.size && parseFloat(ex.length) === lenNum &&
-        (!item.grade || !ex.grade || ex.grade === item.grade) &&
-        (!item.spec  || !ex.spec  || ex.spec  === item.spec);
+      sel.appendChild(opt);
     });
   });
+  // Restore previous selection if still in list
+  if (prev && Array.from(sel.options).some(function(o) { return o.value === prev; })) sel.value = prev;
+}
 
-  if (!validPairs.length) {
-    el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--hot);padding:6px 0">No valid pairs — both sides must be empty or hold matching product.</div>';
-    return;
-  }
+function ofPopulateSplitDropdowns() {
+  ofFillSplitSel('of-sp-loc1', document.getElementById('of-sp-loc2').value);
+  ofFillSplitSel('of-sp-loc2', document.getElementById('of-sp-loc1').value);
+}
 
-  validPairs.forEach(function(pair) {
-    var btn = document.createElement('button');
-    btn.className = 'of-pair-btn';
-    btn.textContent = pair[0] + '+' + pair[1];
-    btn.dataset.pair = pair.join(',');
-    btn.onclick = function() {
-      document.querySelectorAll('.of-pair-btn').forEach(function(b) { b.classList.remove('selected'); });
-      btn.classList.add('selected');
-      _of.splitPair = pair;
-      ofSpBdlChange();
-    };
-    el.appendChild(btn);
-  });
-
-  // Auto-select first valid pair
-  el.querySelector('.of-pair-btn').click();
+function ofSpLocChange() {
+  var loc1 = document.getElementById('of-sp-loc1').value;
+  var loc2 = document.getElementById('of-sp-loc2').value;
+  ofFillSplitSel('of-sp-loc1', loc2);
+  ofFillSplitSel('of-sp-loc2', loc1);
+  // Restore after rebuild
+  document.getElementById('of-sp-loc1').value = loc1;
+  document.getElementById('of-sp-loc2').value = loc2;
+  ofSpBdlChange();
 }
 
 function ofSpBdlChange() {
   var bdl = parseInt(document.getElementById('of-sp-bdl').value) || 0;
+  var loc1 = document.getElementById('of-sp-loc1').value;
+  var loc2 = document.getElementById('of-sp-loc2').value;
   var preview = document.getElementById('of-sp-preview');
   var confirmBtn = document.getElementById('of-sp-confirm');
-  if (!_of.splitPair || bdl <= 0) {
+  if (!loc1 || !loc2 || bdl <= 0) {
     preview.style.display = 'none';
     confirmBtn.disabled = true;
     return;
   }
-
-  var stanStr = document.getElementById('of-sp-stan').value;
-  if (!stanStr) { preview.style.display = 'none'; return; }
-  var s = isNaN(parseInt(stanStr)) ? stanStr : parseInt(stanStr);
-
   var half1 = Math.ceil(bdl / 2);
   var half2 = Math.floor(bdl / 2);
-  var id1 = s + _of.splitPair[0];
-  var id2 = s + _of.splitPair[1];
-  var lbl = (s === 'BSU') ? 'B.SU' : 'Stan ' + s;
 
-  var capData = stanchionCapacity[s];
-  var maxBdl = capData ? capData.maxBundlesPerSide : 99999;
-  var ex1 = store[id1]; var ex2 = store[id2];
-  var used1 = ex1 ? (ex1.bundles || 0) : 0;
-  var used2 = ex2 ? (ex2.bundles || 0) : 0;
-  var ok1 = (half1 + used1) <= maxBdl;
-  var ok2 = (half2 + used2) <= maxBdl;
+  function slotInfo(id) {
+    var sk = id.slice(0, -1);
+    var sk2 = parseInt(sk) || sk;
+    var cap = stanchionCapacity[sk2];
+    var maxBdl = cap ? cap.maxBundlesPerSide : 99999;
+    var ex = store[id];
+    var used = ex ? (ex.bundles || 0) : 0;
+    return { lbl: (sk === 'BSU' ? 'B.SU' : 'Stan ' + sk) + ' ' + id.slice(-1) + '-side', maxBdl: maxBdl, used: used, avail: maxBdl - used };
+  }
+
+  var i1 = slotInfo(loc1), i2 = slotInfo(loc2);
+  var ok1 = half1 <= i1.avail, ok2 = half2 <= i2.avail;
 
   preview.innerHTML =
     '<div style="font-size:9px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Split Preview</div>' +
     '<div style="display:flex;justify-content:space-between;margin-bottom:5px">' +
-      '<span style="color:' + (ok1 ? 'var(--accent)' : 'var(--hot)') + '">' + lbl + ' ' + _of.splitPair[0] + '-side</span>' +
-      '<span style="color:var(--text)">' + half1 + ' bdl' + (ex1 ? ' (+' + used1 + ' existing)' : '') + (ok1 ? '' : ' ⛔ OVER CAP') + '</span>' +
+      '<span style="color:' + (ok1 ? 'var(--accent)' : 'var(--hot)') + '">' + i1.lbl + '</span>' +
+      '<span style="color:var(--text)">' + half1 + ' bdl' + (i1.used ? ' (+' + i1.used + ' existing)' : '') + (ok1 ? '' : ' ⛔ OVER CAP') + '</span>' +
     '</div>' +
     '<div style="display:flex;justify-content:space-between">' +
-      '<span style="color:' + (ok2 ? 'var(--accent)' : 'var(--hot)') + '">' + lbl + ' ' + _of.splitPair[1] + '-side</span>' +
-      '<span style="color:var(--text)">' + half2 + ' bdl' + (ex2 ? ' (+' + used2 + ' existing)' : '') + (ok2 ? '' : ' ⛔ OVER CAP') + '</span>' +
+      '<span style="color:' + (ok2 ? 'var(--accent)' : 'var(--hot)') + '">' + i2.lbl + '</span>' +
+      '<span style="color:var(--text)">' + half2 + ' bdl' + (i2.used ? ' (+' + i2.used + ' existing)' : '') + (ok2 ? '' : ' ⛔ OVER CAP') + '</span>' +
     '</div>';
   preview.style.display = 'block';
-
-  var valid = ok1 && ok2;
-  confirmBtn.disabled = !valid;
+  confirmBtn.disabled = !(ok1 && ok2);
 }
 
 function ofConfirmSplit() {
-  var stanStr = document.getElementById('of-sp-stan').value;
-  var bdl = parseInt(document.getElementById('of-sp-bdl').value) || 0;
-  if (!stanStr || !_of.splitPair || bdl <= 0) return;
-  var s = isNaN(parseInt(stanStr)) ? stanStr : parseInt(stanStr);
-  var id1 = s + _of.splitPair[0];
-  var id2 = s + _of.splitPair[1];
-  var half1 = Math.ceil(bdl / 2);
-  var half2 = Math.floor(bdl / 2);
+  var loc1 = document.getElementById('of-sp-loc1').value;
+  var loc2 = document.getElementById('of-sp-loc2').value;
+  var bdl  = parseInt(document.getElementById('of-sp-bdl').value) || 0;
+  if (!loc1 || !loc2 || bdl <= 0) return;
+  var half1 = Math.ceil(bdl / 2), half2 = Math.floor(bdl / 2);
   var item = _of.item;
   var bdlTons = item.weightPerBundleTons || 0;
 
   function placeOrMerge(loc, count, pairedWith) {
     var newItem = {
+      uid: genUid(),
       heat: item.heat, size: item.size, length: item.length, type: item.type,
       grade: item.grade, spec: item.spec, bundles: count,
       weightPerBundleTons: bdlTons, weightTons: bdlTons * count,
@@ -4727,7 +4720,8 @@ function ofConfirmSplit() {
       splitPairedWith: pairedWith, splitTotal: bdl
     };
     var existing = store[loc];
-    var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length);
+    var isMerge = existing && item.size && existing.size === item.size &&
+      parseFloat(existing.length) === parseFloat(item.length);
     if (isMerge) {
       existing.bundles += count;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
@@ -4742,11 +4736,13 @@ function ofConfirmSplit() {
     }
   }
 
-  placeOrMerge(id1, half1, id2);
-  placeOrMerge(id2, half2, id1);
+  placeOrMerge(loc1, half1, loc2);
+  placeOrMerge(loc2, half2, loc1);
 
-  var lbl = (s === 'BSU') ? 'B.SU' : 'Stan ' + s;
-  showScrapToast('✓ Split: ' + lbl + ' ' + _of.splitPair[0] + '-side ' + half1 + ' bdl + ' + _of.splitPair[1] + '-side ' + half2 + ' bdl');
+  var sk1 = loc1.slice(0,-1), sk2 = loc2.slice(0,-1);
+  var l1 = (sk1==='BSU'?'B.SU':'Stan '+sk1)+' '+loc1.slice(-1);
+  var l2 = (sk2==='BSU'?'B.SU':'Stan '+sk2)+' '+loc2.slice(-1);
+  showScrapToast('✓ Split: ' + l1 + ': ' + half1 + ' bdl  |  ' + l2 + ': ' + half2 + ' bdl');
 
   document.getElementById('of-modal-overlay').classList.remove('active');
   ofClearLogForm();
@@ -5026,6 +5022,7 @@ function logRun() {
         if (invItem) { invItem.bundles = store[p.loc].bundles; invItem.weightTons = store[p.loc].weightTons; }
       } else {
         var pItem = {
+          uid: genUid(),
           heat: document.getElementById('inp-heat').value.trim(),
           size: size, length: '', type: 'spool',
           grade: grade, spec: spec,
@@ -5126,6 +5123,7 @@ function logRun() {
 
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
   var item = {
+    uid: genUid(),
     heat: document.getElementById('inp-heat').value.trim(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
@@ -5314,7 +5312,7 @@ function clearInvSearch() {
 
 function filterInv(f,btn) {
   currentFilter=f;
-  document.querySelectorAll('.filter-btn').forEach(function(b){b.classList.remove('active');});
+  document.querySelectorAll('.inv-filter-btn').forEach(function(b){b.classList.remove('active');});
   btn.classList.add('active');
   renderInventory();
 }
@@ -5663,6 +5661,7 @@ function saveData() {
         cSideEnabled: encodeObj(cSideEnabled),
         LOCATOR_CODES:encodeObj(LOCATOR_CODES),
         stanchionCapacity: stanchionCapacity,
+        optimizerCustomRules: optimizerCustomRules,
         savedAt: new Date().toISOString()
       };
       updateSaveIndicator('saving…', '#f5a623');
@@ -5714,6 +5713,7 @@ function loadData(callback) {
       reservedSlots = decodeObj(payload.reservedSlots || {});
       LOCATOR_CODES = decodeObj(payload.LOCATOR_CODES || {});
       if (payload.stanchionCapacity) stanchionCapacity = payload.stanchionCapacity;
+      if (payload.optimizerCustomRules) optimizerCustomRules = payload.optimizerCustomRules;
       var ago = payload.savedAt ? new Date(payload.savedAt).toLocaleTimeString() : '';
       updateSaveIndicator('loaded ✓ ' + ago, '#336633');
       callback(true);
@@ -5731,13 +5731,21 @@ function loadData(callback) {
 
 function exportBackup() {
   try {
+    // Use the same encoding as saveData so the backup can be safely imported back
     var payload = {
-      store: store, storeExtra: storeExtra, inventory: inventory,
-      area22Stacks: area22Stacks, area22NextId: area22NextId,
-      scrapSlots: scrapSlots, holdSlots: holdSlots,
-      redTagSlots: redTagSlots, reservedSlots: reservedSlots,
-      cSideEnabled: cSideEnabled, LOCATOR_CODES: LOCATOR_CODES,
+      store:        encodeObj(store),
+      storeExtra:   encodeObj(storeExtra),
+      inventory:    encodeInventory(inventory),
+      area22Stacks: area22Stacks,
+      area22NextId: area22NextId,
+      scrapSlots:   encodeObj(scrapSlots),
+      holdSlots:    encodeObj(holdSlots),
+      redTagSlots:  encodeObj(redTagSlots),
+      reservedSlots:encodeObj(reservedSlots),
+      cSideEnabled: encodeObj(cSideEnabled),
+      LOCATOR_CODES:encodeObj(LOCATOR_CODES),
       stanchionCapacity: stanchionCapacity,
+      optimizerCustomRules: optimizerCustomRules,
       savedAt: new Date().toISOString()
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
@@ -5745,6 +5753,7 @@ function exportBackup() {
     a.href = URL.createObjectURL(blob);
     a.download = 'rebartrack-backup-' + new Date().toISOString().slice(0,10) + '.json';
     a.click();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 100);
   } catch(e) { alert('Export failed: ' + e.message); }
 }
 
@@ -5760,6 +5769,8 @@ function importBackup(input) {
       db.ref(FB_PATH).set(payload).then(function() {
         alert('Backup restored. Reloading now.');
         location.reload();
+      }).catch(function(err) {
+        alert('Restore failed — Firebase rejected the write: ' + err.message);
       });
     } catch(err) { alert('Failed to read backup: ' + err.message); }
   };
@@ -5824,13 +5835,13 @@ loadData(function(loaded) {
 
 function seedWarehouse() {
   function straight(loc, size, length, bundles) {
-    var item = { heat:'', size:size, length:String(length), type:'straight',
+    var item = { uid:genUid(), heat:'', size:size, length:String(length), type:'straight',
       bundles:bundles, weightPerBundleTons:2.1, weightTons:bundles*2.1,
       ship:'', order:'', customer:'', loc:loc, logged:'sim' };
     store[loc] = item; inventory.push(item);
   }
   function spool(loc, size, coils, spoolLbs) {
-    var item = { heat:'', size:size, length:'Coil', type:'spool',
+    var item = { uid:genUid(), heat:'', size:size, length:'Coil', type:'spool',
       bundles:coils, spoolWeightLbs:spoolLbs, weightPerBundleTons:spoolLbs/2000,
       weightTons:(spoolLbs/2000)*coils, ship:'', order:'', customer:'', loc:loc, logged:'sim' };
     store[loc] = item; inventory.push(item);
@@ -5873,6 +5884,7 @@ function seedWarehouse() {
   ];
   a22seed.forEach(function(s) {
     var stack = {
+      uid:genUid(),
       id:'S'+String(area22NextId++).padStart(2,'0'),
       side:s.side, heat:'', size:s.size, length:s.length||'', type:s.type,
       bundles:s.bundles, spoolWeightLbs:s.spoolWeightLbs||0,
