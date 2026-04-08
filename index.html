@@ -3488,24 +3488,24 @@ function runCSVImport() {
         }
       }
 
-      // Group by location — accumulate bundles and LPNs
-      if (!locationGroups[loc]) {
-        locationGroups[loc] = {
-          size: size, heat: heat, length: lenNum ? String(lenNum) : '',
+      // Group by location+product — accumulate bundles and LPNs
+      // Key includes size/grade/spec so different products at the same slot
+      // create separate groups and flow into primary/secondary correctly.
+      var grpKey = loc + '|' + size + '|' + (gradeSpec.grade||'') + '|' + (gradeSpec.spec||'');
+      if (!locationGroups[grpKey]) {
+        locationGroups[grpKey] = {
+          loc: loc, size: size, heat: heat, length: lenNum ? String(lenNum) : '',
           type: type, bundles: 0, weightPerBdl: wtPerBdl, wtTons: 0,
           grade: gradeSpec.grade, spec: gradeSpec.spec,
           ship: ship, order: order, customer: cust, lpns: []
         };
       }
-      var grp = locationGroups[loc];
+      var grp = locationGroups[grpKey];
       grp.bundles += bdlCount;
       grp.wtTons += wtPerBdl * bdlCount;
       if (lpn) grp.lpns.push(lpn);
       // Use first non-empty value for metadata fields
-      if (!grp.size && size) grp.size = size;
       if (!grp.heat && heat) grp.heat = heat;
-      if (!grp.grade && gradeSpec.grade) grp.grade = gradeSpec.grade;
-      if (!grp.spec  && gradeSpec.spec)  grp.spec  = gradeSpec.spec;
       if (!grp.ship && ship) grp.ship = ship;
       if (!grp.order && order) grp.order = order;
       if (!grp.customer && cust) grp.customer = cust;
@@ -3516,8 +3516,9 @@ function runCSVImport() {
   });
 
   // Write grouped data to store
-  Object.keys(locationGroups).forEach(function(loc) {
-    var grp = locationGroups[loc];
+  Object.keys(locationGroups).forEach(function(grpKey) {
+    var grp = locationGroups[grpKey];
+    var loc = grp.loc;
     var lpnStr = grp.lpns.length > 0 ? grp.lpns.join(', ') : '';
     var item = {
       uid: genUid(),
@@ -3809,18 +3810,18 @@ function runFullYardImport() {
         }
       }
 
-      // Accumulate by location — each row is one LPN = one bundle
-      if (!locationGroups[loc]) {
-        locationGroups[loc] = { size: size, grade: grade, spec: spec,
+      // Accumulate by location+product — each row is one LPN = one bundle
+      // Key includes size/grade/spec so different products at the same slot
+      // become separate groups and flow into primary/secondary correctly.
+      var grpKey = loc + '|' + size + '|' + grade + '|' + spec;
+      if (!locationGroups[grpKey]) {
+        locationGroups[grpKey] = { loc: loc, size: size, grade: grade, spec: spec,
           length: lenNum ? String(lenNum) : '', type: type, bundles: 0, wtTons: 0, lpns: [] };
       }
-      var grp = locationGroups[loc];
+      var grp = locationGroups[grpKey];
       grp.bundles += 1;
       grp.wtTons  += wtPerLpn;
       if (lpn) grp.lpns.push(lpn);
-      if (!grp.size   && size)  grp.size   = size;
-      if (!grp.grade  && grade) grp.grade  = grade;
-      if (!grp.spec   && spec)  grp.spec   = spec;
       if (!grp.length && lenNum) grp.length = String(lenNum);
 
     } catch(e) {
@@ -3829,8 +3830,9 @@ function runFullYardImport() {
   });
 
   // Write to store
-  Object.keys(locationGroups).forEach(function(loc) {
-    var grp = locationGroups[loc];
+  Object.keys(locationGroups).forEach(function(grpKey) {
+    var grp = locationGroups[grpKey];
+    var loc = grp.loc;
     var item = {
       uid: genUid(),
       size: grp.size || '#?', length: grp.length, type: grp.type,
