@@ -5948,6 +5948,7 @@ function seedWarehouse() {
       uid:genUid(),
       id:'S'+String(area22NextId++).padStart(2,'0'),
       side:s.side, heat:'', size:s.size, length:s.length||'', type:s.type,
+      grade:'', spec:'',
       bundles:s.bundles, spoolWeightLbs:s.spoolWeightLbs||0,
       weightPerBundleTons:(s.spoolWeightLbs||0)/2000,
       weightTons:((s.spoolWeightLbs||0)/2000)*s.bundles,
