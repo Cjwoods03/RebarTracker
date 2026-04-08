@@ -2717,6 +2717,27 @@ function confirmSecondaryTransfer() {
   var ei = extras[secTransferIdx];
   if (!ei) return;
 
+  // Footage check: if destination is a stanchion side and item is longer than
+  // the current longest bar there, verify remaining stanchion capacity
+  if (!dest.startsWith('RACK-')) {
+    var destStan = dest.slice(0, -1);
+    var eiLen = parseFloat(ei.length) || 0;
+    if (eiLen > 0) {
+      var allOnDest = slotAllItems(dest);
+      var curMaxDest = allOnDest.reduce(function(m, i) {
+        return Math.max(m, parseFloat(i.length) || 0);
+      }, 0);
+      if (eiLen > curMaxDest) {
+        var ftIncrease = eiLen - curMaxDest;
+        var ftLeft = stanchionFtRemaining(destStan);
+        if (ftIncrease > ftLeft) {
+          alert('⛔ This secondary item (' + eiLen + 'ft) is longer than the current longest bar on that side (' + curMaxDest + 'ft) and would exceed the stanchion capacity.\n\nOnly ' + ftLeft.toFixed(1) + 'ft remaining.');
+          return;
+        }
+      }
+    }
+  }
+
   var moved = JSON.parse(JSON.stringify(ei));
   moved.loc = dest;
   moved.logged = 'transferred from ' + secTransferSlot + ' — ' + new Date().toLocaleTimeString();
@@ -2971,6 +2992,9 @@ function clearSlot() {
   } else {
     clearSecondaryItems(modalLoc);
     delete reservedSlots[modalLoc];
+    delete scrapSlots[modalLoc];
+    delete holdSlots[modalLoc];
+    delete redTagSlots[modalLoc];
     store[modalLoc] = null;
     // Remove all remaining inventory entries for this slot
     for (var _ci = inventory.length - 1; _ci >= 0; _ci--) {
