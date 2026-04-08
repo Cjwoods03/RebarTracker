@@ -4181,6 +4181,7 @@ function runOptimizer() {
   suggestions.sort(function(a,b){ return (priorityOrder[a.priority]||2) - (priorityOrder[b.priority]||2); });
 
   allOptMoves = suggestions;
+  window._optimizerSuggestions = suggestions;
   optFilters = { priority: 'all', moveType: 'all', ruleType: 'all' };
   ['priority','moveType','ruleType'].forEach(function(group) {
     document.querySelectorAll('.opt-filter-' + group).forEach(function(b){ b.classList.remove('active'); });
@@ -4212,7 +4213,6 @@ function runOptimizer() {
     '  |  ' + straightCount + ' straight · ' + spoolCount + ' spool' +
     '  |  ' + consolidateCount + ' consolidate · ' + pairCount + ' pair';
 
-  window._optimizerSuggestions = suggestions;
   renderOptMoveList();
 }
 
