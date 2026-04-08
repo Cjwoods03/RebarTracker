@@ -2755,27 +2755,28 @@ function confirmSecondaryTransfer() {
   var ei = extras[secTransferIdx];
   if (!ei) return;
 
-  if (!storeExtra[dest]) storeExtra[dest] = [];
   var moved = JSON.parse(JSON.stringify(ei));
   moved.loc = dest;
   moved.logged = 'transferred from ' + secTransferSlot + ' — ' + new Date().toLocaleTimeString();
 
-  // If destination is empty, promote to primary item
+  // Remove from source extras first
+  extras.splice(secTransferIdx, 1);
+  if (extras.length === 0) delete storeExtra[secTransferSlot];
+  // Remove original inventory entry by uid
+  var srcInvIdx = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
+  if (srcInvIdx > -1) inventory.splice(srcInvIdx, 1);
+
+  // Place at destination
   if (!store[dest]) {
+    // Destination empty — promote to primary
     store[dest] = moved;
     inventory.push(moved);
   } else {
+    // Destination occupied — add as secondary
+    if (!storeExtra[dest]) storeExtra[dest] = [];
     storeExtra[dest].push(moved);
-    var ii = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
-    if (ii > -1) inventory[ii] = moved;
+    inventory.push(moved);
   }
-
-  // Remove from source extras
-  extras.splice(secTransferIdx, 1);
-  if (extras.length === 0) delete storeExtra[secTransferSlot];
-  // Remove original inventory reference (new one was pushed in the if/else above)
-  var srcInvIdx = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
-  if (srcInvIdx > -1) inventory.splice(srcInvIdx, 1);
 
   var fromSlot = secTransferSlot;
   secTransferSlot = null;
@@ -2947,7 +2948,7 @@ function confirmTransfer() {
     destItem2.bundles += srcItem.bundles;
     if (destItem2.weightPerBundleTons) destItem2.weightTons = destItem2.weightPerBundleTons * destItem2.bundles;
     // Update inventory record for dest
-    var di = inventory.find(function(i){ return i.loc === dest; });
+    var di = inventory.find(function(i){ return i.uid === destItem2.uid; });
     if (di) { di.bundles = destItem2.bundles; di.weightTons = destItem2.weightTons; }
   } else {
     // Move to empty slot
@@ -2992,8 +2993,10 @@ function clearSlot() {
     clearSecondaryItems(modalLoc);
     delete reservedSlots[modalLoc];
     store[modalLoc] = null;
-    var idx2 = inventory.findIndex(function(i){return i.loc===modalLoc;});
-    if (idx2>-1) inventory.splice(idx2,1);
+    // Remove all remaining inventory entries for this slot
+    for (var _ci = inventory.length - 1; _ci >= 0; _ci--) {
+      if (inventory[_ci].loc === modalLoc) inventory.splice(_ci, 1);
+    }
   }
   closeModal(); renderAll(); renderInventory(); saveData();
 }
@@ -3529,6 +3532,9 @@ function runCSVImport() {
         existing.bundles += grp.bundles;
         existing.weightTons = (existing.weightTons||0) + grp.wtTons;
         if (lpnStr) existing.lpns = ((existing.lpns||'') + (existing.lpns?', ':'') + lpnStr).trim();
+        // Sync inventory record
+        var ei = inventory.find(function(i){ return i.uid === existing.uid; });
+        if (ei) { ei.bundles = existing.bundles; ei.weightTons = existing.weightTons; ei.lpns = existing.lpns; }
       } else {
         // Different product — add as secondary stack
         if (!storeExtra[loc]) storeExtra[loc] = [];
@@ -4188,7 +4194,8 @@ function runOptimizer() {
           sides2.forEach(function(side2) {
             var destId = s2 + side2;
             var destItem = store[destId];
-            var isMerge = destItem && destItem.size === item.size && parseFloat(destItem.length) === itemLen;
+            var isMerge = destItem && destItem.size === item.size && parseFloat(destItem.length) === itemLen &&
+                          destItem.grade === item.grade && destItem.spec === item.spec;
             if (destItem && !isMerge) return; // occupied with different product
             var destItems = slotAllItems(destId);
             var destBdl = destItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
@@ -4742,13 +4749,14 @@ function ofConfirmSplit() {
     };
     var existing = store[loc];
     var isMerge = existing && item.size && existing.size === item.size &&
-      parseFloat(existing.length) === parseFloat(item.length);
+      parseFloat(existing.length) === parseFloat(item.length) &&
+      existing.grade === item.grade && existing.spec === item.spec;
     if (isMerge) {
       existing.bundles += count;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
       existing.splitPairedWith = pairedWith;
       existing.splitTotal = bdl;
-      var inv = inventory.find(function(i) { return i.loc === loc && i.size === item.size; });
+      var inv = inventory.find(function(i) { return i.uid === existing.uid; });
       if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons; inv.splitPairedWith = pairedWith; inv.splitTotal = bdl; }
       else inventory.push(newItem);
     } else {
@@ -5039,7 +5047,7 @@ function logRun() {
         // Merge into existing
         store[p.loc].bundles += p.count;
         store[p.loc].weightTons = (store[p.loc].weightTons || 0) + pWtTons;
-        var invItem = inventory.find(function(i){ return i.loc === p.loc; });
+        var invItem = inventory.find(function(i){ return i.uid === store[p.loc].uid; });
         if (invItem) { invItem.bundles = store[p.loc].bundles; invItem.weightTons = store[p.loc].weightTons; }
       } else {
         var pItem = {
@@ -5867,8 +5875,8 @@ loadData(function(loaded) {
 function seedWarehouse() {
   function straight(loc, size, length, bundles) {
     var item = { uid:genUid(), heat:'', size:size, length:String(length), type:'straight',
-      bundles:bundles, weightPerBundleTons:2.1, weightTons:bundles*2.1,
-      ship:'', order:'', customer:'', loc:loc, logged:'sim' };
+      grade:'', spec:'', bundles:bundles, weightPerBundleTons:2.1, weightTons:bundles*2.1,
+      spoolWeightLbs:0, ship:'', order:'', customer:'', loc:loc, logged:'sim' };
     store[loc] = item; inventory.push(item);
   }
   function spool(loc, size, coils, spoolLbs) {
