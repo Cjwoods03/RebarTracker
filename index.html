@@ -5110,6 +5110,22 @@ function logRun() {
     if (!storeExtra[loc]) storeExtra[loc] = [];
     storeExtra[loc].push(item);
     inventory.push(item);
+  } else if (!isSecondary && store[loc]) {
+    // Slot is occupied — merge if same product, otherwise warn
+    var existing = store[loc];
+    var canMerge = existing.size === item.size &&
+      parseFloat(existing.length) === parseFloat(item.length) &&
+      existing.grade === item.grade &&
+      existing.spec  === item.spec;
+    if (canMerge) {
+      existing.bundles += item.bundles;
+      existing.weightTons = (existing.weightTons || 0) + (item.weightTons || 0);
+      var invEntry = inventory.find(function(i){ return i.uid && existing.uid && i.uid === existing.uid; });
+      if (invEntry) { invEntry.bundles = existing.bundles; invEntry.weightTons = existing.weightTons; }
+    } else {
+      alert('⛔ ' + loc + ' already holds a different product.\n\nCheck "Secondary stack" to log on top of the existing item, or choose a different slot.');
+      return;
+    }
   } else {
     store[loc] = item;
     inventory.push(item);
