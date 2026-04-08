@@ -5886,7 +5886,7 @@ function seedWarehouse() {
   }
   function spool(loc, size, coils, spoolLbs) {
     var item = { uid:genUid(), heat:'', size:size, length:'Coil', type:'spool',
-      bundles:coils, spoolWeightLbs:spoolLbs, weightPerBundleTons:spoolLbs/2000,
+      grade:'', spec:'', bundles:coils, spoolWeightLbs:spoolLbs, weightPerBundleTons:spoolLbs/2000,
       weightTons:(spoolLbs/2000)*coils, ship:'', order:'', customer:'', loc:loc, logged:'sim' };
     store[loc] = item; inventory.push(item);
   }
