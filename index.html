@@ -1424,11 +1424,13 @@ function adjustZoom(delta) {
   document.getElementById('zoom-val').textContent = pct + '%';
   var wrap = document.getElementById('map-wrap');
   if (wrap) {
+    // Read scrollHeight BEFORE applying transform — avoids stale pre-reflow value
+    var naturalHeight = wrap.scrollHeight;
     wrap.style.transformOrigin = 'top left';
     wrap.style.transform = 'scale(' + currentZoom + ')';
     wrap.style.width = Math.round(100 / currentZoom) + '%';
     // Adjust the parent container height to match scaled content
-    wrap.style.marginBottom = ((currentZoom - 1) * wrap.scrollHeight) + 'px';
+    wrap.style.marginBottom = ((currentZoom - 1) * naturalHeight) + 'px';
   }
 }
 var scrapSlots = {}; // slotId -> true
@@ -4374,6 +4376,11 @@ function executeOptimizerMove(idx) {
   if (s.from === s.to || !s.to) { showScrapToast('⛔ No valid destination — re-run the optimizer.'); return; }
   var srcItem = store[s.from];
   if (!srcItem) { alert('Source slot is now empty — re-run the optimizer.'); return; }
+  // Warn if source has secondary items that will be lost
+  var srcExtrasOpt = (storeExtra[s.from] || []).length;
+  if (srcExtrasOpt > 0) {
+    if (!confirm('⚠️ Source slot has ' + srcExtrasOpt + ' secondary item' + (srcExtrasOpt !== 1 ? 's' : '') + ' that will be removed when the primary is moved.\n\nContinue?')) return;
+  }
   var destItem = store[s.to];
   if (destItem) {
     // Merge — same product check (size + length + compatible grade/spec)
@@ -4403,6 +4410,8 @@ function executeOptimizerMove(idx) {
     moved.loc = s.to;
     moved.logged = 'optimizer → ' + new Date().toLocaleTimeString();
     store[s.to] = moved;
+    // Clean up any orphaned empty extras at destination before placing
+    if (storeExtra[s.to] && storeExtra[s.to].length === 0) delete storeExtra[s.to];
     inventory.push(moved);
   }
   // Clear source (secondaries + primary)
@@ -5788,8 +5797,14 @@ function decodeInventory(arr) {
 }
 
 // Debounced save — waits 800ms after last change before writing to Firebase
+var _pendingSave = false;
+window.addEventListener('beforeunload', function(e) {
+  if (_pendingSave) { e.preventDefault(); e.returnValue = ''; }
+});
+
 function saveData() {
   if (!db) { updateSaveIndicator('no db', '#cc0000'); return; }
+  _pendingSave = true;
   clearTimeout(saveTimer);
   saveTimer = setTimeout(function() {
     try {
@@ -5806,6 +5821,7 @@ function saveData() {
         cSideEnabled: encodeObj(cSideEnabled),
         LOCATOR_CODES:encodeObj(LOCATOR_CODES),
         stanchionCapacity: stanchionCapacity,
+        adminPin: ADMIN_PIN,
         optimizerCustomRules: optimizerCustomRules,
         optimizerBuiltInEnabled: (function() {
           var m = {};
@@ -5816,6 +5832,7 @@ function saveData() {
       };
       updateSaveIndicator('saving…', '#f5a623');
       db.ref(FB_PATH).set(payload).then(function() {
+        _pendingSave = false;
         updateSaveIndicator('saved ✓', '#336633');
       }).catch(function(e) {
         updateSaveIndicator('❌ ' + e.code, '#cc0000');
@@ -5863,6 +5880,7 @@ function loadData(callback) {
       reservedSlots = decodeObj(payload.reservedSlots || {});
       LOCATOR_CODES = decodeObj(payload.LOCATOR_CODES || {});
       if (payload.stanchionCapacity) stanchionCapacity = payload.stanchionCapacity;
+      if (payload.adminPin) ADMIN_PIN = payload.adminPin;
       if (payload.optimizerCustomRules) optimizerCustomRules = payload.optimizerCustomRules;
       if (payload.optimizerBuiltInEnabled) {
         OPTIMIZER_BUILT_IN_RULES.forEach(function(r) {
@@ -5900,6 +5918,7 @@ function exportBackup() {
       cSideEnabled: encodeObj(cSideEnabled),
       LOCATOR_CODES:encodeObj(LOCATOR_CODES),
       stanchionCapacity: stanchionCapacity,
+      adminPin: ADMIN_PIN,
       optimizerCustomRules: optimizerCustomRules,
       optimizerBuiltInEnabled: (function() {
         var m = {};
@@ -5909,11 +5928,17 @@ function exportBackup() {
       savedAt: new Date().toISOString()
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
-    var a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = 'rebartrack-backup-' + new Date().toISOString().slice(0,10) + '.json';
-    a.click();
-    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 100);
+    var blobUrl = URL.createObjectURL(blob);
+    try {
+      var a = document.createElement('a');
+      a.href = blobUrl;
+      a.download = 'rebartrack-backup-' + new Date().toISOString().slice(0,10) + '.json';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } finally {
+      setTimeout(function(){ URL.revokeObjectURL(blobUrl); }, 10000);
+    }
   } catch(e) { alert('Export failed: ' + e.message); }
 }
 
@@ -5924,7 +5949,12 @@ function importBackup(input) {
   reader.onload = function(e) {
     try {
       var payload = JSON.parse(e.target.result);
-      if (!payload.store || !payload.inventory) { alert('This does not look like a RebarTrack backup file.'); return; }
+      if (typeof payload !== 'object' || payload === null ||
+          typeof payload.store !== 'object' || Array.isArray(payload.store) ||
+          !Array.isArray(payload.inventory)) {
+        alert('This does not look like a valid RebarTrack backup file.\n\nExpected: JSON with a "store" object and "inventory" array.');
+        return;
+      }
       if (!db) { alert('Not connected to Firebase.'); return; }
       db.ref(FB_PATH).set(payload).then(function() {
         alert('Backup restored. Reloading now.');
