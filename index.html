@@ -5420,7 +5420,10 @@ function renderInventory() {
       // Separate tokens into length-only and general buckets
       // Length words (numeric + ft/in) should only match length tokens, not loc
       var lengthTokens = [i.length, fmtLen].filter(Boolean).map(function(v){ return v.toLowerCase(); });
-      var generalTokens = [i.size, i.heat, i.order, i.customer, i.loc, i.type, i.side]
+      var generalTokens = [i.size, i.heat, i.order, i.customer, i.loc, i.type, i.side, i.grade, i.spec]
+        .filter(Boolean).map(function(v){ return v.toLowerCase(); });
+      // For numeric searches: also match heat/order/customer (but not loc, which could false-match)
+      var numericTokens = [i.heat, i.order, i.customer]
         .filter(Boolean).map(function(v){ return v.toLowerCase(); });
 
       return searchWords.every(function(word) {
@@ -5428,9 +5431,16 @@ function renderInventory() {
         var isNumericWord = /^\d+\.?\d*$/.test(bare);
 
         if (isNumericWord) {
-          // Numeric words (lengths) must match length tokens exactly — not location
+          // Numeric words: match lengths exactly (including floor-ft match for "20ft" → "20ft 6in"),
+          // or match heat/order/customer
+          var bareNum = parseFloat(bare);
           return lengthTokens.some(function(token) {
-            return token === bare || token === word || token === bare + 'ft';
+            if (token === bare || token === word || token === bare + 'ft') return true;
+            // "20ft" should match "20ft 6in" — compare integer-foot portion
+            var tokenFt = Math.floor(parseFloat(token));
+            return !isNaN(bareNum) && !isNaN(tokenFt) && tokenFt === Math.floor(bareNum) && token.indexOf(bare) === 0;
+          }) || numericTokens.some(function(token) {
+            return token === bare || token.startsWith(bare);
           });
         } else {
           // Non-numeric words (size, heat, etc.) match general tokens
