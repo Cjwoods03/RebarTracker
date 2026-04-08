@@ -4352,7 +4352,7 @@ function ofOpen(itemTemplate, firstLoc) {
     var fk = firstLoc.slice(0, -1);
     var fk2 = parseInt(fk) || fk;
     var fCap = stanchionCapacity[fk2];
-    var fMax = fCap ? fCap.maxBundlesPerSide : _of.totalBundles;
+    var fMax = (fCap && fCap.maxBundlesPerSide) ? fCap.maxBundlesPerSide : _of.totalBundles;
     var fEx = store[firstLoc];
     var fUsed = fEx ? (fEx.bundles || 0) : 0;
     var fFirst = Math.min(_of.totalBundles, fMax - fUsed);
