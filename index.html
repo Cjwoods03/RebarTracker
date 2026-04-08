@@ -4015,10 +4015,10 @@ function renderOptimizerRules() {
 
 function toggleBuiltInRule(id, val) {
   var r = OPTIMIZER_BUILT_IN_RULES.find(function(r){ return r.id === id; });
-  if (r) r.enabled = val;
+  if (r) { r.enabled = val; saveData(); }
 }
-function toggleCustomRule(idx, val) { if (optimizerCustomRules[idx]) optimizerCustomRules[idx].enabled = val; }
-function removeCustomRule(idx) { optimizerCustomRules.splice(idx, 1); renderOptimizerRules(); }
+function toggleCustomRule(idx, val) { if (optimizerCustomRules[idx]) { optimizerCustomRules[idx].enabled = val; saveData(); } }
+function removeCustomRule(idx) { optimizerCustomRules.splice(idx, 1); renderOptimizerRules(); saveData(); }
 function addOptimizerRule() {
   var inp = document.getElementById('opt-new-rule');
   var val = (inp.value || '').trim();
@@ -4026,6 +4026,7 @@ function addOptimizerRule() {
   optimizerCustomRules.push({ label: val, enabled: true });
   inp.value = '';
   renderOptimizerRules();
+  saveData();
 }
 
 function runOptimizer() {
@@ -5716,6 +5717,11 @@ function saveData() {
         LOCATOR_CODES:encodeObj(LOCATOR_CODES),
         stanchionCapacity: stanchionCapacity,
         optimizerCustomRules: optimizerCustomRules,
+        optimizerBuiltInEnabled: (function() {
+          var m = {};
+          OPTIMIZER_BUILT_IN_RULES.forEach(function(r) { m[r.id] = r.enabled; });
+          return m;
+        })(),
         savedAt: new Date().toISOString()
       };
       updateSaveIndicator('saving…', '#f5a623');
@@ -5768,6 +5774,11 @@ function loadData(callback) {
       LOCATOR_CODES = decodeObj(payload.LOCATOR_CODES || {});
       if (payload.stanchionCapacity) stanchionCapacity = payload.stanchionCapacity;
       if (payload.optimizerCustomRules) optimizerCustomRules = payload.optimizerCustomRules;
+      if (payload.optimizerBuiltInEnabled) {
+        OPTIMIZER_BUILT_IN_RULES.forEach(function(r) {
+          if (payload.optimizerBuiltInEnabled.hasOwnProperty(r.id)) r.enabled = payload.optimizerBuiltInEnabled[r.id];
+        });
+      }
       var ago = payload.savedAt ? new Date(payload.savedAt).toLocaleTimeString() : '';
       updateSaveIndicator('loaded ✓ ' + ago, '#336633');
       callback(true);
@@ -5800,6 +5811,11 @@ function exportBackup() {
       LOCATOR_CODES:encodeObj(LOCATOR_CODES),
       stanchionCapacity: stanchionCapacity,
       optimizerCustomRules: optimizerCustomRules,
+      optimizerBuiltInEnabled: (function() {
+        var m = {};
+        OPTIMIZER_BUILT_IN_RULES.forEach(function(r) { m[r.id] = r.enabled; });
+        return m;
+      })(),
       savedAt: new Date().toISOString()
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
