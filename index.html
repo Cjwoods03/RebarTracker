@@ -3188,8 +3188,10 @@ function parseCSV(text) {
     var result = [], cur = '', inQ = false;
     for (var i = 0; i < row.length; i++) {
       var c = row[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
+      if (c === '"') {
+        if (inQ && row[i+1] === '"') { cur += '"'; i++; } // RFC 4180: "" inside quotes → literal "
+        else { inQ = !inQ; }
+      } else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
       else { cur += c; }
     }
     result.push(cur.trim());
@@ -3620,8 +3622,10 @@ function parseFYI(text) {
     var result = [], cur = '', inQ = false;
     for (var i = 0; i < row.length; i++) {
       var c = row[i];
-      if (c === '"') { inQ = !inQ; }
-      else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
+      if (c === '"') {
+        if (inQ && row[i+1] === '"') { cur += '"'; i++; } // RFC 4180: "" inside quotes → literal "
+        else { inQ = !inQ; }
+      } else if (c === delim && !inQ) { result.push(cur.trim()); cur = ''; }
       else { cur += c; }
     }
     result.push(cur.trim());
@@ -3778,7 +3782,7 @@ function runFullYardImport() {
         wtPerLpn = (fyiLbsPerFt * lenNum * fyiPieces) / 2000;
       } else {
         var wtNum = parseFloat(wtStr.replace(/[^0-9.]/g, '')) || 0;
-        wtPerLpn = wtNum > 100 ? wtNum / 2000 : wtNum; // lbs → tons
+        wtPerLpn = wtNum / 2000; // PriQty is always lbs in EBS — convert to tons
       }
 
       var type = /^SB\./i.test(ebsLoc) ? 'spool' : 'straight';
