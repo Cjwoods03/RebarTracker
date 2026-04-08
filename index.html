@@ -4337,7 +4337,7 @@ function ofOpen(itemTemplate, firstLoc) {
 
   document.getElementById('of-modal-title').textContent = 'Multi-Stanchion Placement';
   ofSetMode('overflow');
-  ofPopulateSplitStanDropdown();
+  ofPopulateSplitDropdowns();
   document.getElementById('of-modal-overlay').classList.add('active');
 }
 
@@ -4397,7 +4397,7 @@ function openSplitFromForm() {
 
   document.getElementById('of-modal-title').textContent = 'Split Sides';
   document.getElementById('of-sp-bdl').value = bundles || '';
-  ofPopulateSplitStanDropdown();
+  ofPopulateSplitDropdowns();
   ofSetMode('split');
   document.getElementById('of-modal-overlay').classList.add('active');
 }
