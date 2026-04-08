@@ -4275,13 +4275,20 @@ function executeOptimizerMove(idx) {
   if (!srcItem) { alert('Source slot is now empty — re-run the optimizer.'); return; }
   var destItem = store[s.to];
   if (destItem) {
-    // Merge — same product check (size + length + grade + spec)
+    // Merge — same product check (size + length + compatible grade/spec)
+    // Treat empty grade/spec as "unknown" — permissive match (same as logRun)
+    var gradeOk2 = !destItem.grade || !srcItem.grade || destItem.grade === srcItem.grade;
+    var specOk2  = !destItem.spec  || !srcItem.spec  || destItem.spec  === srcItem.spec;
     if (destItem.size === srcItem.size && parseFloat(destItem.length) === parseFloat(srcItem.length) &&
-        destItem.grade === srcItem.grade && destItem.spec === srcItem.spec) {
+        gradeOk2 && specOk2) {
       destItem.bundles += srcItem.bundles;
       destItem.weightTons = (destItem.weightTons||0) + (srcItem.weightTons||0);
+      if (!destItem.grade && srcItem.grade) destItem.grade = srcItem.grade;
+      if (!destItem.spec  && srcItem.spec)  destItem.spec  = srcItem.spec;
       var di = inventory.find(function(i){ return i.uid && destItem.uid && i.uid === destItem.uid; });
-      if (di) { di.bundles = destItem.bundles; di.weightTons = destItem.weightTons; }
+      if (di) { di.bundles = destItem.bundles; di.weightTons = destItem.weightTons;
+                if (!di.grade && srcItem.grade) di.grade = srcItem.grade;
+                if (!di.spec  && srcItem.spec)  di.spec  = srcItem.spec; }
     } else {
       if (!storeExtra[s.to]) storeExtra[s.to] = [];
       var secCopy = JSON.parse(JSON.stringify(srcItem));
