@@ -4648,7 +4648,7 @@ function ofSpBdlChange() {
     var sk = id.slice(0, -1);
     var sk2 = parseInt(sk) || sk;
     var cap = stanchionCapacity[sk2];
-    var maxBdl = cap ? cap.maxBundlesPerSide : 99999;
+    var maxBdl = (cap && cap.maxBundlesPerSide) ? cap.maxBundlesPerSide : 99999;
     var ex = store[id];
     var used = ex ? (ex.bundles || 0) : 0;
     return { lbl: (sk === 'BSU' ? 'B.SU' : 'Stan ' + sk) + ' ' + id.slice(-1) + '-side', maxBdl: maxBdl, used: used, avail: maxBdl - used };
