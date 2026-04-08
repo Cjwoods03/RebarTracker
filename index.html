@@ -4516,7 +4516,7 @@ function ofAddPlacement() {
   var sk = id.slice(0, -1);
   var sk2 = parseInt(sk) || sk;
   var capData = stanchionCapacity[sk2];
-  var maxBdl = capData ? capData.maxBundlesPerSide : 99999;
+  var maxBdl = (capData && capData.maxBundlesPerSide) ? capData.maxBundlesPerSide : 99999;
   var existing = store[id];
   var usedBdl = existing ? (existing.bundles || 0) : 0;
   if (bdl + usedBdl > maxBdl) {
