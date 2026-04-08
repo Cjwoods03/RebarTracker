@@ -3140,6 +3140,7 @@ function saveLocatorCodes() {
       input.classList.remove('has-value');
     }
   });
+  saveData();
   var status = document.getElementById('locator-save-status');
   var count = Object.keys(LOCATOR_CODES).length;
   status.textContent = '✓ Saved ' + count + ' locator code' + (count !== 1 ? 's' : '');
