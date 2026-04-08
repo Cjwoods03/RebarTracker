@@ -1330,8 +1330,9 @@
 
 <script>
 // ─── DATA ────────────────────────────────────────────────────────
+var _uidSeq = 0;
 function genUid() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  return Date.now().toString(36) + (++_uidSeq).toString(36) + Math.random().toString(36).slice(2, 5);
 }
 var STANCHION_COUNT = 38;
 var MAX_STANCHION_FT = 80; // default
@@ -2487,7 +2488,7 @@ function setQty(newVal) {
   }
 
   // Sync inventory array
-  var invItem = inventory.find(function(i){ return isA22 ? i.id===item.id : i.loc===modalLoc; });
+  var invItem = inventory.find(function(i){ return i.uid ? i.uid === item.uid : (isA22 ? i.id===item.id : i.loc===modalLoc); });
   if (invItem) {
     invItem.bundles = newVal;
     invItem.weightTons = item.weightTons;
@@ -2986,8 +2987,11 @@ function clearSlot() {
   if (modalLoc.startsWith('A22:')) {
     var sid = modalLoc.replace('A22:','');
     var idx = area22Stacks.findIndex(function(s){return s.id===sid;});
+    var removedA22 = idx > -1 ? area22Stacks[idx] : null;
     if (idx>-1) area22Stacks.splice(idx,1);
-    var ii = inventory.findIndex(function(i){return i.id===sid&&i.loc==='AREA-22';});
+    var ii = inventory.findIndex(function(i){
+      return removedA22 && removedA22.uid ? i.uid === removedA22.uid : (i.id===sid && i.loc==='AREA-22');
+    });
     if (ii>-1) inventory.splice(ii,1);
   } else {
     clearSecondaryItems(modalLoc);
@@ -4336,9 +4340,10 @@ function executeOptimizerMove(idx) {
     } else {
       if (!storeExtra[s.to]) storeExtra[s.to] = [];
       var secCopy = JSON.parse(JSON.stringify(srcItem));
+      secCopy.uid = genUid(); // new uid so cleanup splice doesn't remove it
       secCopy.loc = s.to;
       storeExtra[s.to].push(secCopy);
-      inventory.push(storeExtra[s.to][storeExtra[s.to].length-1]);
+      inventory.push(secCopy);
     }
   } else {
     var moved = JSON.parse(JSON.stringify(srcItem));
@@ -4605,11 +4610,12 @@ function ofFinalize() {
       customer: item.customer, loc: p.loc, logged: new Date().toLocaleTimeString()
     };
     var existing = store[p.loc];
-    var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length);
+    var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
+                  existing.grade === item.grade && existing.spec === item.spec;
     if (isMerge) {
       existing.bundles += p.bundles;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
-      var inv = inventory.find(function(i) { return i.loc === p.loc && i.size === item.size; });
+      var inv = inventory.find(function(i) { return i.uid === existing.uid; });
       if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons; }
       else inventory.push(newItem);
     } else {
