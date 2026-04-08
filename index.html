@@ -2793,9 +2793,11 @@ function openTransferModal() {
         var opt = document.createElement('option');
         opt.value = id;
         if (existing) {
+          var tfGradeOk = !existing.grade || !item.grade || existing.grade === item.grade;
+          var tfSpecOk  = !existing.spec  || !item.spec  || existing.spec  === item.spec;
           if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-              existing.grade === item.grade && existing.spec === item.spec) {
-            // Same product (size + length + grade + spec) — allow merge (no footage added, just bundles)
+              tfGradeOk && tfSpecOk) {
+            // Same product (size + length + compatible grade/spec) — allow merge
             opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
             opt.style.fontWeight = 'bold';
           } else {
@@ -2848,7 +2850,8 @@ function confirmTransfer() {
     // If destination already has the same product, this is a bundle merge — no footage is added
     // so no ft check needed. Only check ft when moving to an empty slot or different stanchion.
     var isMerge = destItem0 && destItem0.size === srcItem.size && parseFloat(destItem0.length) === parseFloat(srcItem.length) &&
-                  destItem0.grade === srcItem.grade && destItem0.spec === srcItem.spec;
+                  (!destItem0.grade || !srcItem.grade || destItem0.grade === srcItem.grade) &&
+                  (!destItem0.spec  || !srcItem.spec  || destItem0.spec  === srcItem.spec);
     if (!isMerge) {
       var length = parseFloat(srcItem.length) || 0;
       var destStan = dest.slice(0, -1);
@@ -4160,7 +4163,8 @@ function runOptimizer() {
             var destId = s2 + side2;
             var destItem = store[destId];
             var isMerge = destItem && destItem.size === item.size && parseFloat(destItem.length) === itemLen &&
-                          destItem.grade === item.grade && destItem.spec === item.spec;
+                          (!destItem.grade || !item.grade || destItem.grade === item.grade) &&
+                          (!destItem.spec  || !item.spec  || destItem.spec  === item.spec);
             if (destItem && !isMerge) return; // occupied with different product
             var destItems = slotAllItems(destId);
             var destBdl = destItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
