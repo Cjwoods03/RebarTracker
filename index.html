@@ -392,6 +392,10 @@
   .rack-bdl { font-size: 9px; font-family: 'IBM Plex Mono', monospace; color: var(--text-dim); }
   .rack-cap { font-size: 8px; font-family: 'IBM Plex Mono', monospace; color: var(--text-dim); opacity: 0.6; margin-top: 2px; }
   .rack-dot.urgent { background: var(--hot); }
+  .sec7-rack-wrapper { position: relative; display: inline-block; }
+  .sec7-remove-btn { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background: #660000; border: 1px solid #990000; color: #ff8080; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; font-family: 'IBM Plex Mono', monospace; font-weight: bold; line-height: 1; }
+  .sec7-remove-btn:active { background: #990000; }
+  .rack-slot.sec7-add-btn { border: 1px dashed var(--border) !important; background: transparent !important; color: var(--text-dim); font-size: 22px; }
 
   /* OPTIMIZER */
   .opt-rule-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:6px 10px; background:var(--steel);border:1px solid var(--border);border-radius:6px; }
@@ -1600,8 +1604,9 @@ var SPOOL_SECTIONS = {
   4:['4.1','4.2','4.3','4.4','4.5','4.6'],
   5:['5.1','5.2','5.3','5.4','5.5','5.6'],
   6:['6.1','6.2','6.3','6.4','6.5','6.6','6.7','6.8','6.9','6.10'],
-  7:['7.1','7.2','7.3','7.4','7.5','7.6','7.7','7.8','7.9','7.10']
+  7:[] // dynamic — populated at runtime via addSec7Rack / loadData
 };
+var SEC7_ALL_RACKS = ['7.1','7.2','7.3','7.4','7.5','7.6','7.7','7.8','7.9','7.10'];
 
 // Max spools per rack — null means no cap yet
 var RACK_MAX_SPOOLS = (function() {
@@ -2591,9 +2596,35 @@ function renderSpoolRacks(wrap) {
   var secT = el('div','section-title'); secT.style.marginTop='24px'; secT.textContent='SPOOL RACKS — SECTIONS 1–7 & 2...'; wrap.appendChild(secT);
   Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
     var section = el('div','rack-section');
-    var label = el('div','rack-section-label'); label.textContent='SECTION '+sec+' — '+SPOOL_SECTIONS[sec].length+' RACKS'; section.appendChild(label);
+    var label = el('div','rack-section-label');
+    var rackCount = SPOOL_SECTIONS[sec].length;
+    label.textContent = 'SECTION '+sec+' — '+rackCount+' RACK'+(rackCount!==1?'S':'');
+    section.appendChild(label);
     var grid = el('div','rack-grid');
-    SPOOL_SECTIONS[sec].forEach(function(rack) { grid.appendChild(makeRackSlot('RACK-'+rack, rack)); });
+    if (String(sec) === '7') {
+      // Section 7: dynamic rows — show active racks with × remove button + + add button
+      SPOOL_SECTIONS[7].forEach(function(rack) {
+        var wrapper = el('div','sec7-rack-wrapper');
+        wrapper.appendChild(makeRackSlot('RACK-'+rack, rack));
+        if (!store['RACK-'+rack]) {
+          var removeBtn = el('div','sec7-remove-btn');
+          removeBtn.textContent = '×';
+          removeBtn.title = 'Remove rack '+rack;
+          (function(r){ removeBtn.addEventListener('click', function(e){ e.stopPropagation(); removeSec7Rack(r); }); })(rack);
+          wrapper.appendChild(removeBtn);
+        }
+        grid.appendChild(wrapper);
+      });
+      if (SPOOL_SECTIONS[7].length < 10) {
+        var addSlot = el('div','rack-slot sec7-add-btn');
+        addSlot.textContent = '+';
+        addSlot.title = 'Add rack to Section 7 ('+SPOOL_SECTIONS[7].length+'/10)';
+        addSlot.addEventListener('click', addSec7Rack);
+        grid.appendChild(addSlot);
+      }
+    } else {
+      SPOOL_SECTIONS[sec].forEach(function(rack) { grid.appendChild(makeRackSlot('RACK-'+rack, rack)); });
+    }
     section.appendChild(grid); wrap.appendChild(section);
   });
 }
@@ -2641,6 +2672,24 @@ function rackFillColor(pct) {
   if (pct <= 0.5) { var t=pct/0.5; r=Math.round(t*245); g=Math.round(176+t*(166-176)); b=Math.round(79+t*(35-79)); }
   else { var t2=(pct-0.5)/0.5; r=Math.round(245+t2*(232-245)); g=Math.round(166+t2*(64-166)); b=Math.round(35+t2*(64-35)); }
   return r+','+g+','+b;
+}
+
+// ─── SECTION 7 DYNAMIC RACKS ─────────────────────────────────────
+function addSec7Rack() {
+  if (SPOOL_SECTIONS[7].length >= 10) return;
+  var next = SEC7_ALL_RACKS.filter(function(n){ return SPOOL_SECTIONS[7].indexOf(n) === -1; })[0];
+  if (!next) return;
+  SPOOL_SECTIONS[7].push(next);
+  store['RACK-'+next] = null;
+  renderAll(); saveData();
+}
+
+function removeSec7Rack(rack) {
+  if (store['RACK-'+rack]) { alert('Cannot remove — rack '+rack+' is occupied.'); return; }
+  var idx = SPOOL_SECTIONS[7].indexOf(rack);
+  if (idx > -1) SPOOL_SECTIONS[7].splice(idx, 1);
+  delete store['RACK-'+rack];
+  renderAll(); saveData();
 }
 
 // ─── SLOT CLICK ──────────────────────────────────────────────────
@@ -6500,6 +6549,7 @@ function saveData() {
         area22NextId: area22NextId,
         area1Stacks:  area1Stacks,
         area1NextId:  area1NextId,
+        sec7Racks:    SPOOL_SECTIONS[7],
         scrapSlots:   encodeObj(scrapSlots),
         holdSlots:    encodeObj(holdSlots),
         redTagSlots:  encodeObj(redTagSlots),
@@ -6564,6 +6614,15 @@ function loadData(callback) {
       area22NextId  = payload.area22NextId  || 1;
       area1Stacks   = payload.area1Stacks   || [];
       area1NextId   = payload.area1NextId   || 1;
+      // Section 7 dynamic racks
+      if (payload.sec7Racks) {
+        SPOOL_SECTIONS[7] = payload.sec7Racks;
+        SPOOL_SECTIONS[7].forEach(function(r) { if (!store.hasOwnProperty('RACK-'+r)) store['RACK-'+r] = null; });
+      } else {
+        // Migration from old fixed format: keep occupied racks, discard empty ones
+        SPOOL_SECTIONS[7] = SEC7_ALL_RACKS.filter(function(r) { return store['RACK-'+r] != null; });
+        SEC7_ALL_RACKS.forEach(function(r) { if (store['RACK-'+r] === null) delete store['RACK-'+r]; });
+      }
       scrapSlots    = decodeObj(payload.scrapSlots    || {});
       holdSlots     = decodeObj(payload.holdSlots     || {});
       redTagSlots   = decodeObj(payload.redTagSlots   || {});
@@ -6605,6 +6664,7 @@ function exportBackup() {
       area22NextId: area22NextId,
       area1Stacks:  area1Stacks,
       area1NextId:  area1NextId,
+      sec7Racks:    SPOOL_SECTIONS[7],
       scrapSlots:   encodeObj(scrapSlots),
       holdSlots:    encodeObj(holdSlots),
       redTagSlots:  encodeObj(redTagSlots),
