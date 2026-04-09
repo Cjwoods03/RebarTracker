@@ -881,7 +881,7 @@
           </button>
           <div id="locator-editor-wrap" style="display:none;margin-top:8px">
             <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5">
-              Enter your EBS locator code for each stanchion side and spool rack. These will be stored and shown in the detail panel for each location, and used when live EBS integration is set up.
+              Enter your EBS locator code for each stanchion side and spool row. These will be stored and shown in the detail panel for each location, and used when live EBS integration is set up.
             </div>
             <div id="locator-code-grid"></div>
             <button class="btn btn-primary" style="margin-top:10px;font-size:13px;padding:10px" onclick="saveLocatorCodes()">SAVE LOCATOR CODES</button>
@@ -2593,12 +2593,12 @@ function renderCycleSlot(wrap) {
 }
 
 function renderSpoolRacks(wrap) {
-  var secT = el('div','section-title'); secT.style.marginTop='24px'; secT.textContent='SPOOL RACKS — SECTIONS 1–7 & 2...'; wrap.appendChild(secT);
+  var secT = el('div','section-title'); secT.style.marginTop='24px'; secT.textContent='SPOOL ROWS — SECTIONS 1–7 & 2...'; wrap.appendChild(secT);
   Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
     var section = el('div','rack-section');
     var label = el('div','rack-section-label');
     var rackCount = SPOOL_SECTIONS[sec].length;
-    label.textContent = 'SECTION '+sec+' — '+rackCount+' RACK'+(rackCount!==1?'S':'');
+    label.textContent = 'SECTION '+sec+' — '+rackCount+' ROW'+(rackCount!==1?'S':'');
     section.appendChild(label);
     var grid = el('div','rack-grid');
     if (String(sec) === '7') {
@@ -2609,7 +2609,7 @@ function renderSpoolRacks(wrap) {
         if (!store['RACK-'+rack]) {
           var removeBtn = el('div','sec7-remove-btn');
           removeBtn.textContent = '×';
-          removeBtn.title = 'Remove rack '+rack;
+          removeBtn.title = 'Remove row '+rack;
           (function(r){ removeBtn.addEventListener('click', function(e){ e.stopPropagation(); removeSec7Rack(r); }); })(rack);
           wrapper.appendChild(removeBtn);
         }
@@ -2618,7 +2618,7 @@ function renderSpoolRacks(wrap) {
       if (SPOOL_SECTIONS[7].length < 10) {
         var addSlot = el('div','rack-slot sec7-add-btn');
         addSlot.textContent = '+';
-        addSlot.title = 'Add rack to Section 7 ('+SPOOL_SECTIONS[7].length+'/10)';
+        addSlot.title = 'Add row to Section 7 ('+SPOOL_SECTIONS[7].length+'/10)';
         addSlot.addEventListener('click', addSec7Rack);
         grid.appendChild(addSlot);
       }
@@ -2685,7 +2685,7 @@ function addSec7Rack() {
 }
 
 function removeSec7Rack(rack) {
-  if (store['RACK-'+rack]) { alert('Cannot remove — rack '+rack+' is occupied.'); return; }
+  if (store['RACK-'+rack]) { alert('Cannot remove — row '+rack+' is occupied.'); return; }
   var idx = SPOOL_SECTIONS[7].indexOf(rack);
   if (idx > -1) SPOOL_SECTIONS[7].splice(idx, 1);
   delete store['RACK-'+rack];
@@ -2697,7 +2697,7 @@ function onSlotClick(id) {
   if (store[id]) { modalLoc=id; showModal(id); }
   else {
     suggestedLoc=id;
-    document.getElementById('suggestion-loc').textContent = id.replace('RACK-','RACK ');
+    document.getElementById('suggestion-loc').textContent = id.replace('RACK-','ROW ');
     document.getElementById('suggestion-reason').textContent = 'Manually selected on floor map';
     document.getElementById('suggestion-box').classList.add('active');
     document.getElementById('inp-type').value = id.startsWith('RACK-')?'spool':'straight';
@@ -2764,7 +2764,7 @@ function showModal(id) {
   var days = getDaysToShip(item.ship);
   var isSpool = item.type==='spool';
   var allItems = slotAllItems(id);
-  document.getElementById('modal-title').textContent = id === 'CYCLE' ? 'CYCLE…' : id.replace('RACK-','RACK ');
+  document.getElementById('modal-title').textContent = id === 'CYCLE' ? 'CYCLE…' : id.replace('RACK-','ROW ');
 
   if (allItems.length > 1) {
     // Multiple products — show a summary header then the list below
@@ -2874,7 +2874,7 @@ function setQty(newVal) {
     var maxCap2 = RACK_MAX_SPOOLS[rackKey2];
     if (maxCap2 && newVal > maxCap2) {
       newVal = maxCap2;
-      showScrapToast('Max ' + maxCap2 + ' spools for Rack ' + rackKey2); saveData();
+      showScrapToast('Max ' + maxCap2 + ' spools for Row ' + rackKey2); saveData();
     }
   }
 
@@ -3278,7 +3278,7 @@ function openTransferModal() {
         var availStr = maxCap ? (existingCoils+'/'+maxCap+' used') : (existing ? existingCoils+' coils' : 'empty');
         var opt = document.createElement('option');
         opt.value = rid;
-        opt.textContent = 'Rack ' + rack + ' — ' + (existing ? existing.size+' · ' : '') + availStr;
+        opt.textContent = 'Row ' + rack + ' — ' + (existing ? existing.size+' · ' : '') + availStr;
         if (maxCap && existingCoils >= maxCap) { opt.disabled = true; opt.textContent += ' (FULL)'; }
         sel.appendChild(opt);
       });
@@ -3390,7 +3390,7 @@ function confirmTransfer() {
     var destCoils = destItem ? destItem.bundles : 0;
     if (maxCap && destCoils + srcItem.bundles > maxCap) {
       hint.className = 'length-hint over';
-      hint.textContent = '⛔ Rack ' + rackKey + ' only has ' + (maxCap - destCoils) + ' spots remaining.';
+      hint.textContent = '⛔ Row ' + rackKey + ' only has ' + (maxCap - destCoils) + ' spots remaining.';
       hint.style.display = 'block';
       return;
     }
@@ -3440,7 +3440,7 @@ function confirmTransfer() {
   var fromId = modalLoc;
   closeTransferModal();
   closeModal();
-  showScrapToast('✓ Transferred from ' + fromId + ' → ' + dest.replace('RACK-','Rack ')); saveData();
+  showScrapToast('✓ Transferred from ' + fromId + ' → ' + dest.replace('RACK-','Row ')); saveData();
   renderAll();
   renderInventory();
 
@@ -3525,13 +3525,13 @@ function renderLocatorEditor() {
   });
 
   // Spool racks
-  html += '<div class="locator-section-label">SPOOL RACKS</div>';
+  html += '<div class="locator-section-label">SPOOL ROWS</div>';
   Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
     SPOOL_SECTIONS[sec].forEach(function(rack) {
       var rid = 'RACK-' + rack;
       var code = LOCATOR_CODES[rid] || '';
       html += '<div class="locator-row">' +
-        '<div class="locator-slot-label">Rack ' + rack + '</div>' +
+        '<div class="locator-slot-label">Row ' + rack + '</div>' +
         '<input class="locator-input' + (code?' has-value':'') + '" id="lc-' + rid + '" type="text" placeholder="EBS locator code" value="' + code.replace(/"/g,'&quot;') + '">' +
         '</div>';
     });
@@ -5469,14 +5469,14 @@ function calcSuggestLoc(type, size, length, grade, spec) {
           var maxCap = RACK_MAX_SPOOLS[r];
           if (maxCap && item.bundles >= maxCap) return;
           pick = rid;
-          pickReason = 'Rack '+r+' — matches '+size+' already stored ('+(maxCap ? item.bundles+'/'+maxCap+' used' : item.bundles+' coils')+')';
+          pickReason = 'Row '+r+' — matches '+size+' already stored ('+(maxCap ? item.bundles+'/'+maxCap+' used' : item.bundles+' coils')+')';
         });
       }
     }
     if (!pick) {
       for (var i2=0; i2<secs.length && !pick; i2++) {
         SPOOL_SECTIONS[secs[i2]].forEach(function(r) {
-          if (!pick && !store['RACK-'+r]) { pick='RACK-'+r; pickReason='Next available empty rack'; }
+          if (!pick && !store['RACK-'+r]) { pick='RACK-'+r; pickReason='Next available empty row'; }
         });
       }
     }
@@ -5569,7 +5569,7 @@ function suggestLocation() {
 
   if (manualPick) {
     suggestedLoc = manualPick;
-    document.getElementById('suggestion-loc').textContent = manualPick.replace('RACK-','RACK ');
+    document.getElementById('suggestion-loc').textContent = manualPick.replace('RACK-','ROW ');
     document.getElementById('suggestion-reason').textContent = 'Manually selected location';
     document.getElementById('suggestion-box').classList.add('active');
     renderAll(); return;
@@ -5577,14 +5577,14 @@ function suggestLocation() {
 
   var result = calcSuggestLoc(type, size, length, grade, spec);
   if (!result) {
-    if (type === 'spool') alert('All spool racks are full.');
+    if (type === 'spool') alert('All spool rows are full.');
     else alert('No stanchion slots found that fit '+(length||'')+'ft.');
     return;
   }
 
   suggestedLoc = result.loc;
   if (type === 'spool') {
-    document.getElementById('suggestion-loc').textContent = result.loc.replace('RACK-','RACK ');
+    document.getElementById('suggestion-loc').textContent = result.loc.replace('RACK-','ROW ');
   } else {
     document.getElementById('suggestion-loc').textContent = result.loc === 'CYCLE' ? 'CYCLE…' : (result.loc.startsWith('BSU') ? 'B.SU ' : 'STANCHION ') + result.loc;
   }
@@ -5831,7 +5831,7 @@ function logRun() {
     }
 
     if (placed < totalCoils) {
-      alert('⛔ Not enough rack space for ' + totalCoils + ' coils starting from Rack ' + loc.replace('RACK-','') + '.\nOnly ' + placed + ' spaces found.\n\nPlease reduce quantity or choose a different starting rack.');
+      alert('⛔ Not enough row space for ' + totalCoils + ' coils starting from Row ' + loc.replace('RACK-','') + '.\nOnly ' + placed + ' spaces found.\n\nPlease reduce quantity or choose a different starting row.');
       return;
     }
 
@@ -5865,10 +5865,10 @@ function logRun() {
     });
 
     if (placements.length > 1) {
-      var summary = placements.map(function(p){ return p.loc.replace('RACK-','Rack ') + ' (' + p.count + ')'; }).join(', ');
+      var summary = placements.map(function(p){ return p.loc.replace('RACK-','Row ') + ' (' + p.count + ')'; }).join(', ');
       showScrapToast('✓ ' + totalCoils + ' coils placed: ' + summary); saveData();
     } else {
-      showScrapToast('✓ ' + totalCoils + ' coils logged to ' + placements[0].loc.replace('RACK-','Rack ')); saveData();
+      showScrapToast('✓ ' + totalCoils + ' coils logged to ' + placements[0].loc.replace('RACK-','Row ')); saveData();
     }
 
     ['inp-heat','inp-bundles','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
@@ -6134,7 +6134,7 @@ function populateLocationDropdown(type) {
     Object.keys(SPOOL_SECTIONS).forEach(function(sec){
       SPOOL_SECTIONS[sec].forEach(function(rack){
         var rid='RACK-'+rack;
-        if (!store[rid]){var opt=document.createElement('option');opt.value=rid;opt.textContent='Rack '+rack;sel.appendChild(opt);}
+        if (!store[rid]){var opt=document.createElement('option');opt.value=rid;opt.textContent='Row '+rack;sel.appendChild(opt);}
       });
     });
   }
@@ -6242,7 +6242,7 @@ function renderInventory() {
     var isArea1  = item.loc === 'AREA-1';
     var dispLoc = isArea22 ? ('AREA 22 — '+(item.side||'A')+'-Side '+(item.id||'')) :
                   isArea1  ? ('AREA 1 — '+(item.side||'A')+'-Side '+(item.id||''))  :
-                  item.loc.replace('RACK-','RACK ');
+                  item.loc.replace('RACK-','ROW ');
     var clickId = (isArea22||isArea1) ? (item.id||'') : item.loc;
     var areaFlag = isArea22 ? 'a22' : isArea1 ? 'a1' : '';
 
