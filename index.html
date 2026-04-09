@@ -1045,7 +1045,7 @@
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Grade</div>
               <select id="rc-grade" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
                 <option value="">—</option>
-                <option>Grade 60</option><option>Grade 80</option><option>Grade 100</option>
+                <option>Grade 40</option><option>Grade 60</option><option>Grade 80</option>
               </select>
             </div>
             <div>
@@ -1062,6 +1062,10 @@
             <div>
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Pc / Bundle</div>
               <input type="number" id="rc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bundle Wt (lbs)</div>
+              <input type="number" id="rc-weight" placeholder="e.g. 1200" min="0" inputmode="decimal" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
           </div>
           <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="rcAddItem()">ADD TO RUN CYCLE</button>
@@ -5603,6 +5607,7 @@ function rcAddItem() {
   var spec    = document.getElementById('rc-spec').value;
   var bundles = parseInt(document.getElementById('rc-bundles').value) || 0;
   var pieces  = parseInt(document.getElementById('rc-pieces').value) || 0;
+  var weight  = parseFloat(document.getElementById('rc-weight').value) || 0;
 
   if (!size)    { alert('Select a bar size.'); return; }
   if (!length)  { alert('Enter a length.'); return; }
@@ -5616,13 +5621,14 @@ function rcAddItem() {
     spec:        spec,
     bundles:     bundles,
     pieces:      pieces,
+    weight:      weight,
     assignedLoc: ''
   };
   runCycle.push(item);
 
   // Clear form
   ['rc-size','rc-grade','rc-spec'].forEach(function(id){ document.getElementById(id).value = ''; });
-  ['rc-length','rc-bundles','rc-pieces'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['rc-length','rc-bundles','rc-pieces','rc-weight'].forEach(function(id){ document.getElementById(id).value = ''; });
 
   renderRunCycle();
   updateRcBadge();
@@ -5666,7 +5672,7 @@ function renderRunCycle() {
   container.innerHTML = runCycle.map(function(item) {
     var lenStr = formatLength(String(item.length));
     var label  = [item.size, lenStr, item.grade, item.spec].filter(Boolean).join(' · ');
-    var bdlStr = item.bundles + ' bdl' + (item.pieces ? ' · ' + item.pieces + 'pc/bdl' : '');
+    var bdlStr = item.bundles + ' bdl' + (item.pieces ? ' · ' + item.pieces + 'pc/bdl' : '') + (item.weight ? ' · ' + item.weight.toLocaleString() + ' lbs/bdl' : '');
 
     // Auto-suggest
     var sugg = calcSuggestLoc('straight', item.size, item.length, item.grade, item.spec);
