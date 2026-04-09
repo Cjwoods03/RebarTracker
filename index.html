@@ -6,6 +6,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>RebarTrack</title>
+<script>
+  // Hide app content immediately if not yet unlocked — prevents any flash
+  if (sessionStorage.getItem('rt_unlocked') !== '1') {
+    document.documentElement.style.visibility = 'hidden';
+  }
+</script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
 
@@ -27,6 +33,76 @@
   }
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   body { background: var(--steel); color: var(--text); font-family: 'IBM Plex Sans', sans-serif; min-height: 100vh; min-height: 100dvh; overflow-x: hidden; }
+
+  /* PIN LOCK SCREEN */
+  #pin-screen {
+    position: fixed; inset: 0; z-index: 9999;
+    background: var(--steel);
+    display: flex; align-items: center; justify-content: center;
+  }
+  #pin-screen.hidden { display: none; }
+  .pin-card {
+    background: var(--steel-mid);
+    border: 1px solid var(--border);
+    border-top: 3px solid var(--accent);
+    border-radius: 14px;
+    padding: 36px 32px 32px;
+    width: 320px;
+    max-width: calc(100vw - 40px);
+    box-shadow: 0 8px 40px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column; align-items: center; gap: 20px;
+  }
+  .pin-logo {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 26px; letter-spacing: 4px; color: #fff;
+    line-height: 1;
+  }
+  .pin-logo-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; color: var(--accent); letter-spacing: 2px;
+    text-align: center; margin-top: 3px;
+  }
+  .pin-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--text-dim);
+    letter-spacing: 1px; text-transform: uppercase;
+    align-self: flex-start;
+  }
+  .pin-input-wrap { width: 100%; display: flex; flex-direction: column; gap: 8px; }
+  #pin-input {
+    width: 100%;
+    background: var(--steel);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 22px;
+    letter-spacing: 6px;
+    text-align: center;
+    padding: 12px 16px;
+    border-radius: 8px;
+    outline: none;
+    transition: border-color 0.15s;
+    -webkit-text-security: disc;
+  }
+  #pin-input:focus { border-color: var(--accent); }
+  #pin-input.error { border-color: var(--hot); }
+  #pin-error {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; color: var(--hot);
+    text-align: center; letter-spacing: 0.5px;
+    min-height: 16px;
+  }
+  #pin-submit {
+    width: 100%;
+    padding: 14px;
+    background: var(--accent);
+    color: #fff;
+    border: none; border-radius: 8px;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 20px; letter-spacing: 2px;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+  #pin-submit:active { opacity: 0.8; }
 
   header {
     background: linear-gradient(135deg, #00205B 0%, #001540 100%);
@@ -444,6 +520,22 @@
 </style>
 </head>
 <body>
+
+<!-- PIN LOCK SCREEN -->
+<div id="pin-screen">
+  <div class="pin-card">
+    <div>
+      <div class="pin-logo">RebarTrack</div>
+      <div class="pin-logo-sub">WAREHOUSE TRACKING</div>
+    </div>
+    <div class="pin-input-wrap">
+      <label class="pin-label" for="pin-input">Enter PIN</label>
+      <input id="pin-input" type="tel" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••" onkeydown="if(event.key==='Enter')pinUnlock()">
+      <div id="pin-error"></div>
+    </div>
+    <button id="pin-submit" onclick="pinUnlock()">Unlock</button>
+  </div>
+</div>
 
 <header>
   <div style="display:flex;align-items:center;gap:14px">
@@ -6296,6 +6388,26 @@ function clearSavedData() {
 
 function saveAndRender() { saveData(); renderAll(); renderInventory(); }
 
+// ─── PIN LOCK ────────────────────────────────────────────────────
+function pinUnlock() {
+  var entered = document.getElementById('pin-input').value;
+  var inp = document.getElementById('pin-input');
+  var err = document.getElementById('pin-error');
+  if (entered === ADMIN_PIN) {
+    sessionStorage.setItem('rt_unlocked', '1');
+    document.getElementById('pin-screen').classList.add('hidden');
+    document.documentElement.style.visibility = '';
+    inp.classList.remove('error');
+    err.textContent = '';
+    document.getElementById('pin-input').value = '';
+  } else {
+    inp.classList.add('error');
+    err.textContent = 'Incorrect PIN';
+    inp.value = '';
+    inp.focus();
+  }
+}
+
 // ─── INIT ────────────────────────────────────────────────────────
 document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
 buildStore();
@@ -6307,6 +6419,15 @@ loadData(function(loaded) {
   populateLocationDropdown('straight');
   renderAll();
   renderInventory();
+
+  // Show app — either already unlocked this session or show PIN screen
+  if (sessionStorage.getItem('rt_unlocked') === '1') {
+    document.getElementById('pin-screen').classList.add('hidden');
+    document.documentElement.style.visibility = '';
+  } else {
+    document.documentElement.style.visibility = '';
+    setTimeout(function() { document.getElementById('pin-input').focus(); }, 50);
+  }
 });
 
 function seedWarehouse() {
