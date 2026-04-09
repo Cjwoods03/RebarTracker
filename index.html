@@ -345,6 +345,7 @@
   .slot-bdl { font-size: 8px; font-family: 'IBM Plex Mono', monospace; color: var(--text-dim); }
   .slot-dot { position: absolute; bottom: 2px; right: 2px; width: 5px; height: 5px; border-radius: 50%; background: var(--safe); }
   .slot-dot.urgent { background: var(--hot); }
+  .slot-customer { position: absolute; bottom: 2px; left: 2px; right: 9px; font-family: 'IBM Plex Mono', monospace; font-size: 7px; color: #e8a020; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: left; line-height: 1; }
   .slot-extra-badge { position: absolute; top: 2px; right: 3px; font-size: 8px; font-family: 'IBM Plex Mono', monospace; background: var(--accent); color: #001540; border-radius: 4px; padding: 0 3px; line-height: 1.6; font-weight: bold; }
 
   /* AREA 22 */
@@ -2247,20 +2248,27 @@ function makeSlot(id, side) {
       div.classList.add('occupied');
     }
     if (totalCount > 1) {
-      // Multiple products — show count
+      // Multiple products — show count + most recent customer
       var totalBundles = allItems.reduce(function(s,i){ return s + (i.bundles||0); }, 0);
+      var multiCust = '';
+      for (var _mci = allItems.length - 1; _mci >= 0; _mci--) {
+        if (allItems[_mci].customer) { multiCust = allItems[_mci].customer; break; }
+      }
       div.innerHTML =
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;line-height:1.1;color:var(--accent)">'+totalCount+'</div>'+
         '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--text-dim);line-height:1.2">products</div>'+
         '<div class="slot-bdl">'+totalBundles+'b</div>'+
-        (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'');
+        (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'')+
+        (multiCust?'<div class="slot-customer">'+escHtml(multiCust)+'</div>':'');
     } else {
-      // Single product — show detail
+      // Single product — show detail + customer if present
+      var custStr = item.customer || '';
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+item.size+'</div>'+
         '<div class="slot-len">'+(item.length ? formatLength(item.length) : 'Coil')+'</div>'+
         '<div class="slot-bdl">'+item.bundles+'b</div>'+
-        (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'');
+        (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'')+
+        (custStr?'<div class="slot-customer">'+escHtml(custStr)+'</div>':'');
     }
   } else {
     div.innerHTML = '<div class="slot-side">'+side+'</div>';
