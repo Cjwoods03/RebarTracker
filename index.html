@@ -1061,11 +1061,11 @@
             </div>
             <div>
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Pc / Bundle</div>
-              <input type="number" id="rc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+              <input type="number" id="rc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="rcOnPiecesInput()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
             <div>
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bundle Wt (lbs)</div>
-              <input type="number" id="rc-weight" placeholder="e.g. 1200" min="0" inputmode="decimal" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+              <input type="number" id="rc-weight" placeholder="e.g. 1200" min="0" inputmode="decimal" oninput="rcOnWeightInput()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
           </div>
           <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="rcAddItem()">ADD TO RUN CYCLE</button>
@@ -5599,6 +5599,43 @@ function suggestLocation() {
 }
 
 // ─── RUN CYCLE ───────────────────────────────────────────────────
+
+var _rcSyncing = false;
+
+// Pieces typed → auto-fill bundle weight
+function rcOnPiecesInput() {
+  if (_rcSyncing) return;
+  _rcSyncing = true;
+  var size     = document.getElementById('rc-size').value;
+  var lenNum   = parseFloat(document.getElementById('rc-length').value) || 0;
+  var pieces   = parseInt(document.getElementById('rc-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (lbsPerFt && lenNum && pieces) {
+    document.getElementById('rc-weight').value = Math.round(lbsPerFt * lenNum * pieces);
+  } else {
+    document.getElementById('rc-weight').value = '';
+  }
+  _rcSyncing = false;
+}
+
+// Bundle weight typed → back-calculate pieces/bundle
+function rcOnWeightInput() {
+  if (_rcSyncing) return;
+  _rcSyncing = true;
+  var size     = document.getElementById('rc-size').value;
+  var lenNum   = parseFloat(document.getElementById('rc-length').value) || 0;
+  var bdlWt    = parseFloat(document.getElementById('rc-weight').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (lbsPerFt && lenNum && bdlWt) {
+    var lbsPerPiece = lbsPerFt * lenNum;
+    var pieces = Math.round(bdlWt / lbsPerPiece);
+    if (pieces < 1) pieces = 1;
+    document.getElementById('rc-pieces').value = pieces;
+  } else {
+    document.getElementById('rc-pieces').value = '';
+  }
+  _rcSyncing = false;
+}
 
 function rcAddItem() {
   var size    = document.getElementById('rc-size').value;
