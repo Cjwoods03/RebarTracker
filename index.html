@@ -1006,6 +1006,70 @@
     </div>
   </div>
 
+  <!-- ═══ SECTION: RUN CYCLE ═══ -->
+  <div class="section-card" id="sec-runcycle">
+    <button class="section-header" onclick="toggleSection('runcycle',this)">
+      <div class="sec-header-left">
+        <span class="sec-icon">🗓️</span>
+        <span class="sec-title">Run Cycle</span>
+      </div>
+      <div class="sec-header-right">
+        <span class="sec-badge" id="badge-runcycle"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body" id="body-runcycle" style="display:none">
+      <div style="padding:16px">
+
+        <!-- Add item form -->
+        <div style="margin-bottom:16px;padding:12px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">➕ Add Product to Run Cycle</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bar Size</div>
+              <select id="rc-size" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+                <option value="">—</option>
+                <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+                <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Length (ft)</div>
+              <input type="number" id="rc-length" placeholder="e.g. 20" min="1" inputmode="decimal" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Grade</div>
+              <select id="rc-grade" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+                <option value="">—</option>
+                <option>Grade 60</option><option>Grade 80</option><option>Grade 100</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Spec</div>
+              <select id="rc-spec" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+                <option value="">—</option>
+                <option>A615</option><option>A706</option>
+              </select>
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bundles</div>
+              <input type="number" id="rc-bundles" placeholder="e.g. 5" min="1" inputmode="numeric" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+            </div>
+            <div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Pc / Bundle</div>
+              <input type="number" id="rc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;margin-top:4px" onclick="rcAddItem()">ADD TO RUN CYCLE</button>
+        </div>
+
+        <!-- List -->
+        <div id="rc-list"></div>
+
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ SECTION: INVENTORY ═══ -->
   <div class="section-card" id="sec-inventory">
     <button class="section-header" onclick="toggleSection('inventory',this)">
@@ -1561,6 +1625,8 @@ var area22Stacks = [];
 var area1Stacks = [];
 var inventory = [];
 var area22NextId = 1;
+var runCycle = [];        // [{id, size, length, grade, spec, bundles, pieces, assignedLoc}]
+var runCycleNextId = 1;
 var area1NextId = 1;
 var suggestedLoc = null;
 var modalLoc = null;
@@ -1891,6 +1957,7 @@ function toggleSection(name, btn) {
   // Re-render map if opening the map section
   if (name === 'map' && isCollapsed) renderAll();
   if (name === 'optimizer' && isCollapsed) renderOptimizerRules();
+  if (name === 'runcycle' && isCollapsed) renderRunCycle();
 }
 
 function openSection(name) {
@@ -4314,6 +4381,12 @@ var OPTIMIZER_BUILT_IN_RULES = [
     label: 'Over Physical Capacity',
     desc: 'Flag any stanchion side where the current bundle count exceeds the confirmed per-side maximum from physical measurements. Suggests the best available destination with room to absorb the excess.',
     enabled: true
+  },
+  {
+    id: 'run_cycle',
+    label: 'Run Cycle Planning',
+    desc: 'For each product in the Run Cycle list that has no compatible open slot, suggest a move that would free up suitable space.',
+    enabled: true
   }
 ];
 
@@ -4589,6 +4662,80 @@ function runOptimizer() {
   }
 
 
+
+  // ── RULE: Run Cycle planning needs ───────────────────────────
+  // For each Run Cycle item, check if a compatible slot already exists.
+  // If not, find the best occupied slot that could be moved to free a compatible space.
+  if (ruleEnabled('run_cycle') && runCycle.length > 0) {
+    runCycle.forEach(function(rcItem) {
+      if (!rcItem.size || !rcItem.length) return;
+      var rcLen = parseFloat(rcItem.length) || 0;
+
+      // Check if a compatible slot already exists (same product or empty slot that fits)
+      var hasSlot = false;
+      order.forEach(function(s) {
+        if (hasSlot) return;
+        if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+        if (rcLen > 0 && rcLen > stanchionFtRemaining(s)) return;
+        var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+        sides.forEach(function(side) {
+          if (hasSlot) return;
+          var sid = s + side;
+          // Compatible = empty slot, or same product already here
+          var existing = store[sid];
+          if (!existing && slotAvailable(sid)) { hasSlot = true; return; }
+          if (existing &&
+              existing.size === rcItem.size &&
+              parseFloat(existing.length) === rcLen &&
+              (!rcItem.grade || !existing.grade || existing.grade === rcItem.grade) &&
+              (!rcItem.spec  || !existing.spec  || existing.spec  === rcItem.spec)) {
+            hasSlot = true;
+          }
+        });
+      });
+
+      if (hasSlot) return; // already have somewhere to put it
+
+      // No compatible slot — find the most moveable item to free one up
+      // Look for the lightest/shortest item in the first stanchion that has footage for rcLen
+      var bestFrom = null, bestTo = null, bestFromItem = null;
+      order.some(function(s) {
+        if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return false;
+        var rem = stanchionFtRemaining(s);
+        // This stanchion could fit rcLen if we clear a side
+        var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+        return sides.some(function(side) {
+          var sid = s + side;
+          var srcItem = store[sid];
+          if (!srcItem) return false;
+          // Find a destination for srcItem so we can free this slot for the RC item
+          var dest = calcSuggestLoc('straight', srcItem.size, parseFloat(srcItem.length) || 0, srcItem.grade, srcItem.spec);
+          if (dest && dest.loc !== sid) {
+            bestFrom = sid;
+            bestTo = dest.loc;
+            bestFromItem = srcItem;
+            return true;
+          }
+          return false;
+        });
+      });
+
+      var rcLabel = [rcItem.size, formatLength(String(rcItem.length)), rcItem.grade, rcItem.spec].filter(Boolean).join(' ');
+      suggestions.push({
+        priority: 'high',
+        moveType: 'straight',
+        ruleType: 'consolidate',
+        rule: 'Run Cycle Planning',
+        desc: '[RUN CYCLE] No open slot for ' + rcLabel + ' — ' +
+          (bestFrom
+            ? 'move ' + bestFrom + ' → ' + bestTo + ' to free a compatible slot'
+            : 'no moveable product found — manual review needed'),
+        detail: 'Planned: ' + rcLabel + ' · ' + rcItem.bundles + ' bundles',
+        from: bestFrom || (order[0] + 'A'),
+        to:   bestTo   || (order[0] + 'A')
+      });
+    });
+  }
 
   // Deduplicate (same from/to pair)
   var seen2 = {};
@@ -5256,6 +5403,113 @@ function ofClearLogForm() {
   suggestedLoc = null;
 }
 
+// ─── CORE SUGGEST ENGINE ─────────────────────────────────────────
+// Returns {loc, reason} or null. Pure calculation — no DOM side effects.
+function calcSuggestLoc(type, size, length, grade, spec) {
+  if (type === 'spool') {
+    var pick = null, pickReason = '';
+    var secs = Object.keys(SPOOL_SECTIONS);
+    if (size) {
+      for (var i=0; i<secs.length && !pick; i++) {
+        SPOOL_SECTIONS[secs[i]].forEach(function(r) {
+          if (pick) return;
+          var rid = 'RACK-'+r;
+          var item = store[rid];
+          if (!item) return;
+          if (item.size !== size) return;
+          var maxCap = RACK_MAX_SPOOLS[r];
+          if (maxCap && item.bundles >= maxCap) return;
+          pick = rid;
+          pickReason = 'Rack '+r+' — matches '+size+' already stored ('+(maxCap ? item.bundles+'/'+maxCap+' used' : item.bundles+' coils')+')';
+        });
+      }
+    }
+    if (!pick) {
+      for (var i2=0; i2<secs.length && !pick; i2++) {
+        SPOOL_SECTIONS[secs[i2]].forEach(function(r) {
+          if (!pick && !store['RACK-'+r]) { pick='RACK-'+r; pickReason='Next available empty rack'; }
+        });
+      }
+    }
+    return pick ? { loc: pick, reason: pickReason } : null;
+  }
+
+  // Straight bar
+  var pick2 = null, reason = '';
+  var stanchionOrder = orderedStanchions();
+  var isShortRun = length > 0 && length < 40;
+
+  function isFSBlocked(stanKey) { return !!(stanchionCapacity[stanKey] && stanchionCapacity[stanKey].freeStack); }
+
+  // Pass 1: matching product already stored — merge
+  if (size && length > 0) {
+    for (var si=0; si<stanchionOrder.length && !pick2; si++) {
+      var s = stanchionOrder[si];
+      if (isFSBlocked(s)) continue;
+      var allSides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+      for (var j=0; j<allSides.length && !pick2; j++) {
+        var id = s + allSides[j];
+        var existing = store[id];
+        if (!existing) continue;
+        if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
+        if (existing.size === size && parseFloat(existing.length) === length &&
+            (!grade || !existing.grade || existing.grade === grade) &&
+            (!spec  || !existing.spec  || existing.spec  === spec)) {
+          pick2 = id;
+          var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
+          reason = lbl+' '+allSides[j]+'-side — '+size+' '+formatLength(String(length))+' already stored here ('+existing.bundles+' bundles), stack on top';
+        }
+      }
+    }
+  }
+
+  // Pass 2: short runs — prefer C then B
+  if (!pick2 && isShortRun) {
+    for (var si=0; si<stanchionOrder.length && !pick2; si++) {
+      var s = stanchionOrder[si];
+      if (isFSBlocked(s) || !cSideEnabled[s]) continue;
+      if (length > stanchionFtRemaining(s)) continue;
+      var id = s+'C';
+      if (slotAvailable(id)) {
+        pick2 = id;
+        reason = ((s==='BSU')?'B.SU':'Stanchion '+s)+' C-side — short run (<40ft), C-side preferred';
+      }
+    }
+    for (var si=0; si<stanchionOrder.length && !pick2; si++) {
+      var s = stanchionOrder[si];
+      if (isFSBlocked(s)) continue;
+      if (length > stanchionFtRemaining(s)) continue;
+      var id = s+'B';
+      if (slotAvailable(id)) {
+        pick2 = id;
+        reason = ((s==='BSU')?'B.SU':'Stanchion '+s)+' B-side — short run (<40ft), B-side preferred';
+        if (length > 0) reason += ' ('+stanchionFtUsed(s).toFixed(0)+'ft used, '+(stanchionFtUsed(s)+length).toFixed(0)+'ft after)';
+      }
+    }
+  }
+
+  // Pass 3: first available slot
+  if (!pick2) {
+    for (var si2=0; si2<stanchionOrder.length && !pick2; si2++) {
+      var s2 = stanchionOrder[si2];
+      if (isFSBlocked(s2)) continue;
+      if (length > 0 && length > stanchionFtRemaining(s2)) continue;
+      var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
+      for (var j2=0; j2<sides2.length && !pick2; j2++) {
+        var id2 = s2+sides2[j2];
+        if (slotAvailable(id2)) {
+          pick2 = id2;
+          var lbl2 = (s2==='BSU') ? 'B.SU' : 'Stanchion '+s2;
+          reason = lbl2+' '+sides2[j2]+'-side — next available';
+          if (length > 0) reason += ' ('+stanchionFtUsed(s2).toFixed(0)+'ft used, '+(stanchionFtUsed(s2)+length).toFixed(0)+'ft after)';
+        }
+      }
+    }
+  }
+
+  return pick2 ? { loc: pick2, reason: reason } : null;
+}
+
 function suggestLocation() {
   var type = document.getElementById('inp-type').value;
   var size = document.getElementById('inp-size').value;
@@ -5272,143 +5526,163 @@ function suggestLocation() {
     renderAll(); return;
   }
 
-  if (type === 'spool') {
-    var pick = null;
-    var pickReason = '';
-    var secs = Object.keys(SPOOL_SECTIONS);
-
-    // Pass 1: prefer racks that already have the same bar size and have capacity
-    if (size) {
-      for (var i=0; i<secs.length && !pick; i++) {
-        SPOOL_SECTIONS[secs[i]].forEach(function(r) {
-          if (pick) return;
-          var rid = 'RACK-'+r;
-          var item = store[rid];
-          if (!item) return; // empty — skip in pass 1
-          if (item.size !== size) return; // wrong size
-          // Check capacity
-          var maxCap = RACK_MAX_SPOOLS[r];
-          if (maxCap && item.bundles >= maxCap) return; // full
-          pick = rid;
-          pickReason = 'Rack '+r+' — matches '+size+' already stored ('+(maxCap ? item.bundles+'/'+maxCap+' used' : item.bundles+' coils')+ ')';
-        });
-      }
-    }
-
-    // Pass 2: fallback to first empty rack
-    if (!pick) {
-      for (var i2=0; i2<secs.length && !pick; i2++) {
-        SPOOL_SECTIONS[secs[i2]].forEach(function(r) {
-          if (!pick && !store['RACK-'+r]) { pick='RACK-'+r; pickReason='Next available empty rack'; }
-        });
-      }
-    }
-
-    if (!pick) { alert('All spool racks are full.'); return; }
-    suggestedLoc = pick;
-    document.getElementById('suggestion-loc').textContent = pick.replace('RACK-','RACK ');
-    document.getElementById('suggestion-reason').textContent = pickReason;
-
-  } else {
-    var pick2 = null, reason = '';
-    var stanchionOrder = orderedStanchions();
-    var isShortRun = length > 0 && length < 40;
-    var bundleCount = parseInt(document.getElementById('inp-bundles').value) || 0;
-    // Free-stack zones (stanchions 1 & 22) are never suggested — user must select manually.
-    function isFreeStackBlocked(stanKey) {
-      return !!(stanchionCapacity[stanKey] && stanchionCapacity[stanKey].freeStack);
-    }
-
-    // Helper: check if a slot is available (empty, no status flags)
-    // (global version defined below — this local reference kept for clarity)
-
-    // ── PASS 1: if matching product exists anywhere in the warehouse,
-    //    suggest that exact slot first (bundle merge — no new footage added) ──
-    if (size && length > 0) {
-      for (var si=0; si<stanchionOrder.length && !pick2; si++) {
-        var s = stanchionOrder[si];
-        if (isFreeStackBlocked(s)) continue;
-        var allSides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
-
-        // Look for a side on this stanchion that already has the same product
-        for (var j=0; j<allSides.length && !pick2; j++) {
-          var id = s + allSides[j];
-          var existing = store[id];
-          if (!existing) continue;
-          if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
-          if (existing.size === size && parseFloat(existing.length) === length &&
-              (!grade || !existing.grade || existing.grade === grade) &&
-              (!spec  || !existing.spec  || existing.spec  === spec)) {
-            // Found a match — suggest this slot directly (merging bundles, no footage check needed)
-            pick2 = id;
-            var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
-            reason = lbl + ' ' + allSides[j] + '-side — ' + size + ' ' + formatLength(String(length)) + ' already stored here (' + existing.bundles + ' bundles), stack on top';
-          }
-        }
-      }
-    }
-
-    // ── PASS 2: for short runs (<40ft) prefer C-side first, then B-side ──
-    if (!pick2 && isShortRun) {
-      // First try C-sides (only where enabled)
-      for (var si=0; si<stanchionOrder.length && !pick2; si++) {
-        var s = stanchionOrder[si];
-        if (isFreeStackBlocked(s)) continue;
-        if (!cSideEnabled[s]) continue;
-        var remaining = stanchionFtRemaining(s);
-        if (length > remaining) continue;
-        var id = s + 'C';
-        if (slotAvailable(id)) {
-          pick2 = id;
-          var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
-          reason = lbl + ' C-side — short run (<40ft), C-side preferred';
-        }
-      }
-      // Then try B-sides
-      for (var si=0; si<stanchionOrder.length && !pick2; si++) {
-        var s = stanchionOrder[si];
-        if (isFreeStackBlocked(s)) continue;
-        var remaining = stanchionFtRemaining(s);
-        if (length > remaining) continue;
-        var id = s + 'B';
-        if (slotAvailable(id)) {
-          pick2 = id;
-          var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
-          reason = lbl + ' B-side — short run (<40ft), B-side preferred';
-          if (length > 0) reason += ' (' + stanchionFtUsed(s).toFixed(0) + 'ft used, ' + (stanchionFtUsed(s)+length).toFixed(0) + 'ft after)';
-        }
-      }
-    }
-
-    // ── PASS 3: fallback — first available empty slot (A, B, or C in normal order) ──
-    if (!pick2) {
-      for (var si2=0; si2<stanchionOrder.length && !pick2; si2++) {
-        var s2 = stanchionOrder[si2];
-        if (isFreeStackBlocked(s2)) continue;
-        var remaining2 = stanchionFtRemaining(s2);
-        if (length > 0 && length > remaining2) continue;
-        var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
-        for (var j2=0; j2<sides2.length && !pick2; j2++) {
-          var id2 = s2 + sides2[j2];
-          if (slotAvailable(id2)) {
-            pick2 = id2;
-            var lbl2 = (s2==='BSU') ? 'B.SU' : 'Stanchion '+s2;
-            reason = lbl2 + ' ' + sides2[j2] + '-side — next available';
-            if (length > 0) reason += ' (' + stanchionFtUsed(s2).toFixed(0) + 'ft used, ' + (stanchionFtUsed(s2)+length).toFixed(0) + 'ft after)';
-          }
-        }
-      }
-    }
-
-    if (!pick2) { alert('No stanchion slots found that fit ' + (length||'') + 'ft.'); return; }
-    suggestedLoc = pick2;
-    document.getElementById('suggestion-loc').textContent = pick2 === 'CYCLE' ? 'CYCLE…' : (pick2.startsWith('BSU') ? 'B.SU ' : 'STANCHION ') + pick2;
-    document.getElementById('suggestion-reason').textContent = reason;
+  var result = calcSuggestLoc(type, size, length, grade, spec);
+  if (!result) {
+    if (type === 'spool') alert('All spool racks are full.');
+    else alert('No stanchion slots found that fit '+(length||'')+'ft.');
+    return;
   }
 
+  suggestedLoc = result.loc;
+  if (type === 'spool') {
+    document.getElementById('suggestion-loc').textContent = result.loc.replace('RACK-','RACK ');
+  } else {
+    document.getElementById('suggestion-loc').textContent = result.loc === 'CYCLE' ? 'CYCLE…' : (result.loc.startsWith('BSU') ? 'B.SU ' : 'STANCHION ') + result.loc;
+  }
+  document.getElementById('suggestion-reason').textContent = result.reason;
   document.getElementById('suggestion-box').classList.add('active');
   renderAll();
   setTimeout(function(){ var e=document.getElementById('slot-'+suggestedLoc); if(e) e.scrollIntoView({behavior:'smooth',block:'center'}); }, 100);
+}
+
+// ─── RUN CYCLE ───────────────────────────────────────────────────
+
+function rcAddItem() {
+  var size    = document.getElementById('rc-size').value;
+  var length  = parseFloat(document.getElementById('rc-length').value) || 0;
+  var grade   = document.getElementById('rc-grade').value;
+  var spec    = document.getElementById('rc-spec').value;
+  var bundles = parseInt(document.getElementById('rc-bundles').value) || 0;
+  var pieces  = parseInt(document.getElementById('rc-pieces').value) || 0;
+
+  if (!size)    { alert('Select a bar size.'); return; }
+  if (!length)  { alert('Enter a length.'); return; }
+  if (!bundles) { alert('Enter bundle count.'); return; }
+
+  var item = {
+    id:          runCycleNextId++,
+    size:        size,
+    length:      length,
+    grade:       grade,
+    spec:        spec,
+    bundles:     bundles,
+    pieces:      pieces,
+    assignedLoc: ''
+  };
+  runCycle.push(item);
+
+  // Clear form
+  ['rc-size','rc-grade','rc-spec'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['rc-length','rc-bundles','rc-pieces'].forEach(function(id){ document.getElementById(id).value = ''; });
+
+  renderRunCycle();
+  updateRcBadge();
+  saveData();
+}
+
+function rcRemoveItem(id) {
+  runCycle = runCycle.filter(function(i){ return i.id !== id; });
+  renderRunCycle();
+  updateRcBadge();
+  saveData();
+}
+
+function rcAssignLoc(id, loc) {
+  var item = runCycle.find(function(i){ return i.id === id; });
+  if (item) { item.assignedLoc = loc; saveData(); }
+}
+
+function rcToggleLocPanel(id) {
+  var panel = document.getElementById('rc-loc-panel-' + id);
+  var arrow = document.getElementById('rc-loc-arrow-' + id);
+  if (!panel) return;
+  var isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'block';
+  arrow.style.transform = isOpen ? '' : 'rotate(180deg)';
+}
+
+function updateRcBadge() {
+  var badge = document.getElementById('badge-runcycle');
+  if (badge) badge.textContent = runCycle.length ? runCycle.length + ' item' + (runCycle.length !== 1 ? 's' : '') : '';
+}
+
+function renderRunCycle() {
+  var container = document.getElementById('rc-list');
+  if (!container) return;
+  if (runCycle.length === 0) {
+    container.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);padding:8px 0;text-align:center">No items in Run Cycle yet.</div>';
+    return;
+  }
+
+  container.innerHTML = runCycle.map(function(item) {
+    var lenStr = formatLength(String(item.length));
+    var label  = [item.size, lenStr, item.grade, item.spec].filter(Boolean).join(' · ');
+    var bdlStr = item.bundles + ' bdl' + (item.pieces ? ' · ' + item.pieces + 'pc/bdl' : '');
+
+    // Auto-suggest
+    var sugg = calcSuggestLoc('straight', item.size, item.length, item.grade, item.spec);
+    var suggLoc    = sugg ? sugg.loc : null;
+    var suggReason = sugg ? sugg.reason : 'No compatible slot found';
+
+    var displayLoc = item.assignedLoc || suggLoc || '';
+    var displayLabel = displayLoc ? displayLoc : '—';
+
+    // Build stanchion search options
+    var order = orderedStanchions();
+    var optionsHtml = '<option value="">— None —</option>';
+    order.forEach(function(s) {
+      if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+      var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+      sides.forEach(function(side) {
+        var sid = s + side;
+        var label2 = (s==='BSU'?'B.SU':'Stan '+s)+' '+side+'-side';
+        var occupied = store[sid] ? ' (occupied)' : '';
+        optionsHtml += '<option value="'+sid+'"'+(displayLoc===sid?' selected':'')+'>'+label2+occupied+'</option>';
+      });
+    });
+
+    return '<div style="background:var(--steel-light);border:1px solid var(--border);border-radius:8px;padding:12px;margin-bottom:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px">' +
+        '<div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--text);line-height:1;letter-spacing:1px">' + label + '</div>' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">' + bdlStr + '</div>' +
+        '</div>' +
+        '<button onclick="rcRemoveItem('+item.id+')" style="background:none;border:none;color:var(--hot);font-size:18px;cursor:pointer;padding:0 2px;line-height:1">×</button>' +
+      '</div>' +
+
+      // Location row
+      '<button onclick="rcToggleLocPanel('+item.id+')" style="width:100%;display:flex;justify-content:space-between;align-items:center;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:7px 10px;cursor:pointer;margin-top:8px">' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase">📍 Location</span>' +
+        '<span style="display:flex;align-items:center;gap:8px">' +
+          '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:'+(item.assignedLoc ? 'var(--accent)' : 'var(--safe)')+'">'+
+            (item.assignedLoc ? item.assignedLoc : (suggLoc ? '⚡ ' + suggLoc : '—')) +
+          '</span>' +
+          '<span id="rc-loc-arrow-'+item.id+'" style="font-size:10px;color:var(--text-dim);transition:transform 0.2s">▼</span>' +
+        '</span>' +
+      '</button>' +
+
+      '<div id="rc-loc-panel-'+item.id+'" style="display:none;margin-top:6px;padding:10px;background:var(--steel);border:1px solid var(--border);border-radius:6px">' +
+        // Auto-suggest display
+        (suggLoc
+          ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;margin-bottom:8px;padding:7px 9px;background:#0d1f10;border:1px solid var(--border);border-radius:5px">' +
+              '<div style="color:var(--safe);margin-bottom:2px">⚡ Suggested: <strong>' + suggLoc + '</strong></div>' +
+              '<div style="color:var(--text-dim)">' + suggReason + '</div>' +
+              (item.assignedLoc !== suggLoc
+                ? '<button onclick="rcAssignLoc('+item.id+',\''+suggLoc+'\');renderRunCycle();" style="margin-top:6px;background:var(--accent);color:#001540;border:none;padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;font-weight:bold">ACCEPT</button>'
+                : '<span style="color:var(--accent);font-size:10px;margin-top:4px;display:inline-block">✓ Accepted</span>') +
+            '</div>'
+          : '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--warn);margin-bottom:8px">⚠ No compatible slot found in current inventory.</div>') +
+        // Manual pick
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Or pick manually:</div>' +
+        '<select onchange="rcAssignLoc('+item.id+',this.value);renderRunCycle();" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;outline:none;box-sizing:border-box">' +
+          optionsHtml +
+        '</select>' +
+        (item.assignedLoc
+          ? '<button onclick="rcAssignLoc('+item.id+',\'\');renderRunCycle();" style="margin-top:6px;background:none;border:1px solid var(--border);color:var(--text-dim);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">Clear assignment</button>'
+          : '') +
+      '</div>' +
+    '</div>';
+  }).join('');
 }
 
 // ─── LOG RUN ─────────────────────────────────────────────────────
@@ -6240,6 +6514,8 @@ function saveData() {
           OPTIMIZER_BUILT_IN_RULES.forEach(function(r) { m[r.id] = r.enabled; });
           return m;
         })(),
+        runCycle:       runCycle,
+        runCycleNextId: runCycleNextId,
         savedAt: new Date().toISOString()
       };
       updateSaveIndicator('saving…', '#f5a623');
@@ -6301,6 +6577,8 @@ function loadData(callback) {
           if (payload.optimizerBuiltInEnabled.hasOwnProperty(r.id)) r.enabled = payload.optimizerBuiltInEnabled[r.id];
         });
       }
+      if (payload.runCycle)       runCycle       = payload.runCycle;
+      if (payload.runCycleNextId) runCycleNextId = payload.runCycleNextId;
       var ago = payload.savedAt ? new Date(payload.savedAt).toLocaleTimeString() : '';
       updateSaveIndicator('loaded ✓ ' + ago, '#336633');
       callback(true);
@@ -6341,6 +6619,8 @@ function exportBackup() {
         OPTIMIZER_BUILT_IN_RULES.forEach(function(r) { m[r.id] = r.enabled; });
         return m;
       })(),
+      runCycle:       runCycle,
+      runCycleNextId: runCycleNextId,
       savedAt: new Date().toISOString()
     };
     var blob = new Blob([JSON.stringify(payload, null, 2)], {type:'application/json'});
@@ -6459,6 +6739,8 @@ loadData(function(loaded) {
   populateLocationDropdown('straight');
   renderAll();
   renderInventory();
+  renderRunCycle();
+  updateRcBadge();
 
   // Show app — either already unlocked this session or show PIN screen
   if (sessionStorage.getItem('rt_unlocked') === '1') {
