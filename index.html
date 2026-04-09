@@ -4512,28 +4512,47 @@ function runOptimizer() {
   }
 
   // ── RULE: Over Physical Capacity ─────────────────────────────
+  // Calculates effective max bundles from actual bundle dimensions (piece count),
+  // falling back to the hardcoded maxBundlesPerSide only when pieces are unknown.
+  var BDL_WIDTH_IN = 9; // bundle width is constant regardless of size
+  function effectiveMaxBundles(capData, pieces) {
+    if (!capData || capData.freeStack) return 0;
+    if (pieces > 0) {
+      var bdlHeightIn = 5.5 * (pieces / 20);
+      var across = Math.floor(capData.widthIn / BDL_WIDTH_IN);
+      var layers = bdlHeightIn > 0 ? Math.floor(capData.heightCapIn / bdlHeightIn) : 0;
+      return across * layers;
+    }
+    return capData.maxBundlesPerSide || 0;
+  }
+
   if (ruleEnabled('over_capacity')) {
     order.forEach(function(s) {
       var capData = stanchionCapacity[s];
-      if (!capData || capData.freeStack || !capData.maxBundlesPerSide) return;
-      var maxBdl = capData.maxBundlesPerSide;
+      if (!capData || capData.freeStack) return;
       var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
       sides.forEach(function(side) {
         var slotId = s + side;
         var allItems = slotAllItems(slotId);
         if (allItems.length === 0) return;
+        var item = store[slotId];
+        if (!item) return;
+        // Use actual piece count from the primary item to derive physical bundle dimensions
+        var pieces = parseInt(item.pieces) || 0;
+        var maxBdl = effectiveMaxBundles(capData, pieces);
+        if (maxBdl === 0) return;
         var totalBdl = allItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
         if (totalBdl <= maxBdl) return;
         var overBdl = totalBdl - maxBdl;
-        var item = store[slotId];
-        if (!item) return;
         var itemLen = parseFloat(item.length) || 0;
         // Find best destination: most remaining bundle capacity, footage fits, empty or matching product
         var bestDest = null, bestRem = 0;
         order.forEach(function(s2) {
           if (s2 === s) return;
           var destCapData = stanchionCapacity[s2];
-          if (!destCapData || destCapData.freeStack || !destCapData.maxBundlesPerSide) return;
+          if (!destCapData || destCapData.freeStack) return;
+          var destMaxBdl = effectiveMaxBundles(destCapData, pieces);
+          if (destMaxBdl === 0) return;
           var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
           sides2.forEach(function(side2) {
             var destId = s2 + side2;
@@ -4544,7 +4563,7 @@ function runOptimizer() {
             if (destItem && !isMerge) return; // occupied with different product
             var destItems = slotAllItems(destId);
             var destBdl = destItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
-            var destRem = destCapData.maxBundlesPerSide - destBdl;
+            var destRem = destMaxBdl - destBdl;
             if (destRem < overBdl) return;
             if (!isMerge && itemLen > 0 && itemLen > stanchionFtRemaining(s2)) return;
             if (destRem > bestRem) { bestRem = destRem; bestDest = destId; }
@@ -4559,7 +4578,7 @@ function runOptimizer() {
           detail: bestDest
             ? 'Move ' + overBdl + ' excess bundles \u2192 ' + stanLabel(bestDest.slice(0,-1)) + ' ' + bestDest.slice(-1) + '-side (' + bestRem + ' spots available)'
             : 'No suitable destination found \u2014 manual redistribution required',
-          reason: item.size + (itemLen > 0 ? ' ' + formatLength(String(itemLen)) : '') + ' \u00b7 ' + totalBdl + ' bundles vs max ' + maxBdl,
+          reason: item.size + (itemLen > 0 ? ' ' + formatLength(String(itemLen)) : '') + (pieces > 0 ? ' \u00b7 ' + pieces + 'pc/bdl' : '') + ' \u00b7 ' + totalBdl + ' bundles vs max ' + maxBdl,
           gain: overBdl + ' bundles over \u2014 resolve to free capacity',
           from: slotId,
           to: bestDest || slotId
