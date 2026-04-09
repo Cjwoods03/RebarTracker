@@ -782,22 +782,8 @@
           <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL FIELDS</div>
           <div class="form-row">
             <div class="form-group">
-              <div class="optional-label"><span>Heat #</span><span class="optional-badge">optional</span></div>
-              <input type="text" id="inp-heat" placeholder="HT-XXXX-XXXX">
-            </div>
-            <div class="form-group">
-              <div class="optional-label"><span>Ship Date</span><span class="optional-badge">optional</span></div>
-              <input type="date" id="inp-ship">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
               <div class="optional-label"><span>Customer</span><span class="optional-badge">optional</span></div>
               <input type="text" id="inp-customer" placeholder="Customer name">
-            </div>
-            <div class="form-group">
-              <div class="optional-label"><span>Order #</span><span class="optional-badge">optional</span></div>
-              <input type="text" id="inp-order" placeholder="ORD-XXXX">
             </div>
           </div>
         </div>
@@ -5030,13 +5016,10 @@ function openSplitFromForm() {
     var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
     _of.item = {
-      heat: document.getElementById('inp-heat').value.trim(),
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
-      ship: document.getElementById('inp-ship').value,
-      order: document.getElementById('inp-order').value.trim(),
       customer: document.getElementById('inp-customer').value.trim(),
       _totalBundles: bundles
     };
@@ -5469,7 +5452,7 @@ function ofCancel() {
 }
 
 function ofClearLogForm() {
-  ['inp-heat', 'inp-bundles', 'inp-pieces', 'inp-bdl-wt', 'inp-order', 'inp-ship', 'inp-customer'].forEach(function(id) {
+  ['inp-bundles', 'inp-pieces', 'inp-bdl-wt', 'inp-customer'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
@@ -5823,9 +5806,6 @@ function logRun() {
     document.getElementById('a1-size').value=size;
     document.getElementById('a1-length').value=lenNum || '';
     document.getElementById('a1-bundles').value=bundles;
-    document.getElementById('a1-heat').value=document.getElementById('inp-heat').value.trim();
-    document.getElementById('a1-ship').value=document.getElementById('inp-ship').value;
-    document.getElementById('a1-order').value=document.getElementById('inp-order').value.trim();
     document.getElementById('a1-customer').value=document.getElementById('inp-customer').value.trim();
     if (type==='spool') {
       document.getElementById('a1-spool-weight').value = document.getElementById('inp-spool-weight').value;
@@ -5841,9 +5821,6 @@ function logRun() {
     document.getElementById('a22-size').value=size;
     document.getElementById('a22-length').value=lenNum || '';
     document.getElementById('a22-bundles').value=bundles;
-    document.getElementById('a22-heat').value=document.getElementById('inp-heat').value.trim();
-    document.getElementById('a22-ship').value=document.getElementById('inp-ship').value;
-    document.getElementById('a22-order').value=document.getElementById('inp-order').value.trim();
     document.getElementById('a22-customer').value=document.getElementById('inp-customer').value.trim();
     // Pass spool weight if applicable
     if (type==='spool') {
@@ -5921,15 +5898,12 @@ function logRun() {
       } else {
         var pItem = {
           uid: genUid(),
-          heat: document.getElementById('inp-heat').value.trim(),
           size: size, length: '', type: 'spool',
           grade: grade, spec: spec,
           bundles: p.count,
           weightPerBundleTons: spoolLbsV / 2000,
           weightTons: pWtTons,
           spoolWeightLbs: spoolLbsV,
-          ship: document.getElementById('inp-ship').value,
-          order: document.getElementById('inp-order').value.trim(),
           customer: document.getElementById('inp-customer').value.trim(),
           loc: p.loc, logged: new Date().toLocaleTimeString()
         };
@@ -5945,7 +5919,7 @@ function logRun() {
       showScrapToast('✓ ' + totalCoils + ' coils logged to ' + placements[0].loc.replace('RACK-','Row ')); saveData();
     }
 
-    ['inp-heat','inp-bundles','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
+    ['inp-bundles','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
     clearLengthInputs();
     document.getElementById('inp-size').value='';
     document.getElementById('inp-grade').value='';
@@ -6003,13 +5977,10 @@ function logRun() {
       if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
         // Build item template and hand off to overflow modal
         var ofTemplate = {
-          heat: document.getElementById('inp-heat').value.trim(),
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
-          ship: document.getElementById('inp-ship').value,
-          order: document.getElementById('inp-order').value.trim(),
           customer: document.getElementById('inp-customer').value.trim(),
           _totalBundles: ofNewBdl
         };
@@ -6022,15 +5993,12 @@ function logRun() {
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
   var item = {
     uid: genUid(),
-    heat: document.getElementById('inp-heat').value.trim(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
     bundles: parseInt(bundles),
     weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
     spoolWeightLbs: spoolLbsStored,
-    ship: document.getElementById('inp-ship').value,
-    order: document.getElementById('inp-order').value.trim(),
     customer: document.getElementById('inp-customer').value.trim(),
     loc: loc, logged: new Date().toLocaleTimeString()
   };
@@ -6071,7 +6039,7 @@ function logRun() {
 
   if (isReserve) reservedSlots[loc] = true;
 
-  ['inp-heat','inp-bundles','inp-pieces','inp-bdl-wt','inp-order','inp-ship','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
+  ['inp-bundles','inp-pieces','inp-bdl-wt','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
   var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
   clearLengthInputs();
