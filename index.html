@@ -972,7 +972,7 @@
           <button class="filter-btn inv-filter-btn active" onclick="filterInv('all',this)">All</button>
           <button class="filter-btn inv-filter-btn" onclick="filterInv('straight',this)">Straight</button>
           <button class="filter-btn inv-filter-btn" onclick="filterInv('spool',this)">Spooled</button>
-          <button class="filter-btn inv-filter-btn" onclick="filterInv('area22',this)">Area 22</button>
+          <button class="filter-btn inv-filter-btn" onclick="filterInv('area22',this)">Free Stack</button>
           <button class="filter-btn inv-filter-btn" onclick="filterInv('urgent',this)">🔴 Soon</button>
         </div>
         <div id="inventory-list"><div class="empty-inv">No inventory logged yet.<br>Use the Log Run tab<br>to add product.</div></div>
@@ -1216,6 +1216,82 @@
   </div>
 </div>
 
+<!-- AREA 1 ADD MODAL -->
+<div class="modal-overlay" id="a1-modal-overlay" onclick="handleA1OverlayClick(event)">
+  <div class="a22-modal">
+    <div class="modal-handle"></div>
+    <div class="a22-modal-title">ADD TO AREA 1</div>
+    <div class="form-group">
+      <label>Side</label>
+      <select id="a1-side">
+        <option value="A">A-Side</option>
+        <option value="B">B-Side</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Product Type</label>
+      <select id="a1-type" onchange="onA1TypeChange()">
+        <option value="straight">Straight Bar</option>
+        <option value="spool">Spooled / Coil</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Bar Size</label>
+        <select id="a1-size">
+          <option value=""># Size</option>
+          <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+          <option>#7</option><option>#8</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Length (ft)</label>
+        <input type="number" id="a1-length" placeholder="ft or blank for coil" min="1" inputmode="decimal">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Bundles / Coils</label>
+      <input type="number" id="a1-bundles" placeholder="qty" min="1" inputmode="numeric">
+    </div>
+    <div class="form-group" id="a1-spool-weight-group" style="display:none">
+      <label>Coil Weight</label>
+      <select id="a1-spool-weight">
+        <option value="">— Select coil weight —</option>
+        <option value="4000">4,000 LBS (2 tons)</option>
+        <option value="6800">6,800 LBS (3.4 tons)</option>
+        <option value="9600">9,600 LBS (4.8 tons)</option>
+      </select>
+    </div>
+    <div style="margin: 12px 0 10px; border-top: 1px solid var(--border); padding-top: 10px;">
+      <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL</div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="optional-label"><span>Heat #</span><span class="optional-badge">optional</span></div>
+          <input type="text" id="a1-heat" placeholder="HT-XXXX">
+        </div>
+        <div class="form-group">
+          <div class="optional-label"><span>Ship Date</span><span class="optional-badge">optional</span></div>
+          <input type="date" id="a1-ship">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <div class="optional-label"><span>Customer</span><span class="optional-badge">optional</span></div>
+          <input type="text" id="a1-customer" placeholder="Customer">
+        </div>
+        <div class="form-group">
+          <div class="optional-label"><span>Order #</span><span class="optional-badge">optional</span></div>
+          <input type="text" id="a1-order" placeholder="ORD-XXXX">
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" style="margin-top:0" onclick="addToArea1()">ADD STACK</button>
+      <button class="btn-close-modal" onclick="closeA1Modal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- AREA 22 ADD MODAL -->
 <div class="modal-overlay" id="a22-modal-overlay" onclick="handleA22OverlayClick(event)">
   <div class="a22-modal">
@@ -1411,8 +1487,10 @@ var store = {};         // slotId -> primary item | null
 var storeExtra = {};    // slotId -> [item, item, ...] secondary items
 var cSideEnabled = {}; // stanKey -> true when C-side has been added
 var area22Stacks = [];
+var area1Stacks = [];
 var inventory = [];
 var area22NextId = 1;
+var area1NextId = 1;
 var suggestedLoc = null;
 var modalLoc = null;
 var currentView = 'horizontal';
@@ -1658,7 +1736,7 @@ function onLengthChange() {
   hintEl.style.display = 'block';
 
   // If a specific stanchion is picked, show its remaining capacity
-  if (locVal && !locVal.startsWith('RACK') && locVal !== 'AREA22') {
+  if (locVal && !locVal.startsWith('RACK') && locVal !== 'AREA22' && locVal !== 'AREA1') {
     var stanKey = locVal.slice(0, -1); // strip side letter
     var stanNum = parseInt(stanKey) || stanKey;
     var maxFt = maxFtForStanchion(stanNum);
@@ -1759,11 +1837,11 @@ function renderAll() {
 
 // Returns which stanchions to render for the current map section
 function stanchionsForSection() {
-  if (currentMapSection === 's1bsu')  return { min:1, max:3,  includeBSU:true,  includeArea22:false };
-  if (currentMapSection === 's4_21') return { min:4, max:21, includeBSU:false, includeArea22:false };
-  if (currentMapSection === 's22')   return { min:22,max:22, includeBSU:false, includeArea22:true  };
-  if (currentMapSection === 's23_38')return { min:23,max:38, includeBSU:false, includeArea22:false };
-  return { min:1, max:38, includeBSU:true, includeArea22:true };
+  if (currentMapSection === 's1bsu')  return { min:1, max:3,  includeBSU:true,  includeArea22:false, includeArea1:true  };
+  if (currentMapSection === 's4_21') return { min:4, max:21, includeBSU:false, includeArea22:false, includeArea1:false };
+  if (currentMapSection === 's22')   return { min:22,max:22, includeBSU:false, includeArea22:true,  includeArea1:false };
+  if (currentMapSection === 's23_38')return { min:23,max:38, includeBSU:false, includeArea22:false, includeArea1:false };
+  return { min:1, max:38, includeBSU:true, includeArea22:true, includeArea1:true };
 }
 
 // ── VERTICAL ──
@@ -1781,7 +1859,7 @@ function renderVertical(wrap) {
   var hasCside = false;
   var stanchionKeys = [];
   for (var s2 = sec.min; s2 <= sec.max; s2++) {
-    if (s2 === 22) continue;
+    if (s2 === 1 || s2 === 22) continue;
     stanchionKeys.push(s2);
     if (cSideEnabled[s2]) hasCside = true;
     if (s2 === 3 && sec.includeBSU) {
@@ -1799,6 +1877,17 @@ function renderVertical(wrap) {
 
   var tbody = document.createElement('tbody');
   for (var s = sec.min; s <= sec.max; s++) {
+    if (s === 1) {
+      if (sec.includeArea1) {
+        var tr1 = document.createElement('tr');
+        var td1 = document.createElement('td'); td1.colSpan = colSpanCount; td1.style.padding = '4px 0';
+        td1.appendChild(buildArea1Block());
+        tr1.appendChild(td1);
+        tbody.appendChild(tr1);
+      }
+      continue;
+    }
+
     if (s === 22) {
       if (sec.includeArea22) {
         var tr22 = document.createElement('tr');
@@ -1876,6 +1965,10 @@ function renderHorizontal(wrap) {
   horizWrap.appendChild(sideLabels);
 
   for (var s = sec.min; s <= sec.max; s++) {
+    if (s === 1) {
+      if (sec.includeArea1) horizWrap.appendChild(buildArea1HorizCol());
+      continue;
+    }
     if (s === 22) {
       if (sec.includeArea22) horizWrap.appendChild(buildArea22HorizCol());
       continue;
@@ -2166,6 +2259,145 @@ function showA22StackModal(stackId) {
   document.getElementById('modal-overlay').classList.add('active');
 }
 
+// ─── AREA 1 BLOCK ────────────────────────────────────────────────
+function buildArea1Block() {
+  var wrap = el('div','area22-wrap'); wrap.id = 'area1-block';
+
+  var header = el('div','area22-header');
+  header.innerHTML =
+    '<div class="area22-title">AREA 1 — OPEN STACKING ZONE</div>' +
+    '<div class="area22-count">'+area1Stacks.length+' stack'+(area1Stacks.length!==1?'s':'')+'</div>';
+  wrap.appendChild(header);
+
+  var cols = el('div','area22-sides');
+  ['A','B'].forEach(function(side) {
+    var col = el('div','area22-side-col');
+
+    var sideLabel = el('div','area22-side-label');
+    sideLabel.textContent = side + '-Side';
+    col.appendChild(sideLabel);
+
+    var stacksDiv = el('div','area22-stacks');
+    var sideStacks = area1Stacks.filter(function(s) { return (s.side || 'A') === side; });
+    sideStacks.forEach(function(stack) { stacksDiv.appendChild(makeArea1Stack(stack)); });
+
+    var addBtn = el('div','area22-stack add-btn');
+    addBtn.innerHTML = '+';
+    addBtn.title = 'Add stack to ' + side + '-Side';
+    addBtn.addEventListener('click', function() { openA1ModalForSide(side); });
+    stacksDiv.appendChild(addBtn);
+
+    col.appendChild(stacksDiv);
+    cols.appendChild(col);
+  });
+  wrap.appendChild(cols);
+  return wrap;
+}
+
+function buildArea1HorizCol() {
+  var col = el('div','horiz-area22-col');
+  var numLabel = el('div','horiz-area22-num'); numLabel.textContent = '1 — OPEN'; col.appendChild(numLabel);
+  var inner = el('div','horiz-area22-inner'); inner.id = 'area1-block';
+  area1Stacks.forEach(function(stack) { inner.appendChild(makeArea1Stack(stack)); });
+  var addBtn = el('div','area22-stack add-btn'); addBtn.innerHTML = '+'; addBtn.addEventListener('click', openA1Modal);
+  inner.appendChild(addBtn);
+  col.appendChild(inner);
+  return col;
+}
+
+function makeArea1Stack(stack) {
+  var div = el('div','area22-stack');
+  div.id = 'a1-'+stack.id;
+  var days = getDaysToShip(stack.ship);
+  var urgent = days !== null && days <= 2;
+  var isSpool = stack.type === 'spool';
+  div.classList.add(urgent ? 'occupied-urgent' : (isSpool ? 'occupied-spool' : 'occupied-straight'));
+  div.innerHTML =
+    '<div class="a22-id">'+stack.id+'</div>'+
+    '<div class="a22-type-icon">'+(isSpool?'🔵':'🟢')+'</div>'+
+    '<div class="a22-size '+(isSpool?'spool':'straight')+'">'+stack.size+'</div>'+
+    '<div class="a22-len">'+(stack.length ? formatLength(stack.length) : 'Coil')+'</div>'+
+    '<div class="a22-bdl">'+stack.bundles+'b</div>'+
+    (days!==null?'<div class="a22-dot'+(urgent?' urgent':'')+'"></div>':'');
+  div.addEventListener('click', function() { showA1StackModal(stack.id); });
+  return div;
+}
+
+// ─── AREA 1 MODAL ────────────────────────────────────────────────
+function onA1TypeChange() {
+  var type = document.getElementById('a1-type').value;
+  var swg = document.getElementById('a1-spool-weight-group');
+  swg.style.display = type === 'spool' ? 'block' : 'none';
+  if (type !== 'spool') document.getElementById('a1-spool-weight').value = '';
+}
+
+function openA1ModalForSide(side) {
+  openA1Modal();
+  document.getElementById('a1-side').value = side;
+}
+
+function openA1Modal() {
+  ['a1-heat','a1-bundles','a1-order','a1-ship','a1-customer','a1-length'].forEach(function(id) { document.getElementById(id).value=''; });
+  document.getElementById('a1-size').value = '';
+  document.getElementById('a1-type').value = 'straight';
+  document.getElementById('a1-side').value = 'A';
+  document.getElementById('a1-spool-weight').value = '';
+  document.getElementById('a1-spool-weight-group').style.display = 'none';
+  document.getElementById('a1-modal-overlay').classList.add('active');
+}
+function closeA1Modal() { document.getElementById('a1-modal-overlay').classList.remove('active'); }
+function handleA1OverlayClick(e) { if (e.target===document.getElementById('a1-modal-overlay')) closeA1Modal(); }
+
+function addToArea1() {
+  var type = document.getElementById('a1-type').value;
+  var size = document.getElementById('a1-size').value;
+  var length = document.getElementById('a1-length').value ? parseFloat(document.getElementById('a1-length').value) : null;
+  var bundles = parseInt(document.getElementById('a1-bundles').value) || 0;
+  var side = document.getElementById('a1-side').value || 'A';
+  if (!size) { alert('Please select a bar size.'); return; }
+  if (!bundles) { alert('Please enter bundle/coil quantity.'); return; }
+  var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a1-spool-weight').value)||0) : 0;
+  var stack = {
+    uid: genUid(),
+    id: 'P'+String(area1NextId++).padStart(2,'0'),
+    side: side,
+    heat: document.getElementById('a1-heat').value.trim(),
+    size: size, length: length, type: type, grade: '', spec: '',
+    bundles: bundles,
+    spoolWeightLbs: spoolLbs,
+    weightPerBundleTons: spoolLbs > 0 ? spoolLbs/2000 : 0,
+    weightTons: spoolLbs > 0 ? (spoolLbs/2000)*(parseInt(bundles)||0) : 0,
+    ship: document.getElementById('a1-ship').value,
+    order: document.getElementById('a1-order').value.trim(),
+    customer: document.getElementById('a1-customer').value.trim(),
+    loc: 'AREA-1', logged: new Date().toLocaleTimeString()
+  };
+  area1Stacks.push(stack);
+  inventory.push(stack);
+  closeA1Modal();
+  renderAll(); renderInventory();
+  saveData();
+  setTimeout(function() { var el2=document.getElementById('area1-block'); if(el2) el2.scrollIntoView({behavior:'smooth',block:'center'}); }, 120);
+}
+
+function showA1StackModal(stackId) {
+  var stack = area1Stacks.find(function(s){return s.id===stackId;});
+  if (!stack) return;
+  var days = getDaysToShip(stack.ship);
+  var isSpool = stack.type === 'spool';
+  document.getElementById('modal-title').textContent = 'Area 1 — ' + (stack.side || 'A') + '-Side Stack ' + stack.id;
+  document.getElementById('modal-info').innerHTML = buildModalRows(stack, isSpool, days);
+  document.getElementById('modal-qty-row').style.display = 'flex';
+  document.getElementById('modal-qty-val').value = stack.bundles;
+  var addBtn = document.getElementById('btn-add-secondary');
+  var editBtn = document.getElementById('btn-edit-primary');
+  if (addBtn) addBtn.style.display = 'none';
+  if (editBtn) editBtn.style.display = 'none';
+  document.getElementById('modal-secondary-list').innerHTML = '';
+  modalLoc = 'A1:'+stackId;
+  document.getElementById('modal-overlay').classList.add('active');
+}
+
 // ─── SPOOL RACKS ─────────────────────────────────────────────────
 // ── CYCLE… SLOT ──
 function renderCycleSlot(wrap) {
@@ -2409,8 +2641,12 @@ function setQty(newVal) {
   if (!modalLoc) return;
   newVal = Math.max(0, newVal);
   var item = null;
+  var isA1  = modalLoc.startsWith('A1:');
   var isA22 = modalLoc.startsWith('A22:');
-  if (isA22) {
+  if (isA1) {
+    var stackId1 = modalLoc.replace('A1:','');
+    item = area1Stacks.find(function(s){return s.id===stackId1;});
+  } else if (isA22) {
     var stackId = modalLoc.replace('A22:','');
     item = area22Stacks.find(function(s){return s.id===stackId;});
   } else {
@@ -2419,7 +2655,7 @@ function setQty(newVal) {
   if (!item) return;
 
   // Enforce spool rack cap when adjusting quantity
-  if (!isA22 && modalLoc && modalLoc.startsWith('RACK-') && item.type === 'spool') {
+  if (!isA22 && !isA1 && modalLoc && modalLoc.startsWith('RACK-') && item.type === 'spool') {
     var rackKey2 = modalLoc.replace('RACK-','');
     var maxCap2 = RACK_MAX_SPOOLS[rackKey2];
     if (maxCap2 && newVal > maxCap2) {
@@ -2439,7 +2675,8 @@ function setQty(newVal) {
   }
 
   // Sync inventory array
-  var invItem = inventory.find(function(i){ return i.uid ? i.uid === item.uid : (isA22 ? i.id===item.id : i.loc===modalLoc); });
+  var isFreeStackItem = isA22 || isA1;
+  var invItem = inventory.find(function(i){ return i.uid ? i.uid === item.uid : (isFreeStackItem ? i.id===item.id : i.loc===modalLoc); });
   if (invItem) {
     invItem.bundles = newVal;
     invItem.weightTons = item.weightTons;
@@ -2455,10 +2692,10 @@ function setQty(newVal) {
 
   updateStats();
   saveData();
-  var slotEl = isA22 ? document.getElementById('a22-'+item.id) : document.getElementById('slot-'+modalLoc);
+  var slotEl = isA1 ? document.getElementById('a1-'+item.id) : isA22 ? document.getElementById('a22-'+item.id) : document.getElementById('slot-'+modalLoc);
   if (slotEl) {
-    var bdlEl = slotEl.querySelector(isA22 ? '.a22-bdl' : '.slot-bdl, .rack-bdl');
-    if (bdlEl) bdlEl.textContent = newVal + (item.type==='spool'&&!isA22?'c':'b');
+    var bdlEl = slotEl.querySelector((isA1||isA22) ? '.a22-bdl' : '.slot-bdl, .rack-bdl');
+    if (bdlEl) bdlEl.textContent = newVal + (item.type==='spool'&&!(isA1||isA22)?'c':'b');
   }
 }
 
@@ -3006,7 +3243,16 @@ function confirmTransfer() {
 
 function clearSlot() {
   if (!modalLoc) return;
-  if (modalLoc.startsWith('A22:')) {
+  if (modalLoc.startsWith('A1:')) {
+    var sid1 = modalLoc.replace('A1:','');
+    var idx1 = area1Stacks.findIndex(function(s){return s.id===sid1;});
+    var removedA1 = idx1 > -1 ? area1Stacks[idx1] : null;
+    if (idx1>-1) area1Stacks.splice(idx1,1);
+    var ii1 = inventory.findIndex(function(i){
+      return removedA1 && removedA1.uid ? i.uid === removedA1.uid : (i.id===sid1 && i.loc==='AREA-1');
+    });
+    if (ii1>-1) inventory.splice(ii1,1);
+  } else if (modalLoc.startsWith('A22:')) {
     var sid = modalLoc.replace('A22:','');
     var idx = area22Stacks.findIndex(function(s){return s.id===sid;});
     var removedA22 = idx > -1 ? area22Stacks[idx] : null;
@@ -4936,12 +5182,9 @@ function suggestLocation() {
     var stanchionOrder = orderedStanchions();
     var isShortRun = length > 0 && length < 40;
     var bundleCount = parseInt(document.getElementById('inp-bundles').value) || 0;
-    // Free-stack zones (stanchions 1 & 22) are not suggested for large runs;
-    // user must select them manually via the dropdown.
-    var FREESTACK_BUNDLE_LIMIT = 30;
+    // Free-stack zones (stanchions 1 & 22) are never suggested — user must select manually.
     function isFreeStackBlocked(stanKey) {
-      return (stanchionCapacity[stanKey] && stanchionCapacity[stanKey].freeStack) &&
-             bundleCount > FREESTACK_BUNDLE_LIMIT;
+      return !!(stanchionCapacity[stanKey] && stanchionCapacity[stanKey].freeStack);
     }
 
     // Helper: check if a slot is available (empty, no status flags)
@@ -5044,6 +5287,24 @@ function logRun() {
   var length = getLengthDisplay(); // display string e.g. "20'6\""
   var lenNum = getLengthDecimal(); // decimal feet e.g. 20.5
   var bundles = document.getElementById('inp-bundles').value;
+
+  // Route to Area 1 if chosen
+  if (locVal==='AREA1'||suggestedLoc==='AREA1') {
+    document.getElementById('a1-type').value=type;
+    document.getElementById('a1-size').value=size;
+    document.getElementById('a1-length').value=lenNum || '';
+    document.getElementById('a1-bundles').value=bundles;
+    document.getElementById('a1-heat').value=document.getElementById('inp-heat').value.trim();
+    document.getElementById('a1-ship').value=document.getElementById('inp-ship').value;
+    document.getElementById('a1-order').value=document.getElementById('inp-order').value.trim();
+    document.getElementById('a1-customer').value=document.getElementById('inp-customer').value.trim();
+    if (type==='spool') {
+      document.getElementById('a1-spool-weight').value = document.getElementById('inp-spool-weight').value;
+      document.getElementById('a1-spool-weight-group').style.display = 'block';
+    }
+    document.getElementById('a1-modal-overlay').classList.add('active');
+    return;
+  }
 
   // Route to Area 22 if chosen
   if (locVal==='AREA22'||suggestedLoc==='AREA22') {
@@ -5311,6 +5572,7 @@ function autoPickLoc(type, lenNum) {
   var order = orderedStanchions();
   for (var si=0; si<order.length; si++) {
     var s = order[si];
+    if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) continue;
     if (lenNum>0 && lenNum > stanchionFtRemaining(s)) continue;
     var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
     for (var i=0;i<sides.length;i++) { var id=s+sides[i]; if(store[id]===null && !scrapSlots[id] && !holdSlots[id] && !redTagSlots[id] && !reservedSlots[id])return id; }
@@ -5363,6 +5625,7 @@ function onTypeChange() {
 function populateLocationDropdown(type) {
   var sel = document.getElementById('inp-location');
   sel.innerHTML = '<option value="">— Auto-suggest —</option>';
+  var a1opt = document.createElement('option'); a1opt.value='AREA1'; a1opt.textContent='★ Area 1 — Open Stack Zone'; sel.appendChild(a1opt);
   var a22opt = document.createElement('option'); a22opt.value='AREA22'; a22opt.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(a22opt);
   if (type==='straight') {
     var isSecondary = document.getElementById('inp-secondary').checked;
@@ -5455,9 +5718,9 @@ function renderInventory() {
   var items = inventory.slice();
 
   // Apply type/urgency filter
-  if (currentFilter==='straight') items=items.filter(function(i){return i.type==='straight'&&i.loc!=='AREA-22';});
-  else if(currentFilter==='spool') items=items.filter(function(i){return i.type==='spool'&&i.loc!=='AREA-22';});
-  else if(currentFilter==='area22') items=items.filter(function(i){return i.loc==='AREA-22';});
+  if (currentFilter==='straight') items=items.filter(function(i){return i.type==='straight'&&i.loc!=='AREA-22'&&i.loc!=='AREA-1';});
+  else if(currentFilter==='spool') items=items.filter(function(i){return i.type==='spool'&&i.loc!=='AREA-22'&&i.loc!=='AREA-1';});
+  else if(currentFilter==='area22') items=items.filter(function(i){return i.loc==='AREA-22'||i.loc==='AREA-1';});
   else if(currentFilter==='urgent') items=items.filter(function(i){var d=getDaysToShip(i.ship);return d!==null&&d<=2;});
 
   // Apply text search — matches size, heat, order, customer, location
@@ -5521,8 +5784,12 @@ function renderInventory() {
     var urgent = days !== null && days <= 2;
     var isSpool = item.type === 'spool';
     var isArea22 = item.loc === 'AREA-22';
-    var dispLoc = isArea22 ? ('AREA 22 — '+(item.side||'A')+'-Side '+(item.id||'')) : item.loc.replace('RACK-','RACK ');
-    var clickId = isArea22 ? (item.id||'') : item.loc;
+    var isArea1  = item.loc === 'AREA-1';
+    var dispLoc = isArea22 ? ('AREA 22 — '+(item.side||'A')+'-Side '+(item.id||'')) :
+                  isArea1  ? ('AREA 1 — '+(item.side||'A')+'-Side '+(item.id||''))  :
+                  item.loc.replace('RACK-','RACK ');
+    var clickId = (isArea22||isArea1) ? (item.id||'') : item.loc;
+    var areaFlag = isArea22 ? 'a22' : isArea1 ? 'a1' : '';
 
     // Product name line — size + length + type
     var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' bundles');
@@ -5531,7 +5798,7 @@ function renderInventory() {
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
 
-    return '<div class="inv-item'+(urgent?' urgent':isArea22?' area22-item':isSpool?' spool-item':'')+'" onclick="goToLoc(\''+clickId+'\','+isArea22+')">'+
+    return '<div class="inv-item'+(urgent?' urgent':(isArea22||isArea1)?' area22-item':isSpool?' spool-item':'')+'" onclick="goToLoc(\''+clickId+'\',\''+areaFlag+'\')">'+
       // Product on top — bold, prominent
       '<div class="inv-product">'+productLine+'</div>'+
       // Location below product
@@ -5545,6 +5812,7 @@ function renderInventory() {
         (gradeSpec ? '<span class="tag" style="background:var(--steel-light);color:var(--text-dim)">'+gradeSpec+'</span>' : '')+
         (item.weightTons ? '<span class="tag" style="background:var(--steel-light);color:var(--text-dim)">'+item.weightTons.toFixed(2)+'t</span>' : '')+
         (isArea22?'<span class="tag tag-area22">Area 22</span>':'')+
+        (isArea1?'<span class="tag tag-area22">Area 1</span>':'')+
         (item.ship?'<span class="tag '+(urgent?'tag-urgent':'tag-ship')+'">'+(urgent?'🔴 ':'')+item.ship+' ('+days+'d)</span>':'')+
       '</div>'+
     '</div>';
@@ -5552,10 +5820,22 @@ function renderInventory() {
   updateBadges();
 }
 
-function goToLoc(locOrId,isArea22) {
+function goToLoc(locOrId,areaFlag) {
   openSection('map');
   // Switch to correct map section tab
-  if (!isArea22) {
+  if (areaFlag === 'a22') {
+    setMapSection('s22', document.getElementById('mst-s22'));
+    setTimeout(function(){
+      var e=document.getElementById('area22-block');if(e)e.scrollIntoView({behavior:'smooth',block:'center'});
+      if(locOrId)showA22StackModal(locOrId);
+    },200);
+  } else if (areaFlag === 'a1') {
+    setMapSection('s1bsu', document.getElementById('mst-s1bsu'));
+    setTimeout(function(){
+      var e=document.getElementById('area1-block');if(e)e.scrollIntoView({behavior:'smooth',block:'center'});
+      if(locOrId)showA1StackModal(locOrId);
+    },200);
+  } else {
     if (locOrId === 'CYCLE') {
       setMapSection('cycle', document.getElementById('mst-cycle'));
     } else if (locOrId.startsWith('RACK-')) {
@@ -5571,13 +5851,11 @@ function goToLoc(locOrId,isArea22) {
     } else {
       setMapSection('s23_38', document.getElementById('mst-s23_38'));
     }
-  } else {
-    setMapSection('s22', document.getElementById('mst-s22'));
+    setTimeout(function(){
+      var e2=document.getElementById('slot-'+locOrId);if(e2)e2.scrollIntoView({behavior:'smooth',block:'center'});
+      if(store[locOrId]){modalLoc=locOrId;showModal(locOrId);}
+    },200);
   }
-  setTimeout(function(){
-    if(isArea22){var e=document.getElementById('area22-block');if(e)e.scrollIntoView({behavior:'smooth',block:'center'});if(locOrId)showA22StackModal(locOrId);}
-    else{var e2=document.getElementById('slot-'+locOrId);if(e2)e2.scrollIntoView({behavior:'smooth',block:'center'});if(store[locOrId]){modalLoc=locOrId;showModal(locOrId);}}
-  },200);
 }
 
 // ─── STATS & BADGES ───────────────────────────────────────────────
@@ -5585,8 +5863,8 @@ function updateStats() {
   var keys=Object.keys(store);
   var total=keys.length;
   var occ=keys.filter(function(k){return store[k]!==null;}).length;
-  var occupiedAll = occ + area22Stacks.length;
-  var totalAll = total + area22Stacks.length;
+  var occupiedAll = occ + area22Stacks.length + area1Stacks.length;
+  var totalAll = total + area22Stacks.length + area1Stacks.length;
   document.getElementById('stat-occupied').textContent = occupiedAll;
   document.getElementById('stat-empty').textContent = total - occ;
   document.getElementById('stat-bundles').textContent=inventory.reduce(function(s,i){return s+i.bundles;},0);
@@ -5595,7 +5873,7 @@ function updateStats() {
 
 function updateBadges() {
   // Map badge: occupied slots count
-  var occ = Object.keys(store).filter(function(k){return store[k]!==null;}).length + area22Stacks.length;
+  var occ = Object.keys(store).filter(function(k){return store[k]!==null;}).length + area22Stacks.length + area1Stacks.length;
   var mapBadge = document.getElementById('badge-map');
   if (mapBadge) mapBadge.textContent = occ > 0 ? occ + ' occupied' : '';
 
@@ -5814,6 +6092,8 @@ function saveData() {
         inventory:    encodeInventory(inventory),
         area22Stacks: area22Stacks,
         area22NextId: area22NextId,
+        area1Stacks:  area1Stacks,
+        area1NextId:  area1NextId,
         scrapSlots:   encodeObj(scrapSlots),
         holdSlots:    encodeObj(holdSlots),
         redTagSlots:  encodeObj(redTagSlots),
@@ -5874,6 +6154,8 @@ function loadData(callback) {
       inventory     = decodeInventory(payload.inventory || []);
       area22Stacks  = payload.area22Stacks  || [];
       area22NextId  = payload.area22NextId  || 1;
+      area1Stacks   = payload.area1Stacks   || [];
+      area1NextId   = payload.area1NextId   || 1;
       scrapSlots    = decodeObj(payload.scrapSlots    || {});
       holdSlots     = decodeObj(payload.holdSlots     || {});
       redTagSlots   = decodeObj(payload.redTagSlots   || {});
@@ -5911,6 +6193,8 @@ function exportBackup() {
       inventory:    encodeInventory(inventory),
       area22Stacks: area22Stacks,
       area22NextId: area22NextId,
+      area1Stacks:  area1Stacks,
+      area1NextId:  area1NextId,
       scrapSlots:   encodeObj(scrapSlots),
       holdSlots:    encodeObj(holdSlots),
       redTagSlots:  encodeObj(redTagSlots),
