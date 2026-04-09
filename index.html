@@ -397,11 +397,6 @@
   .opt-rule-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:6px 10px; background:var(--steel);border:1px solid var(--border);border-radius:6px; }
   .opt-rule-text { flex:1; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--text); }
   .opt-rule-del { background:none; border:none; color:var(--hot); font-size:14px; cursor:pointer; padding:0 4px; flex-shrink:0; }
-  .opt-move-card { background:var(--steel-light); border:1px solid var(--border); border-radius:8px; padding:12px 14px; margin-bottom:8px; }
-  .opt-move-num { font-family:'Bebas Neue',sans-serif; font-size:22px; color:var(--accent); line-height:1; margin-bottom:2px; }
-  .opt-move-desc { font-family:'IBM Plex Mono',monospace; font-size:12px; color:var(--text); line-height:1.5; }
-  .opt-move-reason { font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--text-dim); margin-top:4px; line-height:1.4; }
-  .opt-move-gain { display:inline-block; margin-top:6px; font-family:'IBM Plex Mono',monospace; font-size:10px; color:var(--safe); background:#0d2010; border:1px solid var(--safe); border-radius:4px; padding:2px 7px; }
   /* OPTIMIZER */
   .opt-move-card { background:var(--steel-light); border:1px solid var(--border); border-radius:8px; padding:12px; margin-bottom:10px; }
   .opt-move-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:6px; }
@@ -4240,25 +4235,48 @@ function renderOptMoveList() {
   }
   var priorityColors = { high:'#e84040', medium:'#f5a623', low:'#27c06e' };
   var priorityLabels = { high:'🔴 HIGH', medium:'🟡 MED', low:'🟢 LOW' };
-  listEl.innerHTML = filteredWithIdx.map(function(entry, i) {
+  listEl.innerHTML = filteredWithIdx.map(function(entry) {
     var m = entry.m;
     var origIdx = entry.origIdx;
-    var pc = priorityColors[m.priority]||'var(--text-dim)';
-    var pl = priorityLabels[m.priority]||m.priority.toUpperCase();
+    var pc = priorityColors[m.priority] || 'var(--text-dim)';
+    var pl = priorityLabels[m.priority] || m.priority.toUpperCase();
+
+    // Move title: "6A → 12B" derived from from/to slot IDs
+    var moveTitle = m.from && m.to ? m.from + ' \u2192 ' + m.to : m.desc;
+
+    // Explanation: space freed + tonnage capacity at origin
+    var explanationHtml = '';
+    if (m.from && m.from.length >= 2) {
+      var srcStan = m.from.slice(0, -1);
+      var srcStanNum = isNaN(srcStan) ? srcStan : parseInt(srcStan);
+      var maxFt = maxFtForStanchion(srcStanNum);
+      var srcItem = store[m.from];
+      var lbsPerFt = srcItem ? (REBAR_LBS_PER_FT[srcItem.size] || 0) : 0;
+      var row = function(label, val) {
+        return '<div style="display:flex;gap:8px;margin-bottom:3px">' +
+          '<span style="color:var(--text-dim);min-width:110px;flex-shrink:0">' + label + '</span>' +
+          '<span style="color:var(--text)">' + val + '</span>' +
+          '</div>';
+      };
+      explanationHtml = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;margin:8px 0;padding:8px 10px;background:var(--steel);border-radius:6px;border:1px solid var(--border);line-height:1.6">' +
+        row('Why:', m.rule + (m.detail ? ' — ' + m.detail : '')) +
+        row('Space freed:', maxFt + 'ft max at ' + m.from) +
+        (lbsPerFt > 0 ? row('Slot capacity:', ((lbsPerFt * maxFt) / 2000).toFixed(2) + 't at max footage (' + (srcItem ? srcItem.size : '') + ' · ' + lbsPerFt + ' lbs/ft)') : '') +
+        '</div>';
+    }
+
     return '<div class="opt-move-card">' +
-      '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">' +
-        '<div class="opt-move-num" style="margin-bottom:0">' + (i+1) + '</div>' +
-        '<div style="display:flex;gap:5px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--accent);line-height:1;letter-spacing:1px">' + moveTitle + '</div>' +
+        '<div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px">' +
           '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:'+pc+';border:1px solid '+pc+'">'+pl+'</span>' +
           '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:var(--text-dim);border:1px solid var(--border)">'+(m.moveType==='spool'?'SPOOL':'STRAIGHT')+'</span>' +
           '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:#6090cc;border:1px solid #6090cc">'+(m.ruleType==='consolidate'?'CONSOLIDATE':'PAIR')+'</span>' +
         '</div>' +
       '</div>' +
-      '<div class="opt-move-desc">'+m.desc+'</div>' +
-      '<div class="opt-move-desc" style="color:var(--accent);margin-top:2px">'+m.detail+'</div>' +
-      (m.reason ? '<div class="opt-move-reason">'+m.reason+'</div>' : '') +
-      (m.gain ? '<div class="opt-move-gain">'+m.gain+'</div>' : '') +
-      '<button class="opt-move-btn" onclick="executeOptimizerMove('+origIdx+')">EXECUTE MOVE</button>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);line-height:1.5">' + m.desc + '</div>' +
+      explanationHtml +
+      '<button class="opt-move-btn" onclick="executeOptimizerMove('+origIdx+')" style="margin-top:6px">EXECUTE MOVE</button>' +
       '</div>';
   }).join('');
 }
