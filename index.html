@@ -522,6 +522,29 @@
   .of-pair-btn.selected { background: var(--iron); color: var(--text); border-color: var(--accent); }
   .of-label { font-family: 'IBM Plex Mono', monospace; font-size: 10px; color: var(--text-dim); display: block; margin-bottom: 4px; text-transform: uppercase; letter-spacing: 1px; }
   .of-preview { background: var(--steel-light); border-radius: 6px; padding: 10px 12px; margin-bottom: 12px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; }
+
+  /* ── SSC MODE SYSTEM ── */
+  .ssc-only { display: none; }
+  body.ssc-mode .ssc-only { display: block; }
+  body.ssc-mode .rebar-only { display: none; }
+
+  /* Mode toggle button in header */
+  .mode-toggle-btn {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase;
+    padding: 5px 10px; border-radius: 6px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--steel-light);
+    color: var(--text-dim); transition: all 0.2s; white-space: nowrap;
+  }
+  .mode-toggle-btn:hover { border-color: var(--accent); color: var(--accent); }
+  body.ssc-mode .mode-toggle-btn {
+    background: #001a4d; border-color: #4ab8ff; color: #4ab8ff;
+  }
+  .mode-badge {
+    display: block; font-size: 7px; letter-spacing: 1px;
+    color: var(--text-dim); margin-top: 2px; text-align: center;
+  }
+  body.ssc-mode .mode-badge { color: #4ab8ff; }
 </style>
 </head>
 <body>
@@ -554,9 +577,15 @@
       <span class="logo-sub">SHIPPING & WAREHOUSE</span>
     </div>
   </div>
-  <div style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim)">
-    <div id="header-date"></div>
-    <div id="save-indicator" style="color:#336633;font-size:9px;margin-top:2px">💾 auto-save on</div>
+  <div style="display:flex;align-items:center;gap:10px">
+    <button class="mode-toggle-btn" onclick="setAppMode(APP_MODE==='rebar'?'ssc':'rebar')" title="Switch warehouse mode">
+      <span id="mode-btn-label">REBAR MILL</span>
+      <span class="mode-badge" id="mode-btn-sub">tap to switch</span>
+    </button>
+    <div style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim)">
+      <div id="header-date"></div>
+      <div id="save-indicator" style="color:#336633;font-size:9px;margin-top:2px">💾 auto-save on</div>
+    </div>
   </div>
 </header>
 
@@ -637,7 +666,7 @@
 <div class="stats-bar">
   <div class="stat"><div class="stat-val" id="stat-occupied">0</div><div class="stat-label">Occupied</div></div>
   <div class="stat"><div class="stat-val" id="stat-empty">0</div><div class="stat-label">Available</div></div>
-  <div class="stat"><div class="stat-val" id="stat-bundles">0</div><div class="stat-label">Bundles</div></div>
+  <div class="stat"><div class="stat-val" id="stat-bundles">0</div><div class="stat-label" data-rebar="Bundles" data-ssc="Lifts">Bundles</div></div>
   <div class="stat"><div class="stat-val" id="stat-pct">0%</div><div class="stat-label">Capacity</div></div>
 </div>
 
@@ -706,13 +735,13 @@
         <div class="form-group">
           <label>Product Type</label>
           <select id="inp-type" onchange="onTypeChange()">
-            <option value="straight">Straight Bar</option>
-            <option value="spool">Spooled / Coil</option>
+            <option value="straight" data-rebar="Straight Bar" data-ssc="Cut-to-Length">Straight Bar</option>
+            <option value="spool" data-rebar="Spooled / Coil" data-ssc="Structural Shape">Spooled / Coil</option>
           </select>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Bar Size</label>
+            <label data-rebar="Bar Size" data-ssc="Material Type">Bar Size</label>
             <select id="inp-size" onchange="calcBundleWeight()">
               <option value=""># Size</option>
               <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
@@ -733,9 +762,20 @@
             </div>
           </div>
         </div>
+        <!-- SSC-only: Thickness × Width dimensions -->
+        <div class="form-row ssc-only">
+          <div class="form-group">
+            <label>Thickness (in)</label>
+            <input type="number" id="inp-thickness" placeholder="e.g. 0.5" min="0" step="any" inputmode="decimal">
+          </div>
+          <div class="form-group">
+            <label>Width (in)</label>
+            <input type="number" id="inp-width" placeholder="e.g. 6" min="0" step="any" inputmode="decimal">
+          </div>
+        </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Grade</label>
+            <label data-rebar="Grade" data-ssc="Grade / Designation">Grade</label>
             <select id="inp-grade">
               <option value="">— Grade —</option>
               <option value="40">Grade 40</option>
@@ -754,7 +794,7 @@
         </div>
         <div id="length-hint" style="display:none"></div>
         <div class="form-group">
-          <label>Bundles / Coils</label>
+          <label data-rebar="Bundles / Coils" data-ssc="Lifts">Bundles / Coils</label>
           <input type="number" id="inp-bundles" placeholder="qty" min="1" inputmode="numeric" oninput="calcBundleWeight()">
         </div>
         <div class="form-group" id="spool-weight-group" style="display:none">
@@ -767,11 +807,11 @@
           </select>
         </div>
         <div class="form-group" id="weight-group">
-          <label>Pieces per Bundle</label>
+          <label data-rebar="Pieces per Bundle" data-ssc="Pieces per Lift">Pieces per Bundle</label>
           <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onPiecesInput()">
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
             <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-              <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1">BUNDLE WEIGHT (LBS) — calculates pieces</label>
+              <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1" data-rebar="BUNDLE WEIGHT (LBS) — calculates pieces" data-ssc="LIFT WEIGHT (LBS) — calculates pieces">BUNDLE WEIGHT (LBS) — calculates pieces</label>
               <button id="log-link-btn" class="link-toggle-btn" onclick="toggleLogLink()" title="Fields linked — click to unlink">⛓</button>
             </div>
             <input type="number" id="inp-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcPiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
@@ -808,7 +848,7 @@
           <input type="checkbox" id="inp-secondary" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0;cursor:pointer" onchange="populateLocationDropdown(document.getElementById('inp-type').value)">
           <label for="inp-secondary" style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text);cursor:pointer;line-height:1.4">
             <strong style="color:var(--accent)">Log as secondary stack</strong><br>
-            <span style="font-size:10px;color:var(--text-dim)">Adds on top of existing product in the chosen stanchion side</span>
+            <span style="font-size:10px;color:var(--text-dim)" data-rebar="Adds on top of existing product in the chosen stanchion side" data-ssc="Adds on top of existing product in the chosen bay side">Adds on top of existing product in the chosen stanchion side</span>
           </label>
         </div>
         <button class="btn btn-suggest" onclick="suggestLocation()">⚡ Suggest Location</button>
@@ -1024,7 +1064,7 @@
           <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">➕ Add Product to Run Cycle</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
             <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bar Size</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-rebar="Bar Size" data-ssc="Material Type">Bar Size</div>
               <select id="rc-size" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
                 <option value="">—</option>
                 <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
@@ -1050,16 +1090,16 @@
               </select>
             </div>
             <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bundles</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-rebar="Bundles" data-ssc="Lifts">Bundles</div>
               <input type="number" id="rc-bundles" placeholder="e.g. 5" min="1" inputmode="numeric" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
             <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Pc / Bundle</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-rebar="Pc / Bundle" data-ssc="Pc / Lift">Pc / Bundle</div>
               <input type="number" id="rc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="rcOnPiecesInput()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
             <div>
               <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
-                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;flex:1">Bundle Wt (lbs)</span>
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;flex:1" data-rebar="Bundle Wt (lbs)" data-ssc="Lift Wt (lbs)">Bundle Wt (lbs)</span>
                 <button id="rc-link-btn" class="link-toggle-btn" onclick="toggleRcLink()" title="Fields linked — click to unlink">⛓</button>
               </div>
               <input type="number" id="rc-weight" placeholder="e.g. 1200" min="0" inputmode="decimal" oninput="rcOnWeightInput()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
@@ -1118,7 +1158,7 @@
     <div id="modal-secondary-list"></div>
     <!-- Bundles editor -->
     <div class="modal-edit-row" id="modal-qty-row" style="display:none">
-      <span class="modal-edit-label">Bundles</span>
+      <span class="modal-edit-label" data-rebar="Bundles" data-ssc="Lifts">Bundles</span>
       <div class="modal-edit-controls">
         <button class="qty-btn" onclick="adjustQty(-1)">−</button>
         <input type="number" id="modal-qty-val" value="0" min="0" inputmode="numeric"
@@ -1145,7 +1185,7 @@
     <div id="secondary-slot-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
     <div class="form-row">
       <div class="form-group">
-        <label>Bar Size</label>
+        <label data-rebar="Bar Size" data-ssc="Material Type">Bar Size</label>
         <select id="sec-size">
           <option value=""># Size</option>
           <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
@@ -1168,7 +1208,7 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Grade</label>
+        <label data-rebar="Grade" data-ssc="Grade / Designation">Grade</label>
         <select id="sec-grade">
           <option value="">— Grade —</option>
           <option value="40">Grade 40</option>
@@ -1186,7 +1226,7 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Bundles</label>
+      <label data-rebar="Bundles" data-ssc="Lifts">Bundles</label>
       <input type="number" id="sec-bundles" placeholder="qty" min="1" inputmode="numeric">
     </div>
     <div class="form-group">
@@ -1214,7 +1254,7 @@
     <div id="edit-slot-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
     <div class="form-row">
       <div class="form-group">
-        <label>Bar Size</label>
+        <label data-rebar="Bar Size" data-ssc="Material Type">Bar Size</label>
         <select id="edit-size">
           <option value=""># Size</option>
           <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
@@ -1237,7 +1277,7 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Grade</label>
+        <label data-rebar="Grade" data-ssc="Grade / Designation">Grade</label>
         <select id="edit-grade">
           <option value="">— Grade —</option>
           <option value="40">Grade 40</option>
@@ -1255,7 +1295,7 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Bundles</label>
+      <label data-rebar="Bundles" data-ssc="Lifts">Bundles</label>
       <input type="number" id="edit-bundles" placeholder="qty" min="1" inputmode="numeric">
     </div>
     <div class="form-group">
@@ -1314,11 +1354,11 @@
     <!-- ── OVERFLOW PANEL ── -->
     <div id="of-ov-panel">
       <div id="of-placements" style="max-height:160px;overflow-y:auto;margin-bottom:10px"></div>
-      <label class="of-label">Next stanchion side</label>
+      <label class="of-label" data-rebar="Next stanchion side" data-ssc="Next bay side">Next stanchion side</label>
       <select class="of-sel" id="of-slot-sel" onchange="ofSlotSelChange()"></select>
-      <label class="of-label">Bundles to place here</label>
+      <label class="of-label" data-rebar="Bundles to place here" data-ssc="Lifts to place here">Bundles to place here</label>
       <input class="of-num-inp" type="number" id="of-bdl-inp" min="1" oninput="ofBdlChange()" style="margin-bottom:10px">
-      <button class="of-btn-add" id="of-add-btn" onclick="ofAddPlacement()">+ ADD TO STANCHION</button>
+      <button class="of-btn-add" id="of-add-btn" onclick="ofAddPlacement()" data-rebar="+ ADD TO STANCHION" data-ssc="+ ADD TO BAY">+ ADD TO STANCHION</button>
       <button class="of-btn-done" id="of-done-btn" onclick="ofFinalize()" disabled>✓ DONE — COMMIT ALL</button>
     </div>
 
@@ -1346,7 +1386,7 @@
           <option value="B">B-Side</option>
         </select>
       </div>
-      <label class="of-label">Total bundles</label>
+      <label class="of-label" data-rebar="Total bundles" data-ssc="Total lifts">Total bundles</label>
       <input class="of-num-inp" type="number" id="of-sp-bdl" min="1" oninput="ofSpBdlChange()" style="margin-bottom:10px">
       <div id="of-sp-preview" class="of-preview" style="display:none"></div>
       <button class="of-btn-done" id="of-sp-confirm" onclick="ofConfirmSplit()" disabled>✓ CONFIRM SPLIT</button>
@@ -1377,7 +1417,7 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Bar Size</label>
+        <label data-rebar="Bar Size" data-ssc="Material Type">Bar Size</label>
         <select id="a1-size">
           <option value=""># Size</option>
           <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
@@ -1390,7 +1430,7 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Bundles / Coils</label>
+      <label data-rebar="Bundles / Coils" data-ssc="Lifts">Bundles / Coils</label>
       <input type="number" id="a1-bundles" placeholder="qty" min="1" inputmode="numeric">
     </div>
     <div class="form-group" id="a1-spool-weight-group" style="display:none">
@@ -1453,7 +1493,7 @@
     </div>
     <div class="form-row">
       <div class="form-group">
-        <label>Bar Size</label>
+        <label data-rebar="Bar Size" data-ssc="Material Type">Bar Size</label>
         <select id="a22-size">
           <option value=""># Size</option>
           <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
@@ -1466,7 +1506,7 @@
       </div>
     </div>
     <div class="form-group">
-      <label>Bundles / Coils</label>
+      <label data-rebar="Bundles / Coils" data-ssc="Lifts">Bundles / Coils</label>
       <input type="number" id="a22-bundles" placeholder="qty" min="1" inputmode="numeric">
     </div>
     <!-- Spool coil weight for area 22 — shown when type is spool -->
@@ -1545,6 +1585,145 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
+// ─── MODE SYSTEM ─────────────────────────────────────────────────
+// APP_MODE: 'rebar' (default) | 'ssc' (steel service center)
+// Stored in localStorage as rt_mode. Zero effect on rebar mode data/logic.
+var APP_MODE = localStorage.getItem('rt_mode') || 'rebar';
+
+var _LABELS = {
+  rebar: {
+    bdgSfx:    'b',
+    bundles:   'bundles',
+    bundle:    'bundle',
+    bdlAbbr:   'bdl',
+    bdlCap:    'Bundle',
+    szLbl:     'Bar Size',
+    prodType:  'Straight Bar',
+    prodSpool: 'Spooled',
+    wtPerBdl:  'Weight/Bundle',
+    stan:      'Stanchion',
+    stanShort: 'Stan',
+    multiStan: 'Multi-Stanchion Placement',
+    gradeAlert:'Please select a Grade (40, 60, or 80).',
+    specAlert:  'Please select a Spec (A615 or A706).',
+    sizeAlert:  'Please fill in Bar Size and Bundles/Coils.',
+    logoSub:   'SHIPPING & WAREHOUSE',
+    modeName:  'REBAR MILL'
+  },
+  ssc: {
+    bdgSfx:    'L',
+    bundles:   'lifts',
+    bundle:    'lift',
+    bdlAbbr:   'lft',
+    bdlCap:    'Lift',
+    szLbl:     'Material Type',
+    prodType:  'Cut-to-Length',
+    prodSpool: 'Structural Shape',
+    wtPerBdl:  'Weight/Lift',
+    stan:      'Bay',
+    stanShort: 'Bay',
+    multiStan: 'Multi-Bay Placement',
+    gradeAlert:'Please select a Grade / Designation.',
+    specAlert:  'Please select a Spec.',
+    sizeAlert:  'Please fill in Material Type and Lifts.',
+    logoSub:   'STEEL SERVICE CENTER',
+    modeName:  'STEEL SVC CTR'
+  }
+};
+
+function LBL(key) { return (_LABELS[APP_MODE] && _LABELS[APP_MODE][key]) || key; }
+
+function applyModeLabels() {
+  // Swap data-rebar / data-ssc text on all annotated elements
+  document.querySelectorAll('[data-rebar]').forEach(function(el) {
+    el.textContent = APP_MODE === 'ssc' ? el.getAttribute('data-ssc') : el.getAttribute('data-rebar');
+  });
+  // Overflow modal title (has an id)
+  var ofTitle = document.getElementById('of-modal-title');
+  if (ofTitle) ofTitle.textContent = LBL('multiStan');
+  // Header logo subtitle
+  var logoSub = document.querySelector('.logo-sub');
+  if (logoSub) logoSub.textContent = LBL('logoSub');
+  // Mode button label
+  var mbl = document.getElementById('mode-btn-label');
+  if (mbl) mbl.textContent = LBL('modeName');
+}
+
+function rebuildDropdowns() {
+  var isSsc = APP_MODE === 'ssc';
+
+  var sizeOptsRebar = '<option value=""># Size</option>' +
+    ['#3','#4','#5','#6','#7','#8','#9','#10','#11'].map(function(s){ return '<option>'+s+'</option>'; }).join('');
+  var sizeOptsSsc = '<option value="">— Type —</option>' +
+    ['Flat Bar','Angle','Channel','Beam','Plate','Tube','Pipe'].map(function(s){ return '<option>'+s+'</option>'; }).join('');
+
+  var gradeOptsRebar = '<option value="">— Grade —</option>' +
+    '<option value="40">Grade 40</option><option value="60">Grade 60</option><option value="80">Grade 80</option>';
+  var gradeOptsSsc = '<option value="">— Grade —</option>' +
+    '<option value="A36">A36</option><option value="A572">A572 Gr.50</option><option value="A992">A992</option>' +
+    '<option value="A500">A500</option><option value="A53">A53</option><option value="A36-SS">A36 Stainless</option>';
+
+  var specOptsRebar = '<option value="">— Spec —</option><option value="A615">A615</option><option value="A706">A706</option>';
+  var specOptsSsc = '<option value="">— Spec —</option>' +
+    '<option value="ASTM">ASTM</option><option value="AISC">AISC</option><option value="AWS">AWS</option>';
+
+  var sizeOpts  = isSsc ? sizeOptsSsc  : sizeOptsRebar;
+  var gradeOpts = isSsc ? gradeOptsSsc : gradeOptsRebar;
+  var specOpts  = isSsc ? specOptsSsc  : specOptsRebar;
+
+  var rcSizeOptsRebar = '<option value="">—</option>' +
+    ['#3','#4','#5','#6','#7','#8','#9','#10','#11'].map(function(s){ return '<option>'+s+'</option>'; }).join('');
+  var rcSizeOptsSsc = '<option value="">—</option>' +
+    ['Flat Bar','Angle','Channel','Beam','Plate','Tube','Pipe'].map(function(s){ return '<option>'+s+'</option>'; }).join('');
+  var rcGradeOptsRebar = '<option value="">—</option><option>Grade 40</option><option>Grade 60</option><option>Grade 80</option>';
+  var rcGradeOptsSsc = '<option value="">—</option><option>A36</option><option>A572 Gr.50</option><option>A992</option><option>A500</option><option>A53</option>';
+  var rcSpecOptsRebar = '<option value="">—</option><option>A615</option><option>A706</option>';
+  var rcSpecOptsSsc = '<option value="">—</option><option>ASTM</option><option>AISC</option><option>AWS</option>';
+
+  // Main form
+  ['inp-size','sec-size','edit-size'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.innerHTML=sizeOpts;
+  });
+  ['inp-grade','sec-grade','edit-grade'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.innerHTML=gradeOpts;
+  });
+  ['inp-spec','sec-spec','edit-spec'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.innerHTML=specOpts;
+  });
+
+  // Area modals — smaller size lists (up to #8 in rebar)
+  var areaSizeOptsRebar = '<option value=""># Size</option>' +
+    ['#3','#4','#5','#6','#7','#8'].map(function(s){ return '<option>'+s+'</option>'; }).join('');
+  ['a1-size','a22-size'].forEach(function(id){
+    var el=document.getElementById(id); if(el) el.innerHTML=isSsc?sizeOptsSsc:areaSizeOptsRebar;
+  });
+
+  // Run cycle
+  var rcSizeEl=document.getElementById('rc-size'); if(rcSizeEl) rcSizeEl.innerHTML=isSsc?rcSizeOptsSsc:rcSizeOptsRebar;
+  var rcGradeEl=document.getElementById('rc-grade'); if(rcGradeEl) rcGradeEl.innerHTML=isSsc?rcGradeOptsSsc:rcGradeOptsRebar;
+  var rcSpecEl=document.getElementById('rc-spec'); if(rcSpecEl) rcSpecEl.innerHTML=isSsc?rcSpecOptsSsc:rcSpecOptsRebar;
+
+  // Product type options
+  ['inp-type','a1-type','a22-type'].forEach(function(id){
+    var el=document.getElementById(id); if(!el) return;
+    var opts=el.querySelectorAll('option');
+    opts.forEach(function(o){
+      var dr=o.getAttribute('data-rebar'); var ds=o.getAttribute('data-ssc');
+      if(dr&&ds) o.textContent=isSsc?ds:dr;
+    });
+  });
+}
+
+function setAppMode(mode) {
+  APP_MODE = (mode === 'ssc') ? 'ssc' : 'rebar';
+  localStorage.setItem('rt_mode', APP_MODE);
+  document.body.classList.toggle('ssc-mode', APP_MODE === 'ssc');
+  applyModeLabels();
+  rebuildDropdowns();
+  renderAll();
+  renderInventory();
+}
+
 // ─── DATA ────────────────────────────────────────────────────────
 var _uidSeq = 0;
 function genUid() {
@@ -2223,7 +2402,7 @@ function makeSlot(id, side) {
       div.innerHTML =
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;line-height:1.1;color:#bb88ff">'+totalCount+'</div>'+
         '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:#8844cc;line-height:1.2">products</div>'+
-        '<div class="slot-bdl" style="color:#bb88ff">'+totalBundles+'b</div>'+
+        '<div class="slot-bdl" style="color:#bb88ff">'+totalBundles+LBL('bdgSfx')+'</div>'+
         '<div style="position:absolute;bottom:2px;left:0;right:0;text-align:center;font-family:\'IBM Plex Mono\',monospace;font-size:7px;color:#bb88ff;letter-spacing:0.5px">RESERVED</div>';
     } else {
       div.innerHTML =
@@ -2257,7 +2436,7 @@ function makeSlot(id, side) {
       div.innerHTML =
         '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:15px;letter-spacing:1px;line-height:1.1;color:var(--accent)">'+totalCount+'</div>'+
         '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:8px;color:var(--text-dim);line-height:1.2">products</div>'+
-        '<div class="slot-bdl">'+totalBundles+'b</div>'+
+        '<div class="slot-bdl">'+totalBundles+LBL('bdgSfx')+'</div>'+
         (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'')+
         (multiCust?'<div class="slot-customer">'+escHtml(multiCust)+'</div>':'');
     } else {
@@ -2266,7 +2445,7 @@ function makeSlot(id, side) {
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+item.size+'</div>'+
         '<div class="slot-len">'+(item.length ? formatLength(item.length) : 'Coil')+'</div>'+
-        '<div class="slot-bdl">'+item.bundles+'b</div>'+
+        '<div class="slot-bdl">'+item.bundles+LBL('bdgSfx')+'</div>'+
         (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'')+
         (custStr?'<div class="slot-customer">'+escHtml(custStr)+'</div>':'');
     }
@@ -2412,7 +2591,7 @@ function addToArea22() {
   var length = document.getElementById('a22-length').value.trim();
   var bundles = document.getElementById('a22-bundles').value;
   var side = document.getElementById('a22-side').value || 'A';
-  if (!size || !bundles) { alert('Please fill in Bar Size and Bundles/Coils.'); return; }
+  if (!size || !bundles) { alert(LBL('sizeAlert')); return; }
   var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a22-spool-weight').value)||0) : 0;
   var stack = {
     uid: genUid(),
@@ -2551,8 +2730,8 @@ function addToArea1() {
   var length = document.getElementById('a1-length').value ? parseFloat(document.getElementById('a1-length').value) : null;
   var bundles = parseInt(document.getElementById('a1-bundles').value) || 0;
   var side = document.getElementById('a1-side').value || 'A';
-  if (!size) { alert('Please select a bar size.'); return; }
-  if (!bundles) { alert('Please enter bundle/coil quantity.'); return; }
+  if (!size) { alert('Please select a ' + LBL('szLbl').toLowerCase() + '.'); return; }
+  if (!bundles) { alert('Please enter ' + LBL('bundle') + ' quantity.'); return; }
   var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a1-spool-weight').value)||0) : 0;
   var stack = {
     uid: genUid(),
@@ -2740,16 +2919,16 @@ function escHtml(s) {
 function buildModalRows(item, isSpool, days) {
   var rows = '';
   if (item.side) rows += mrow('Side', item.side + '-Side');
-  rows += mrow('Bar Size', item.size);
-  rows += mrow('Type', isSpool?'Spooled':'Straight Bar');
-  if (item.grade) rows += mrow('Grade', 'Grade ' + item.grade);
+  rows += mrow(LBL('szLbl'), item.size);
+  rows += mrow('Type', isSpool ? LBL('prodSpool') : LBL('prodType'));
+  if (item.grade) rows += mrow('Grade', APP_MODE === 'ssc' ? item.grade : 'Grade ' + item.grade);
   if (item.spec)  rows += mrow('Spec', item.spec);
   rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
     rows += mrow('Total Weight', ((item.spoolWeightLbs/2000)*(item.bundles||0)).toFixed(2) + 't');
   } else if (item.weightTons) {
-    rows += mrow('Weight/Bundle', item.weightPerBundleTons ? item.weightPerBundleTons.toFixed(3)+'t ('+(item.weightPerBundleTons*2000).toFixed(0)+' lbs)' : '—');
+    rows += mrow(LBL('wtPerBdl'), item.weightPerBundleTons ? item.weightPerBundleTons.toFixed(3)+'t ('+(item.weightPerBundleTons*2000).toFixed(0)+' lbs)' : '—');
     rows += mrow('Total Weight', item.weightTons.toFixed(2)+'t ('+(item.weightTons*2000).toFixed(0)+' lbs)');
   }
   if (item.heat) rows += mrow('Heat #', item.heat);
@@ -2772,11 +2951,11 @@ function buildModalRows(item, isSpool, days) {
   if (item.splitPairedWith) {
     var pairKey = item.splitPairedWith.slice(0, -1);
     var pairSide = item.splitPairedWith.slice(-1);
-    var pairLbl = (pairKey === 'BSU') ? 'B.SU' : 'Stan ' + pairKey;
+    var pairLbl = (pairKey === 'BSU') ? 'B.SU' : LBL('stanShort') + ' ' + pairKey;
     rows += '<div class="modal-row" style="border-left:2px solid var(--warn);padding-left:8px;flex-direction:column;align-items:flex-start;gap:2px">' +
       '<span class="modal-key" style="font-size:9px;text-transform:uppercase;letter-spacing:1px">Split Pair</span>' +
       '<span style="color:var(--warn);font-family:\'IBM Plex Mono\',monospace;font-size:12px">Paired with ' + pairLbl + ' ' + pairSide + '-side' +
-        (item.splitTotal ? ' · ' + item.splitTotal + ' bdl combined' : '') + '</span>' +
+        (item.splitTotal ? ' · ' + item.splitTotal + ' ' + LBL('bdlAbbr') + ' combined' : '') + '</span>' +
     '</div>';
   }
   // Show EBS locator code if mapped
@@ -2798,7 +2977,7 @@ function showModal(id) {
     var totalBundles = allItems.reduce(function(s,i){ return s + (i.bundles||0); }, 0);
     document.getElementById('modal-info').innerHTML =
       '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);padding:8px 0 4px">' +
-      allItems.length + ' products · ' + totalBundles + ' total bundles</div>';
+      allItems.length + ' products · ' + totalBundles + ' total ' + LBL('bundles') + '</div>';
     document.getElementById('modal-qty-row').style.display = 'none';
   } else {
     document.getElementById('modal-info').innerHTML = buildModalRows(item, isSpool, days);
@@ -2836,7 +3015,7 @@ function renderSecondaryList(slotId) {
         '<strong style="color:var(--accent)">' + primary.size + '</strong>' +
         (primary.length ? ' · ' + formatLength(primary.length) : '') +
         (primMeta ? '<span style="color:var(--text-dim);font-size:10px"> ' + primMeta.trim() + '</span>' : '') +
-        ' · ' + primary.bundles + ' bundles' +
+        ' · ' + primary.bundles + ' ' + LBL('bundles') +
       '</div>' +
       '<div style="display:flex;gap:5px">' +
       '<button class="secondary-remove-btn" style="background:#1a2a1a;color:var(--accent);border:1px solid var(--accent)" onclick="openEditModal(\'primary\',0)">EDIT</button>' +
@@ -2854,7 +3033,7 @@ function renderSecondaryList(slotId) {
         '<strong style="color:var(--text)">' + ei.size + '</strong>' +
         (ei.length ? ' · ' + formatLength(ei.length) : '') +
         (eiMeta ? '<span style="color:var(--text-dim);font-size:10px"> ' + eiMeta.trim() + '</span>' : '') +
-        ' · ' + ei.bundles + ' bundles' +
+        ' · ' + ei.bundles + ' ' + LBL('bundles') +
       '</div>' +
       '<div style="display:flex;gap:5px">' +
       '<button class="secondary-remove-btn" style="background:#1a2a1a;color:var(--accent);border:1px solid var(--accent)" onclick="openEditModal(\'extra\',' + idx + ')">EDIT</button>' +
@@ -3082,11 +3261,11 @@ function confirmAddSecondary() {
   var inVal = parseFloat(document.getElementById('sec-length-in').value) || 0;
   var lenDecimal = ftVal + (inVal / 12);
   var bundles = parseInt(document.getElementById('sec-bundles').value) || 0;
-  if (!size || !bundles) { alert('Please fill in Bar Size and Bundles.'); return; }
+  if (!size || !bundles) { alert('Please fill in ' + LBL('szLbl') + ' and ' + LBL('bdlCap') + 's.'); return; }
   var secGrade = document.getElementById('sec-grade').value;
   var secSpec  = document.getElementById('sec-spec').value;
-  if (!secGrade) { alert('Please select a Grade (40, 60, or 80).'); return; }
-  if (!secSpec)  { alert('Please select a Spec (A615 or A706).'); return; }
+  if (!secGrade) { alert(LBL('gradeAlert')); return; }
+  if (!secSpec)  { alert(LBL('specAlert')); return; }
 
   // Footage check: if this secondary is longer than the current longest item on
   // this side, it would increase stanchionFtUsed. Ensure it fits within the max.
@@ -3172,7 +3351,7 @@ function openSecondaryTransfer(slotId, idx) {
     '<strong style="color:var(--text)">Secondary from:</strong> ' + slotId +
     ' &nbsp;·&nbsp; ' + ei.size +
     (ei.length ? ' · ' + formatLength(ei.length) : '') +
-    ' &nbsp;·&nbsp; ' + ei.bundles + ' bundles';
+    ' &nbsp;·&nbsp; ' + ei.bundles + ' ' + LBL('bundles');
 
   var sel = document.getElementById('transfer-dest');
   sel.innerHTML = '<option value="">— Select destination —</option>';
@@ -3184,7 +3363,7 @@ function openSecondaryTransfer(slotId, idx) {
     sides.forEach(function(side) {
       var id = s + side;
       if (id === slotId) return;
-      var label = (s==='BSU'?'B.SU':'Stanchion '+s) + ' ' + side + '-side';
+      var label = (s==='BSU'?'B.SU':LBL('stan')+' '+s) + ' ' + side + '-side';
       var opt = document.createElement('option');
       opt.value = id;
       var existing = store[id];
@@ -3325,7 +3504,7 @@ function openTransferModal() {
         var rawRemaining = stanchionFtRemaining(s);
         var effectiveRemaining = (String(s) === String(srcStan)) ? rawRemaining + srcFt : rawRemaining;
         var existing = store[id];
-        var label = (s==='BSU'?'B.SU':'Stanchion '+s) + ' ' + side + '-side';
+        var label = (s==='BSU'?'B.SU':LBL('stan')+' '+s) + ' ' + side + '-side';
         var opt = document.createElement('option');
         opt.value = id;
         if (existing) {
@@ -4530,7 +4709,7 @@ function runOptimizer() {
   var order = orderedStanchions();
 
   // Helper — label for stanchion
-  function stanLabel(s) { return s === 'BSU' ? 'B.SU' : 'Stanchion ' + s; }
+  function stanLabel(s) { return s === 'BSU' ? 'B.SU' : LBL('stan') + ' ' + s; }
 
   // ── RULE: Fill partner sides ──────────────────────────────────
   if (ruleEnabled('fill_partner')) {
@@ -4601,8 +4780,8 @@ function runOptimizer() {
           ruleType: 'consolidate',
           rule: 'Consolidate same product',
           desc: 'Move ' + srcItem.size + ' ' + formatLength(srcItem.length||'') + ' from ' + stanLabel(loc.stan) + ' ' + loc.side + '-side → ' + stanLabel(best.stan) + ' ' + best.side + '-side (merge)',
-          detail: srcItem.bundles + ' bundles to merge with existing ' + best.item.bundles + ' bundles',
-          gain: 'Merge ' + srcItem.bundles + '+' + best.item.bundles + ' bundles',
+          detail: srcItem.bundles + ' ' + LBL('bundles') + ' to merge with existing ' + best.item.bundles + ' ' + LBL('bundles'),
+          gain: 'Merge ' + srcItem.bundles + '+' + best.item.bundles + ' ' + LBL('bundles'),
           from: loc.loc, to: best.loc
         });
       });
@@ -4812,7 +4991,7 @@ function runOptimizer() {
           (bestFrom
             ? 'move ' + bestFrom + ' → ' + bestTo + ' to free a compatible slot'
             : 'no moveable product found — manual review needed'),
-        detail: 'Planned: ' + rcLabel + ' · ' + rcItem.bundles + ' bundles',
+        detail: 'Planned: ' + rcLabel + ' · ' + rcItem.bundles + ' ' + LBL('bundles'),
         from: bestFrom || (order[0] + 'A'),
         to:   bestTo   || (order[0] + 'A')
       });
@@ -4995,7 +5174,7 @@ function ofOpen(itemTemplate, firstLoc) {
   }
   _of.remaining = _of.totalBundles - _of.placements.reduce(function(s, p) { return s + p.bundles; }, 0);
 
-  document.getElementById('of-modal-title').textContent = 'Multi-Stanchion Placement';
+  document.getElementById('of-modal-title').textContent = LBL('multiStan');
   ofSetMode('overflow');
   ofPopulateSplitDropdowns();
   document.getElementById('of-modal-overlay').classList.add('active');
@@ -5109,7 +5288,7 @@ function ofRemovePlacement(idx) {
 
 function ofRefreshOverflowDropdown() {
   var sel = document.getElementById('of-slot-sel');
-  sel.innerHTML = '<option value="">— Pick stanchion side —</option>';
+  sel.innerHTML = '<option value="">— Pick ' + LBL('stan').toLowerCase() + ' side —</option>';
   if (_of.remaining <= 0) { sel.disabled = true; document.getElementById('of-bdl-inp').value = ''; return; }
   sel.disabled = false;
 
@@ -5144,11 +5323,11 @@ function ofRefreshOverflowDropdown() {
       var availBdl = maxBdl - usedBdl;
       if (availBdl <= 0) return;
 
-      var lbl = (s === 'BSU') ? 'B.SU' : 'Stanchion ' + s;
+      var lbl = (s === 'BSU') ? 'B.SU' : LBL('stan') + ' ' + s;
       var ftRem = stanchionFtRemaining(s).toFixed(0);
       var desc = lbl + ' ' + side + '-side';
       desc += existing
-        ? ' — ' + existing.size + ' ' + formatLength(String(existing.length || '')) + ' (' + usedBdl + ' bdl) · ' + availBdl + ' cap remain'
+        ? ' — ' + existing.size + ' ' + formatLength(String(existing.length || '')) + ' (' + usedBdl + ' ' + LBL('bdlAbbr') + ') · ' + availBdl + ' cap remain'
         : ' — empty · ' + ftRem + 'ft avail · ' + availBdl + ' cap';
       var opt = document.createElement('option');
       opt.value = id;
@@ -5182,7 +5361,7 @@ function ofBdlChange() {
 function ofAddPlacement() {
   var id = document.getElementById('of-slot-sel').value;
   var bdl = parseInt(document.getElementById('of-bdl-inp').value) || 0;
-  if (!id) { alert('Please select a stanchion side.'); return; }
+  if (!id) { alert('Please select a ' + LBL('stan').toLowerCase() + ' side.'); return; }
   if (bdl <= 0) { alert('Enter a bundle count greater than zero.'); return; }
   if (bdl > _of.remaining) { alert('Bundle count (' + bdl + ') exceeds remaining (' + _of.remaining + ').'); return; }
 
@@ -5282,7 +5461,7 @@ function ofFillSplitSel(selId, excludeVal) {
       var id = s + side;
       if (id === excludeVal) return;
       if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) return;
-      var lbl = (s === 'BSU') ? 'B.SU' : 'Stanchion ' + s;
+      var lbl = (s === 'BSU') ? 'B.SU' : LBL('stan') + ' ' + s;
       var existing = store[id];
       var opt = document.createElement('option');
       opt.value = id;
@@ -5541,8 +5720,8 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
             (!spec  || !existing.spec  || existing.spec  === spec) &&
             (existing.customer||'') === (customer||'')) {
           pick2 = id;
-          var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
-          reason = lbl+' '+allSides[j]+'-side — '+size+' '+formatLength(String(length))+' already stored here ('+existing.bundles+' bundles), stack on top';
+          var lbl = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
+          reason = lbl+' '+allSides[j]+'-side — '+size+' '+formatLength(String(length))+' already stored here ('+existing.bundles+' '+LBL('bundles')+'), stack on top';
         }
       }
     }
@@ -5557,7 +5736,7 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
       var id = s+'C';
       if (slotAvailable(id)) {
         pick2 = id;
-        reason = ((s==='BSU')?'B.SU':'Stanchion '+s)+' C-side — short run (<40ft), C-side preferred';
+        reason = ((s==='BSU')?'B.SU':LBL('stan')+' '+s)+' C-side — short run (<40ft), C-side preferred';
       }
     }
     for (var si=0; si<stanchionOrder.length && !pick2; si++) {
@@ -5567,7 +5746,7 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
       var id = s+'B';
       if (slotAvailable(id)) {
         pick2 = id;
-        reason = ((s==='BSU')?'B.SU':'Stanchion '+s)+' B-side — short run (<40ft), B-side preferred';
+        reason = ((s==='BSU')?'B.SU':LBL('stan')+' '+s)+' B-side — short run (<40ft), B-side preferred';
         if (length > 0) reason += ' ('+stanchionFtUsed(s).toFixed(0)+'ft used, '+(stanchionFtUsed(s)+length).toFixed(0)+'ft after)';
       }
     }
@@ -5584,7 +5763,7 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
         var id2 = s2+sides2[j2];
         if (slotAvailable(id2)) {
           pick2 = id2;
-          var lbl2 = (s2==='BSU') ? 'B.SU' : 'Stanchion '+s2;
+          var lbl2 = (s2==='BSU') ? 'B.SU' : LBL('stan')+' '+s2;
           reason = lbl2+' '+sides2[j2]+'-side — next available';
           if (length > 0) reason += ' ('+stanchionFtUsed(s2).toFixed(0)+'ft used, '+(stanchionFtUsed(s2)+length).toFixed(0)+'ft after)';
         }
@@ -5681,9 +5860,9 @@ function rcAddItem() {
   var pieces  = parseInt(document.getElementById('rc-pieces').value) || 0;
   var weight  = parseFloat(document.getElementById('rc-weight').value) || 0;
 
-  if (!size)    { alert('Select a bar size.'); return; }
+  if (!size)    { alert('Select a ' + LBL('szLbl').toLowerCase() + '.'); return; }
   if (!length)  { alert('Enter a length.'); return; }
-  if (!bundles) { alert('Enter bundle count.'); return; }
+  if (!bundles) { alert('Enter ' + LBL('bundle') + ' count.'); return; }
 
   var item = {
     id:          runCycleNextId++,
@@ -5744,7 +5923,7 @@ function renderRunCycle() {
   container.innerHTML = runCycle.map(function(item) {
     var lenStr = formatLength(String(item.length));
     var label  = [item.size, lenStr, item.grade, item.spec].filter(Boolean).join(' · ');
-    var bdlStr = item.bundles + ' bdl' + (item.pieces ? ' · ' + item.pieces + 'pc/bdl' : '') + (item.weight ? ' · ' + item.weight.toLocaleString() + ' lbs/bdl' : '');
+    var bdlStr = item.bundles + ' ' + LBL('bdlAbbr') + (item.pieces ? ' · ' + item.pieces + 'pc/'+LBL('bdlAbbr') : '') + (item.weight ? ' · ' + item.weight.toLocaleString() + ' lbs/'+LBL('bdlAbbr') : '');
 
     // Auto-suggest
     var sugg = calcSuggestLoc('straight', item.size, item.length, item.grade, item.spec, item.customer);
@@ -5852,12 +6031,12 @@ function logRun() {
     return;
   }
 
-  if (!size || !bundles) { alert('Please fill in Bar Size and Bundles/Coils.'); return; }
-  if (type==='straight' && !lenNum) { alert('Please enter a length for straight bar.'); return; }
+  if (!size || !bundles) { alert(LBL('sizeAlert')); return; }
+  if (type==='straight' && !lenNum) { alert('Please enter a length.'); return; }
   var grade = document.getElementById('inp-grade').value;
   var spec  = document.getElementById('inp-spec').value;
-  if (!grade) { alert('Please select a Grade (40, 60, or 80).'); return; }
-  if (!spec)  { alert('Please select a Spec (A615 or A706).'); return; }
+  if (!grade) { alert(LBL('gradeAlert')); return; }
+  if (!spec)  { alert(LBL('specAlert')); return; }
 
   // For spool, get weight from the fixed dropdown (lbs → tons)
   var weightTons;
@@ -5979,7 +6158,7 @@ function logRun() {
       var usedFt = stanchionFtUsed(stanNum);
       var remainFt = maxFt - usedFt;
       if (lenNum > remainFt) {
-        alert('⛔ This run is '+lenNum+'ft but Stanchion '+stanNum+' only has '+remainFt.toFixed(1)+'ft remaining ('+usedFt+'ft used of '+maxFt+'ft max).\n\nPlease choose a different stanchion or side.');
+        alert('⛔ This run is '+lenNum+'ft but '+LBL('stan')+' '+stanNum+' only has '+remainFt.toFixed(1)+'ft remaining ('+usedFt+'ft used of '+maxFt+'ft max).\n\nPlease choose a different '+LBL('stan').toLowerCase()+' or side.');
         return;
       }
     }
@@ -6160,7 +6339,7 @@ function populateLocationDropdown(type) {
       // Skip free-stack zones (e.g. stanchion 1, 22) — open floor areas, not grid slots
       if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
       var used=stanchionFtUsed(s); var maxFt=maxFtForStanchion(s); var rem=maxFt-used;
-      var label = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
+      var label = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
       var sidesToShow = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
       sidesToShow.forEach(function(side){
         var id=s+side;
@@ -6313,7 +6492,7 @@ function renderInventory() {
     var areaFlag = isArea22 ? 'a22' : isArea1 ? 'a1' : '';
 
     // Product name line — size + length + type
-    var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' bundles');
+    var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' ' + LBL('bundles'));
     // Grade/spec line
     var gradeSpec = [item.grade ? 'Gr'+item.grade : '', item.spec || ''].filter(Boolean).join(' ');
     // Optional info line
@@ -6329,7 +6508,7 @@ function renderInventory() {
       // Tags row
       '<div class="inv-meta">'+
         '<span class="tag tag-size">'+item.size+'</span>'+
-        '<span class="tag '+(isSpool?'tag-spool':'tag-type')+'">'+(isSpool?'Spooled':'Straight')+'</span>'+
+        '<span class="tag '+(isSpool?'tag-spool':'tag-type')+'">'+(isSpool?LBL('prodSpool'):LBL('prodType'))+'</span>'+
         (gradeSpec ? '<span class="tag" style="background:var(--steel-light);color:var(--text-dim)">'+gradeSpec+'</span>' : '')+
         (item.weightTons ? '<span class="tag" style="background:var(--steel-light);color:var(--text-dim)">'+item.weightTons.toFixed(2)+'t</span>' : '')+
         (isArea22?'<span class="tag tag-area22">Area 22</span>':'')+
@@ -6856,6 +7035,14 @@ function pinUnlock() {
 
 // ─── INIT ────────────────────────────────────────────────────────
 document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+// Apply saved mode on load (before render so labels are correct from the start)
+if (APP_MODE === 'ssc') {
+  document.body.classList.add('ssc-mode');
+}
+applyModeLabels();
+rebuildDropdowns();
+
 buildStore();
 initFirebase();
 loadData(function(loaded) {
