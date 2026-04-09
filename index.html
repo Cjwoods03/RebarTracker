@@ -3331,8 +3331,9 @@ function openTransferModal() {
         if (existing) {
           var tfGradeOk = !existing.grade || !item.grade || existing.grade === item.grade;
           var tfSpecOk  = !existing.spec  || !item.spec  || existing.spec  === item.spec;
+          var tfCustOk  = (existing.customer||'') === (item.customer||'');
           if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-              tfGradeOk && tfSpecOk) {
+              tfGradeOk && tfSpecOk && tfCustOk) {
             // Same product (size + length + compatible grade/spec) — allow merge
             opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
             opt.style.fontWeight = 'bold';
@@ -3393,7 +3394,8 @@ function confirmTransfer() {
     // so no ft check needed. Only check ft when moving to an empty slot or different stanchion.
     var isMerge = destItem0 && destItem0.size === srcItem.size && parseFloat(destItem0.length) === parseFloat(srcItem.length) &&
                   (!destItem0.grade || !srcItem.grade || destItem0.grade === srcItem.grade) &&
-                  (!destItem0.spec  || !srcItem.spec  || destItem0.spec  === srcItem.spec);
+                  (!destItem0.spec  || !srcItem.spec  || destItem0.spec  === srcItem.spec) &&
+                  (destItem0.customer||'') === (srcItem.customer||'');
     if (!isMerge) {
       var length = parseFloat(srcItem.length) || 0;
       var destStan = dest.slice(0, -1);
@@ -3430,10 +3432,11 @@ function confirmTransfer() {
     // Treat empty grade/spec as "unknown" — permissive match (same as logRun)
     var gradeOk = !destItem2.grade || !srcItem.grade || destItem2.grade === srcItem.grade;
     var specOk  = !destItem2.spec  || !srcItem.spec  || destItem2.spec  === srcItem.spec;
+    var custOk  = (destItem2.customer||'') === (srcItem.customer||'');
     if (destItem2.size !== srcItem.size || parseFloat(destItem2.length) !== parseFloat(srcItem.length) ||
-        !gradeOk || !specOk) {
+        !gradeOk || !specOk || !custOk) {
       hint.className = 'length-hint over';
-      hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge identical product (same size, length, grade, spec).';
+      hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge identical product (same size, length, grade, spec, customer).';
       hint.style.display = 'block';
       return;
     }
@@ -3984,8 +3987,9 @@ function runCSVImport() {
       var existing = store[loc];
       var csvGradeOk = !existing.grade || !item.grade || existing.grade === item.grade;
       var csvSpecOk  = !existing.spec  || !item.spec  || existing.spec  === item.spec;
+      var csvCustOk  = (existing.customer||'') === (item.customer||'');
       if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-          csvGradeOk && csvSpecOk) {
+          csvGradeOk && csvSpecOk && csvCustOk) {
         // Same product — merge bundles; fill in blank grade/spec from import (not a new item)
         existing.bundles += grp.bundles;
         existing.weightTons = (existing.weightTons||0) + grp.wtTons;
@@ -4298,7 +4302,7 @@ function runFullYardImport() {
     };
     if (store[loc]) {
       var ex = store[loc];
-      if (ex.size === item.size && ex.grade === item.grade && ex.spec === item.spec) {
+      if (ex.size === item.size && ex.grade === item.grade && ex.spec === item.spec && (ex.customer||'') === (item.customer||'')) {
         // Same product — merge bundle counts
         ex.bundles += item.bundles;
         ex.weightTons += item.weightTons;
@@ -4575,7 +4579,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -4709,7 +4713,8 @@ function runOptimizer() {
             var destItem = store[destId];
             var isMerge = destItem && destItem.size === item.size && parseFloat(destItem.length) === itemLen &&
                           (!destItem.grade || !item.grade || destItem.grade === item.grade) &&
-                          (!destItem.spec  || !item.spec  || destItem.spec  === item.spec);
+                          (!destItem.spec  || !item.spec  || destItem.spec  === item.spec) &&
+                          (destItem.customer||'') === (item.customer||'');
             if (destItem && !isMerge) return; // occupied with different product
             var destItems = slotAllItems(destId);
             var destBdl = destItems.reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
@@ -4764,7 +4769,8 @@ function runOptimizer() {
               existing.size === rcItem.size &&
               parseFloat(existing.length) === rcLen &&
               (!rcItem.grade || !existing.grade || existing.grade === rcItem.grade) &&
-              (!rcItem.spec  || !existing.spec  || existing.spec  === rcItem.spec)) {
+              (!rcItem.spec  || !existing.spec  || existing.spec  === rcItem.spec) &&
+              (existing.customer||'') === (rcItem.customer||'')) {
             hasSlot = true;
           }
         });
@@ -4785,7 +4791,7 @@ function runOptimizer() {
           var srcItem = store[sid];
           if (!srcItem) return false;
           // Find a destination for srcItem so we can free this slot for the RC item
-          var dest = calcSuggestLoc('straight', srcItem.size, parseFloat(srcItem.length) || 0, srcItem.grade, srcItem.spec);
+          var dest = calcSuggestLoc('straight', srcItem.size, parseFloat(srcItem.length) || 0, srcItem.grade, srcItem.spec, srcItem.customer);
           if (dest && dest.loc !== sid) {
             bestFrom = sid;
             bestTo = dest.loc;
@@ -4915,8 +4921,9 @@ function executeOptimizerMove(idx) {
     // Treat empty grade/spec as "unknown" — permissive match (same as logRun)
     var gradeOk2 = !destItem.grade || !srcItem.grade || destItem.grade === srcItem.grade;
     var specOk2  = !destItem.spec  || !srcItem.spec  || destItem.spec  === srcItem.spec;
+    var custOk2  = (destItem.customer||'') === (srcItem.customer||'');
     if (destItem.size === srcItem.size && parseFloat(destItem.length) === parseFloat(srcItem.length) &&
-        gradeOk2 && specOk2) {
+        gradeOk2 && specOk2 && custOk2) {
       destItem.bundles += srcItem.bundles;
       destItem.weightTons = (destItem.weightTons||0) + (srcItem.weightTons||0);
       if (!destItem.grade && srcItem.grade) destItem.grade = srcItem.grade;
@@ -5125,7 +5132,8 @@ function ofRefreshOverflowDropdown() {
         var same = existing.size === item.size &&
           parseFloat(existing.length) === lenNum &&
           (!item.grade || !existing.grade || existing.grade === item.grade) &&
-          (!item.spec  || !existing.spec  || existing.spec  === item.spec);
+          (!item.spec  || !existing.spec  || existing.spec  === item.spec) &&
+          (existing.customer||'') === (item.customer||'');
         if (!same) return;
       } else {
         // Empty — check footage
@@ -5214,7 +5222,8 @@ function ofFinalize() {
     var existing = store[p.loc];
     var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
                   (!existing.grade || !item.grade || existing.grade === item.grade) &&
-                  (!existing.spec  || !item.spec  || existing.spec  === item.spec);
+                  (!existing.spec  || !item.spec  || existing.spec  === item.spec) &&
+                  (existing.customer||'') === (item.customer||'');
     if (isMerge) {
       existing.bundles += p.bundles;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
@@ -5282,7 +5291,8 @@ function ofFillSplitSel(selId, excludeVal) {
         var isSame = item.size && existing.size === item.size &&
           (!lenNum || parseFloat(existing.length) === lenNum) &&
           (!item.grade || !existing.grade || existing.grade === item.grade) &&
-          (!item.spec  || !existing.spec  || existing.spec  === item.spec);
+          (!item.spec  || !existing.spec  || existing.spec  === item.spec) &&
+          (existing.customer||'') === (item.customer||'');
         if (!isSame) return;
         opt.textContent = '★ ' + lbl + ' ' + side + '-side — ' + existing.size + ' ' +
           formatLength(String(existing.length || '')) + ' (' + existing.bundles + ' bdl) MERGE';
@@ -5424,7 +5434,8 @@ function ofConfirmSplit() {
     var isMerge = existing && item.size && existing.size === item.size &&
       parseFloat(existing.length) === parseFloat(item.length) &&
       (!existing.grade || !item.grade || existing.grade === item.grade) &&
-      (!existing.spec  || !item.spec  || existing.spec  === item.spec);
+      (!existing.spec  || !item.spec  || existing.spec  === item.spec) &&
+      (existing.customer||'') === (item.customer||'');
     if (isMerge) {
       existing.bundles += count;
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
@@ -5478,7 +5489,7 @@ function ofClearLogForm() {
 
 // ─── CORE SUGGEST ENGINE ─────────────────────────────────────────
 // Returns {loc, reason} or null. Pure calculation — no DOM side effects.
-function calcSuggestLoc(type, size, length, grade, spec) {
+function calcSuggestLoc(type, size, length, grade, spec, customer) {
   if (type === 'spool') {
     var pick = null, pickReason = '';
     var secs = Object.keys(SPOOL_SECTIONS);
@@ -5527,7 +5538,8 @@ function calcSuggestLoc(type, size, length, grade, spec) {
         if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
         if (existing.size === size && parseFloat(existing.length) === length &&
             (!grade || !existing.grade || existing.grade === grade) &&
-            (!spec  || !existing.spec  || existing.spec  === spec)) {
+            (!spec  || !existing.spec  || existing.spec  === spec) &&
+            (existing.customer||'') === (customer||'')) {
           pick2 = id;
           var lbl = (s==='BSU') ? 'B.SU' : 'Stanchion '+s;
           reason = lbl+' '+allSides[j]+'-side — '+size+' '+formatLength(String(length))+' already stored here ('+existing.bundles+' bundles), stack on top';
@@ -5589,6 +5601,7 @@ function suggestLocation() {
   var length = getLengthDecimal();
   var grade = document.getElementById('inp-grade').value;
   var spec = document.getElementById('inp-spec').value;
+  var customer = document.getElementById('inp-customer').value.trim();
   var manualPick = document.getElementById('inp-location').value;
 
   if (manualPick) {
@@ -5599,7 +5612,7 @@ function suggestLocation() {
     renderAll(); return;
   }
 
-  var result = calcSuggestLoc(type, size, length, grade, spec);
+  var result = calcSuggestLoc(type, size, length, grade, spec, customer);
   if (!result) {
     if (type === 'spool') alert('All spool rows are full.');
     else alert('No stanchion slots found that fit '+(length||'')+'ft.');
@@ -5734,7 +5747,7 @@ function renderRunCycle() {
     var bdlStr = item.bundles + ' bdl' + (item.pieces ? ' · ' + item.pieces + 'pc/bdl' : '') + (item.weight ? ' · ' + item.weight.toLocaleString() + ' lbs/bdl' : '');
 
     // Auto-suggest
-    var sugg = calcSuggestLoc('straight', item.size, item.length, item.grade, item.spec);
+    var sugg = calcSuggestLoc('straight', item.size, item.length, item.grade, item.spec, item.customer);
     var suggLoc    = sugg ? sugg.loc : null;
     var suggReason = sugg ? sugg.reason : 'No compatible slot found';
 
@@ -6025,7 +6038,8 @@ function logRun() {
     var canMerge = existing.size === item.size &&
       parseFloat(existing.length) === parseFloat(item.length) &&
       (!existing.grade || !item.grade || existing.grade === item.grade) &&
-      (!existing.spec  || !item.spec  || existing.spec  === item.spec);
+      (!existing.spec  || !item.spec  || existing.spec  === item.spec) &&
+      (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
       existing.weightTons = (existing.weightTons || 0) + (item.weightTons || 0);
@@ -6135,10 +6149,11 @@ function populateLocationDropdown(type) {
   if (type==='straight') {
     var isSecondary = document.getElementById('inp-secondary').checked;
     // Read current form values so incompatible occupied slots can be identified
-    var curSize  = document.getElementById('inp-size').value;
-    var curLen   = getLengthDecimal();
-    var curGrade = document.getElementById('inp-grade').value;
-    var curSpec  = document.getElementById('inp-spec').value;
+    var curSize     = document.getElementById('inp-size').value;
+    var curLen      = getLengthDecimal();
+    var curGrade    = document.getElementById('inp-grade').value;
+    var curSpec     = document.getElementById('inp-spec').value;
+    var curCustomer = document.getElementById('inp-customer').value.trim();
 
     var order = orderedStanchions();
     order.forEach(function(s) {
@@ -6159,7 +6174,8 @@ function populateLocationDropdown(type) {
           var isSameProduct = curSize && existing.size === curSize &&
             (!curLen   || parseFloat(existing.length) === curLen) &&
             (!curGrade || !existing.grade || existing.grade === curGrade) &&
-            (!curSpec  || !existing.spec  || existing.spec  === curSpec);
+            (!curSpec  || !existing.spec  || existing.spec  === curSpec) &&
+            (existing.customer||'') === (curCustomer||'');
           if (!isSameProduct && !isSecondary) {
             // Incompatible and not stacking — disable so user can't accidentally pick it
             opt.textContent = '⊗ ' + statusPrefix + label + ' ' + side + '-side — ' + prodInfo + statusTag;
