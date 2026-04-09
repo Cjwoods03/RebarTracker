@@ -974,42 +974,6 @@
           </div>
         </div>
 
-        <!-- Weight limit config -->
-        <div style="margin-bottom:16px;padding:12px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">⚖️ Max Weight Per Stanchion</div>
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:10px;line-height:1.5">Enter the max tonnage a stanchion can physically hold. Leave blank to skip weight checking.</div>
-          <div style="display:flex;gap:8px;align-items:center">
-            <input type="number" id="opt-max-weight" placeholder="e.g. 150" min="1" inputmode="decimal"
-              style="flex:1;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none">
-            <span style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">tons per stanchion</span>
-          </div>
-        </div>
-
-        <!-- Product Capacity Calculator -->
-        <div style="margin-bottom:16px;padding:12px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">📦 Product Capacity Calculator</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:10px">
-            <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bar Size</div>
-              <select id="cap-calc-size" onchange="runCapCalc()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;box-sizing:border-box">
-                <option value="">—</option>
-                <option>#3</option><option>#4</option><option>#5</option>
-                <option>#6</option><option>#7</option><option>#8</option>
-                <option>#9</option><option>#10</option><option>#11</option>
-              </select>
-            </div>
-            <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Length (ft)</div>
-              <input type="number" id="cap-calc-length" placeholder="e.g. 20" min="1" inputmode="decimal" oninput="runCapCalc()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;box-sizing:border-box">
-            </div>
-            <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Pc / Bundle</div>
-              <input type="number" id="cap-calc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="runCapCalc()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;outline:none;box-sizing:border-box">
-            </div>
-          </div>
-          <div id="cap-calc-result"></div>
-        </div>
-
         <button class="btn btn-primary" style="margin-top:0;width:100%" onclick="runOptimizer()">⚡ ANALYZE &amp; SUGGEST MOVES</button>
 
         <div id="opt-results" style="margin-top:16px;display:none">
@@ -3410,70 +3374,6 @@ function clearSlot() {
   closeModal(); renderAll(); renderInventory(); saveData();
 }
 
-// ─── SPACE OPTIMIZER ─────────────────────────────────────────────
-
-function runCapCalc() {
-  var size   = document.getElementById('cap-calc-size').value;
-  var lenFt  = parseFloat(document.getElementById('cap-calc-length').value) || 0;
-  var pieces = parseInt(document.getElementById('cap-calc-pieces').value) || 0;
-  var out    = document.getElementById('cap-calc-result');
-  if (!out) return;
-  if (!size || !lenFt || !pieces) { out.innerHTML = ''; return; }
-
-  var lbsPerFt  = REBAR_LBS_PER_FT[size] || 0;
-  var barLbs    = lbsPerFt * lenFt;
-  var bdlLbs    = barLbs * pieces;
-  var bdlTons   = bdlLbs / 2000;
-
-  // Cross-section: baseline 20 pc → 9 in wide × 5.5 in tall
-  var BDL_WIDTH_IN = 9;
-  var bdlHeightIn  = 5.5 * (pieces / 20);
-
-  var order = orderedStanchions();
-
-  var html =
-    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;padding:8px 10px;background:var(--steel);border:1px solid var(--border);border-radius:6px;margin-bottom:10px;line-height:1.9">' +
-    '<span style="color:var(--text-dim)">Bar: ' + barLbs.toFixed(1) + ' lbs</span> &nbsp;&middot;&nbsp; ' +
-    '<strong style="color:var(--safe)">Bundle: ' + bdlLbs.toFixed(0) + ' lbs (' + bdlTons.toFixed(3) + 't)</strong> &nbsp;&middot;&nbsp; ' +
-    '<span style="color:var(--text-dim)">Cross-section: ' + BDL_WIDTH_IN + '&Prime; &times; ' + bdlHeightIn.toFixed(2) + '&Prime;</span>' +
-    '</div>' +
-    '<div style="overflow-x:auto">' +
-    '<table style="width:100%;border-collapse:collapse;font-family:\'IBM Plex Mono\',monospace;font-size:10px">' +
-    '<thead><tr style="color:var(--text-dim);border-bottom:1px solid var(--border)">' +
-    '<th style="text-align:left;padding:5px 6px;font-weight:normal;white-space:nowrap">STANCHION</th>' +
-    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">ACROSS</th>' +
-    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">LAYERS</th>' +
-    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">MAX BDLS/SIDE</th>' +
-    '<th style="text-align:right;padding:5px 6px;font-weight:normal;white-space:nowrap">MAX TONS/SIDE</th>' +
-    '</tr></thead><tbody>';
-
-  order.forEach(function(s) {
-    var capData = stanchionCapacity[s];
-    var label   = s === 'BSU' ? 'B.SU' : 'Stan ' + s;
-    var rowBorder = 'border-bottom:1px solid rgba(0,48,128,0.4)';
-    if (!capData || capData.freeStack) {
-      html += '<tr style="' + rowBorder + '">' +
-        '<td style="padding:5px 6px;color:var(--text)">' + label + '</td>' +
-        '<td colspan="4" style="padding:5px 6px;color:var(--text-dim);text-align:right">—</td></tr>';
-      return;
-    }
-    var across  = Math.floor(capData.widthIn / BDL_WIDTH_IN);
-    var layers  = bdlHeightIn > 0 ? Math.floor(capData.heightCapIn / bdlHeightIn) : 0;
-    var maxBdl  = across * layers;
-    var maxTons = maxBdl * bdlTons;
-    html += '<tr style="' + rowBorder + '">' +
-      '<td style="padding:5px 6px;color:var(--text)">' + label + '</td>' +
-      '<td style="padding:5px 6px;text-align:right;color:var(--text-dim)">' + across + '</td>' +
-      '<td style="padding:5px 6px;text-align:right;color:var(--text-dim)">' + layers + '</td>' +
-      '<td style="padding:5px 6px;text-align:right;color:var(--accent);font-weight:bold">' + maxBdl + '</td>' +
-      '<td style="padding:5px 6px;text-align:right;color:var(--safe)">' + maxTons.toFixed(1) + 't</td>' +
-      '</tr>';
-  });
-
-  html += '</tbody></table></div>';
-  out.innerHTML = html;
-}
-
 function toggleLocatorEditor(btn) {
   var wrap = document.getElementById('locator-editor-wrap');
   var chevron = document.getElementById('locator-editor-chevron');
@@ -4441,7 +4341,6 @@ function addOptimizerRule() {
 
 function runOptimizer() {
   renderOptimizerRules();
-  var maxWt = parseFloat(document.getElementById('opt-max-weight').value) || null;
   var suggestions = [];
   var order = orderedStanchions();
 
@@ -4655,15 +4554,7 @@ function runOptimizer() {
     });
   }
 
-  // Apply maxWt filter — exclude suggestions where the item's weight exceeds the limit
-  if (maxWt) {
-    suggestions = suggestions.filter(function(s) {
-      var srcItem = store[s.from];
-      if (!srcItem) return true; // keep if unknown
-      var wt = srcItem.weightTons || (srcItem.weightPerBundleTons ? srcItem.weightPerBundleTons * (srcItem.bundles || 1) : 0);
-      return wt <= maxWt;
-    });
-  }
+
 
   // Deduplicate (same from/to pair)
   var seen2 = {};
