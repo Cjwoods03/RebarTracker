@@ -396,6 +396,10 @@
   .sec7-remove-btn { position: absolute; top: -5px; right: -5px; width: 16px; height: 16px; border-radius: 50%; background: #660000; border: 1px solid #990000; color: #ff8080; font-size: 12px; display: flex; align-items: center; justify-content: center; cursor: pointer; z-index: 2; font-family: 'IBM Plex Mono', monospace; font-weight: bold; line-height: 1; }
   .sec7-remove-btn:active { background: #990000; }
   .rack-slot.sec7-add-btn { border: 1px dashed var(--border) !important; background: transparent !important; color: var(--text-dim); font-size: 22px; }
+  .link-toggle-btn { position: relative; overflow: hidden; background: none; border: 1px solid var(--accent); color: var(--accent); border-radius: 4px; padding: 2px 6px; font-size: 13px; cursor: pointer; line-height: 1.3; flex-shrink: 0; transition: border-color 0.15s, color 0.15s; }
+  .link-toggle-btn:active { opacity: 0.7; }
+  .link-toggle-btn.unlinked { border-color: var(--hot); color: var(--hot); }
+  .link-toggle-btn.unlinked::after { content: ''; position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: linear-gradient(to top right, transparent calc(50% - 1px), var(--hot) calc(50% - 1px), var(--hot) calc(50% + 1px), transparent calc(50% + 1px)); }
 
   /* OPTIMIZER */
   .opt-rule-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; padding:6px 10px; background:var(--steel);border:1px solid var(--border);border-radius:6px; }
@@ -765,7 +769,10 @@
           <label>Pieces per Bundle</label>
           <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onPiecesInput()">
           <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-            <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:4px;display:block">BUNDLE WEIGHT (LBS) — calculates pieces</label>
+            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+              <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1">BUNDLE WEIGHT (LBS) — calculates pieces</label>
+              <button id="log-link-btn" class="link-toggle-btn" onclick="toggleLogLink()" title="Fields linked — click to unlink">⛓</button>
+            </div>
             <input type="number" id="inp-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcPiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
             <div id="bdl-wt-hint" style="display:none;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);padding:5px 8px;background:#0d1f10;border-radius:5px;border:1px solid var(--border)"></div>
           </div>
@@ -1064,7 +1071,10 @@
               <input type="number" id="rc-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="rcOnPiecesInput()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
             <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Bundle Wt (lbs)</div>
+              <div style="display:flex;align-items:center;gap:4px;margin-bottom:4px">
+                <span style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;flex:1">Bundle Wt (lbs)</span>
+                <button id="rc-link-btn" class="link-toggle-btn" onclick="toggleRcLink()" title="Fields linked — click to unlink">⛓</button>
+              </div>
               <input type="number" id="rc-weight" placeholder="e.g. 1200" min="0" inputmode="decimal" oninput="rcOnWeightInput()" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
           </div>
@@ -1714,9 +1724,27 @@ function getCalcBdlTons() {
 }
 
 var _syncingWeightFields = false;
+var _logRunLinked = true;
+var _rcLinked = true;
+
+function updateLinkBtn(id, linked) {
+  var btn = document.getElementById(id);
+  if (!btn) return;
+  btn.classList.toggle('unlinked', !linked);
+  btn.title = linked ? 'Fields linked — click to unlink' : 'Fields unlinked — click to link';
+}
+function toggleLogLink() {
+  _logRunLinked = !_logRunLinked;
+  updateLinkBtn('log-link-btn', _logRunLinked);
+}
+function toggleRcLink() {
+  _rcLinked = !_rcLinked;
+  updateLinkBtn('rc-link-btn', _rcLinked);
+}
 
 // Called when pieces/bundle is typed directly — auto-fills bundle weight field
 function onPiecesInput() {
+  if (!_logRunLinked) return;
   if (_syncingWeightFields) return;
   _syncingWeightFields = true;
   var hint = document.getElementById('bdl-wt-hint');
@@ -1743,6 +1771,7 @@ function onPiecesInput() {
 
 // Called when bundle weight is entered — back-calculates pieces/bundle and fills the field
 function calcPiecesFromWeight() {
+  if (!_logRunLinked) return;
   if (_syncingWeightFields) return;
   _syncingWeightFields = true;
   var size     = document.getElementById('inp-size').value;
@@ -5604,6 +5633,7 @@ var _rcSyncing = false;
 
 // Pieces typed → auto-fill bundle weight
 function rcOnPiecesInput() {
+  if (!_rcLinked) return;
   if (_rcSyncing) return;
   _rcSyncing = true;
   var size     = document.getElementById('rc-size').value;
@@ -5620,6 +5650,7 @@ function rcOnPiecesInput() {
 
 // Bundle weight typed → back-calculate pieces/bundle
 function rcOnWeightInput() {
+  if (!_rcLinked) return;
   if (_rcSyncing) return;
   _rcSyncing = true;
   var size     = document.getElementById('rc-size').value;
