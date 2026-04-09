@@ -1674,15 +1674,38 @@ function getCalcBdlTons() {
   return (lbsPerFt * lenNum * pieces) / 2000;
 }
 
-// Called when pieces/bundle is typed directly — clear the bundle-weight derived hint
+var _syncingWeightFields = false;
+
+// Called when pieces/bundle is typed directly — auto-fills bundle weight field
 function onPiecesInput() {
+  if (_syncingWeightFields) return;
+  _syncingWeightFields = true;
   var hint = document.getElementById('bdl-wt-hint');
-  if (hint) hint.style.display = 'none';
+  var size = document.getElementById('inp-size').value;
+  var lenNum = getLengthDecimal();
+  var pieces = parseInt(document.getElementById('inp-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (lbsPerFt && lenNum && pieces) {
+    var lbsPerPiece = lbsPerFt * lenNum;
+    var bdlWt = Math.round(lbsPerPiece * pieces);
+    document.getElementById('inp-bdl-wt').value = bdlWt;
+    if (hint) {
+      hint.style.color = 'var(--accent)';
+      hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + bdlWt + ' lbs/bdl calculated';
+      hint.style.display = 'block';
+    }
+  } else {
+    document.getElementById('inp-bdl-wt').value = '';
+    if (hint) hint.style.display = 'none';
+  }
+  _syncingWeightFields = false;
   calcBundleWeight();
 }
 
 // Called when bundle weight is entered — back-calculates pieces/bundle and fills the field
 function calcPiecesFromWeight() {
+  if (_syncingWeightFields) return;
+  _syncingWeightFields = true;
   var size     = document.getElementById('inp-size').value;
   var lenNum   = getLengthDecimal();
   var bdlWt    = parseFloat(document.getElementById('inp-bdl-wt').value) || 0;
@@ -1690,6 +1713,7 @@ function calcPiecesFromWeight() {
 
   if (!bdlWt) {
     hint.style.display = 'none';
+    _syncingWeightFields = false;
     calcBundleWeight();
     return;
   }
@@ -1697,6 +1721,7 @@ function calcPiecesFromWeight() {
     hint.textContent = '⚠ Enter bar size and length first';
     hint.style.color = 'var(--warn)';
     hint.style.display = 'block';
+    _syncingWeightFields = false;
     return;
   }
   var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
@@ -1704,6 +1729,7 @@ function calcPiecesFromWeight() {
     hint.textContent = '⚠ No weight data for ' + size;
     hint.style.color = 'var(--warn)';
     hint.style.display = 'block';
+    _syncingWeightFields = false;
     return;
   }
 
@@ -1715,6 +1741,7 @@ function calcPiecesFromWeight() {
   hint.style.color = 'var(--accent)';
   hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + pieces + ' pc/bdl calculated';
   hint.style.display = 'block';
+  _syncingWeightFields = false;
   calcBundleWeight();
 }
 
