@@ -548,6 +548,12 @@
   body[data-mode="precast"] .product-type-group { display: none; }
   /* Precast — hide pieces-per-bundle / bundle weight section (uses concrete weight calc) */
   body[data-mode="precast"] .pieces-bdl-group { display: none; }
+  /* Pipe/Tube — End Finish field */
+  .mf-endfinish-field { display: none; }
+  body[data-mode="pipe"] .mf-endfinish-field { display: block; }
+  /* Pipe/Tube — Coating field */
+  .mf-coating-field { display: none; }
+  body[data-mode="pipe"] .mf-coating-field { display: block; }
 
   /* Mode selector button in header */
   .mode-select-btn {
@@ -905,6 +911,34 @@
           <div class="form-group">
             <label>Thickness (in)</label>
             <input type="number" id="inp-pc-thickness" placeholder="e.g. 8" min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
+          </div>
+        </div>
+        <!-- Pipe/Tube mode — End Finish field -->
+        <div class="form-row mf-endfinish-field">
+          <div class="form-group" style="width:100%">
+            <label>End Finish</label>
+            <select id="inp-endfinish">
+              <option value="">— End Finish —</option>
+              <option value="Plain End">Plain End</option>
+              <option value="Beveled">Beveled</option>
+              <option value="Threaded">Threaded</option>
+              <option value="Grooved">Grooved</option>
+              <option value="Flanged">Flanged</option>
+            </select>
+          </div>
+        </div>
+        <!-- Pipe/Tube mode — Coating field -->
+        <div class="form-row mf-coating-field">
+          <div class="form-group" style="width:100%">
+            <label>Coating</label>
+            <select id="inp-coating">
+              <option value="">— Coating —</option>
+              <option value="None">None</option>
+              <option value="FBE">FBE</option>
+              <option value="Coal Tar">Coal Tar</option>
+              <option value="Galvanized">Galvanized</option>
+              <option value="Painted">Painted</option>
+            </select>
           </div>
         </div>
         <div id="length-hint" style="display:none"></div>
@@ -1495,6 +1529,34 @@
         <input type="number" id="edit-pc-thickness" placeholder="e.g. 8" min="0" step="any" inputmode="decimal">
       </div>
     </div>
+    <!-- Pipe/Tube mode — End Finish field -->
+    <div class="form-row mf-endfinish-field">
+      <div class="form-group" style="width:100%">
+        <label>End Finish</label>
+        <select id="edit-endfinish">
+          <option value="">— End Finish —</option>
+          <option value="Plain End">Plain End</option>
+          <option value="Beveled">Beveled</option>
+          <option value="Threaded">Threaded</option>
+          <option value="Grooved">Grooved</option>
+          <option value="Flanged">Flanged</option>
+        </select>
+      </div>
+    </div>
+    <!-- Pipe/Tube mode — Coating field -->
+    <div class="form-row mf-coating-field">
+      <div class="form-group" style="width:100%">
+        <label>Coating</label>
+        <select id="edit-coating">
+          <option value="">— Coating —</option>
+          <option value="None">None</option>
+          <option value="FBE">FBE</option>
+          <option value="Coal Tar">Coal Tar</option>
+          <option value="Galvanized">Galvanized</option>
+          <option value="Painted">Painted</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group">
       <label data-mode-label="bundlesCap">Bundles</label>
       <input type="number" id="edit-bundles" placeholder="qty" min="1" inputmode="numeric">
@@ -2079,6 +2141,59 @@ var MODES = {
       spec:      [{v:'',l:'— Finish —'},{v:'Smooth',l:'Smooth'},{v:'Exposed Aggregate',l:'Exposed Aggregate'},{v:'Sandblasted',l:'Sandblasted'},{v:'Painted',l:'Painted'},{v:'Architectural',l:'Architectural'}],
       rcSpec:    [{v:'',l:'—'},{v:'Smooth',l:'Smooth'},{v:'Exposed Aggregate',l:'Exposed Aggregate'},{v:'Sandblasted',l:'Sandblasted'},{v:'Painted',l:'Painted'},{v:'Architectural',l:'Architectural'}],
       productType:[{v:'straight',l:'Precast Element'}]
+    }
+  }
+
+  ,
+
+  // ── PIPE & TUBE DISTRIBUTION ─────────────────────────────────────
+  pipe: {
+    id: 'pipe',
+    name: 'Pipe & Tube Distribution',
+    description: 'Pipe and tube distribution — rack bays, pipe sizes, material, schedule and end finish.',
+    bodyClasses: [],
+    labels: {
+      szLbl:        'Nominal Pipe Size / OD',
+      gradeLbl:     'Material',
+      specLbl:      'Schedule / Wall',
+      customerLbl:  'Customer',
+      bundlesCap:   'Lifts / Bundles',
+      bundlesCoils: 'Lifts / Bundles',
+      bdgSfx:       'b',
+      bundles:      'bundles',
+      bundle:       'bundle',
+      bdlAbbr:      'bdl',
+      bdlCap:       'Bundle',
+      piecesPerBdl: 'Pieces per Bundle',
+      pcPerBdl:     'Pc / Bundle',
+      bdlWtCalc:    'BUNDLE WEIGHT (LBS) — calculates pieces',
+      bdlWtShort:   'Bundle Wt (lbs)',
+      prodType:     'Straight Pipe / Tube',
+      prodSpool:    'Coiled Tube',
+      wtPerBdl:     'Weight/Bundle',
+      stan:         'Rack Bay',
+      stanShort:    'Bay',
+      multiStan:    'Multi-Bay Placement',
+      nextStanSide: 'Next bay side',
+      bdlsHere:     'Bundles to place here',
+      addToStan:    '+ ADD TO BAY',
+      totalBundles: 'Total bundles',
+      secStackDesc: 'Adds on top of existing product in the chosen bay side',
+      gradePrefix:  '',
+      gradeAlert:   'Please select a Material.',
+      specAlert:    'Please select a Schedule/Wall.',
+      sizeAlert:    'Please fill in Pipe Size/OD and Bundles.',
+      logoSub:      'PIPE & TUBE'
+    },
+    dropdowns: {
+      size:      [{v:'',l:'— Pipe Size / OD —'},{v:'1/2"',l:'1/2"'},{v:'3/4"',l:'3/4"'},{v:'1"',l:'1"'},{v:'1-1/4"',l:'1-1/4"'},{v:'1-1/2"',l:'1-1/2"'},{v:'2"',l:'2"'},{v:'2-1/2"',l:'2-1/2"'},{v:'3"',l:'3"'},{v:'4"',l:'4"'},{v:'6"',l:'6"'},{v:'8"',l:'8"'},{v:'10"',l:'10"'},{v:'12"',l:'12"'}],
+      areaSize:  [{v:'',l:'— Pipe Size / OD —'},{v:'1/2"',l:'1/2"'},{v:'3/4"',l:'3/4"'},{v:'1"',l:'1"'},{v:'1-1/4"',l:'1-1/4"'},{v:'1-1/2"',l:'1-1/2"'},{v:'2"',l:'2"'},{v:'2-1/2"',l:'2-1/2"'},{v:'3"',l:'3"'},{v:'4"',l:'4"'},{v:'6"',l:'6"'},{v:'8"',l:'8"'},{v:'10"',l:'10"'},{v:'12"',l:'12"'}],
+      rcSize:    [{v:'',l:'—'},{v:'1/2"',l:'1/2"'},{v:'3/4"',l:'3/4"'},{v:'1"',l:'1"'},{v:'1-1/4"',l:'1-1/4"'},{v:'1-1/2"',l:'1-1/2"'},{v:'2"',l:'2"'},{v:'2-1/2"',l:'2-1/2"'},{v:'3"',l:'3"'},{v:'4"',l:'4"'},{v:'6"',l:'6"'},{v:'8"',l:'8"'},{v:'10"',l:'10"'},{v:'12"',l:'12"'}],
+      grade:     [{v:'',l:'— Material —'},{v:'Carbon Steel',l:'Carbon Steel'},{v:'Stainless 304',l:'Stainless 304'},{v:'Stainless 316',l:'Stainless 316'},{v:'Galvanized',l:'Galvanized'},{v:'Aluminum',l:'Aluminum'},{v:'PVC',l:'PVC'},{v:'CPVC',l:'CPVC'}],
+      rcGrade:   [{v:'',l:'—'},{v:'Carbon Steel',l:'Carbon Steel'},{v:'Stainless 304',l:'Stainless 304'},{v:'Stainless 316',l:'Stainless 316'},{v:'Galvanized',l:'Galvanized'},{v:'Aluminum',l:'Aluminum'},{v:'PVC',l:'PVC'},{v:'CPVC',l:'CPVC'}],
+      spec:      [{v:'',l:'— Schedule/Wall —'},{v:'SCH 10',l:'SCH 10'},{v:'SCH 40',l:'SCH 40'},{v:'SCH 80',l:'SCH 80'},{v:'SCH 160',l:'SCH 160'},{v:'XXH',l:'XXH'},{v:'Standard',l:'Standard'},{v:'Extra Heavy',l:'Extra Heavy'}],
+      rcSpec:    [{v:'',l:'—'},{v:'SCH 10',l:'SCH 10'},{v:'SCH 40',l:'SCH 40'},{v:'SCH 80',l:'SCH 80'},{v:'SCH 160',l:'SCH 160'},{v:'XXH',l:'XXH'},{v:'Standard',l:'Standard'},{v:'Extra Heavy',l:'Extra Heavy'}],
+      productType:[{v:'straight',l:'Straight Pipe / Tube'},{v:'spool',l:'Coiled Tube'}]
     }
   }
 
@@ -2991,10 +3106,11 @@ function makeSlot(id, side) {
     } else {
       // Single product — show detail + customer if present
       var custStr = item.customer || '';
-      // Aluminum mode: show alloy + temper; precast: show element type + mix design
+      // Aluminum: alloy+temper; precast: element type+mix design; pipe: size+material
       var slotLine1 = (APP_MODE === 'alum') ? (item.grade || '—') : item.size;
       var slotLine2 = (APP_MODE === 'alum')    ? (item.spec  || '—') :
                       (APP_MODE === 'precast') ? (item.grade || '—') :
+                      (APP_MODE === 'pipe')    ? (item.grade || '—') :
                       (item.length ? formatLength(item.length) : 'Coil');
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+slotLine1+'</div>'+
@@ -3481,6 +3597,8 @@ function buildModalRows(item, isSpool, days) {
   if (item.finish)      rows += mrow('Finish', item.finish);
   if (item.pcWidth)     rows += mrow('Width', item.pcWidth + ' ft');
   if (item.pcThickness) rows += mrow('Thickness', item.pcThickness + ' in');
+  if (item.endFinish)   rows += mrow('End Finish', item.endFinish);
+  if (item.coating)     rows += mrow('Coating', item.coating);
   rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
@@ -3718,6 +3836,10 @@ function openEditModal(type, idx) {
   if (editPcWidthEl) editPcWidthEl.value = item.pcWidth || '';
   var editPcThicknessEl = document.getElementById('edit-pc-thickness');
   if (editPcThicknessEl) editPcThicknessEl.value = item.pcThickness || '';
+  var editEndFinishEl = document.getElementById('edit-endfinish');
+  if (editEndFinishEl) editEndFinishEl.value = item.endFinish || '';
+  var editCoatingEl = document.getElementById('edit-coating');
+  if (editCoatingEl) editCoatingEl.value = item.coating || '';
   document.getElementById('edit-bundles').value = item.bundles || '';
   document.getElementById('edit-heat').value    = item.heat    || '';
   document.getElementById('edit-length-ft').value = lenFt > 0 ? lenFt : '';
@@ -3755,6 +3877,10 @@ function confirmEdit() {
   var newPcWidth = editPcWidthEl2 ? (parseFloat(editPcWidthEl2.value) || 0) : 0;
   var editPcThicknessEl2 = document.getElementById('edit-pc-thickness');
   var newPcThickness = editPcThicknessEl2 ? (parseFloat(editPcThicknessEl2.value) || 0) : 0;
+  var editEndFinishEl2 = document.getElementById('edit-endfinish');
+  var newEndFinish = editEndFinishEl2 ? editEndFinishEl2.value : undefined;
+  var editCoatingEl2 = document.getElementById('edit-coating');
+  var newCoating = editCoatingEl2 ? editCoatingEl2.value : undefined;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -3772,6 +3898,8 @@ function confirmEdit() {
   if (newSpecies !== undefined) item.species = newSpecies;
   if (newFinish  !== undefined) item.finish  = newFinish;
   if (APP_MODE === 'precast') { item.pcWidth = newPcWidth; item.pcThickness = newPcThickness; }
+  if (newEndFinish !== undefined) item.endFinish = newEndFinish;
+  if (newCoating   !== undefined) item.coating   = newCoating;
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -5349,7 +5477,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'') + '|' + (item.endFinish||'') + '|' + (item.coating||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -5802,13 +5930,17 @@ function openSplitFromForm() {
     var spec    = document.getElementById('inp-spec').value;
     var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
-    var _ofSpeciesEl = document.getElementById('inp-species');
-    var _ofFinishEl  = document.getElementById('inp-finish');
+    var _ofSpeciesEl   = document.getElementById('inp-species');
+    var _ofFinishEl    = document.getElementById('inp-finish');
+    var _ofEndFinishEl = document.getElementById('inp-endfinish');
+    var _ofCoatingEl   = document.getElementById('inp-coating');
     _of.item = {
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
-      species: (APP_MODE === 'lumber' && _ofSpeciesEl) ? _ofSpeciesEl.value : '',
-      finish:  (APP_MODE === 'alum'   && _ofFinishEl)  ? _ofFinishEl.value  : '',
+      species:   (APP_MODE === 'lumber' && _ofSpeciesEl)   ? _ofSpeciesEl.value   : '',
+      finish:    (APP_MODE === 'alum'   && _ofFinishEl)    ? _ofFinishEl.value    : '',
+      endFinish: (APP_MODE === 'pipe'   && _ofEndFinishEl) ? _ofEndFinishEl.value : '',
+      coating:   (APP_MODE === 'pipe'   && _ofCoatingEl)   ? _ofCoatingEl.value   : '',
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
@@ -6259,6 +6391,8 @@ function ofClearLogForm() {
   var _inpProf = document.getElementById('inp-profile'); if (_inpProf) _inpProf.value = '';
   var _inpPcW2 = document.getElementById('inp-pc-width'); if (_inpPcW2) _inpPcW2.value = '';
   var _inpPcT2 = document.getElementById('inp-pc-thickness'); if (_inpPcT2) _inpPcT2.value = '';
+  var _inpEF2  = document.getElementById('inp-endfinish');  if (_inpEF2)  _inpEF2.value  = '';
+  var _inpCt2  = document.getElementById('inp-coating');    if (_inpCt2)  _inpCt2.value  = '';
   var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
   var ss = document.getElementById('inp-secondary'); if (ss) ss.checked = false;
   var sb = document.getElementById('suggestion-box'); if (sb) sb.classList.remove('active');
@@ -6315,13 +6449,17 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
         var existing = store[id];
         if (!existing) continue;
         if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
-        var curSpecies = (APP_MODE === 'lumber' && document.getElementById('inp-species')) ? document.getElementById('inp-species').value : '';
-        var curFinish  = (APP_MODE === 'alum'   && document.getElementById('inp-finish'))   ? document.getElementById('inp-finish').value   : '';
+        var curSpecies   = (APP_MODE === 'lumber' && document.getElementById('inp-species'))    ? document.getElementById('inp-species').value    : '';
+        var curFinish    = (APP_MODE === 'alum'   && document.getElementById('inp-finish'))     ? document.getElementById('inp-finish').value     : '';
+        var curEndFinish = (APP_MODE === 'pipe'   && document.getElementById('inp-endfinish'))  ? document.getElementById('inp-endfinish').value  : '';
+        var curCoating   = (APP_MODE === 'pipe'   && document.getElementById('inp-coating'))    ? document.getElementById('inp-coating').value    : '';
         if (existing.size === size && parseFloat(existing.length) === length &&
-            (!grade     || !existing.grade   || existing.grade   === grade) &&
-            (!spec      || !existing.spec    || existing.spec    === spec) &&
-            (!curSpecies|| !existing.species || existing.species === curSpecies) &&
-            (!curFinish || !existing.finish  || existing.finish  === curFinish) &&
+            (!grade        || !existing.grade     || existing.grade     === grade) &&
+            (!spec         || !existing.spec      || existing.spec      === spec) &&
+            (!curSpecies   || !existing.species   || existing.species   === curSpecies) &&
+            (!curFinish    || !existing.finish    || existing.finish    === curFinish) &&
+            (!curEndFinish || !existing.endFinish || existing.endFinish === curEndFinish) &&
+            (!curCoating   || !existing.coating   || existing.coating   === curCoating) &&
             (existing.customer||'') === (customer||'')) {
           pick2 = id;
           var lbl = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
@@ -6795,13 +6933,17 @@ function logRun() {
       var ofNewBdl = parseInt(bundles) || 0;
       if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
         // Build item template and hand off to overflow modal
-        var _ofTplSpeciesEl = document.getElementById('inp-species');
-        var _ofTplFinishEl  = document.getElementById('inp-finish');
+        var _ofTplSpeciesEl   = document.getElementById('inp-species');
+        var _ofTplFinishEl    = document.getElementById('inp-finish');
+        var _ofTplEndFinishEl = document.getElementById('inp-endfinish');
+        var _ofTplCoatingEl   = document.getElementById('inp-coating');
         var ofTemplate = {
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
-          species: (APP_MODE === 'lumber' && _ofTplSpeciesEl) ? _ofTplSpeciesEl.value : '',
-          finish:  (APP_MODE === 'alum'   && _ofTplFinishEl)  ? _ofTplFinishEl.value  : '',
+          species:   (APP_MODE === 'lumber' && _ofTplSpeciesEl)   ? _ofTplSpeciesEl.value   : '',
+          finish:    (APP_MODE === 'alum'   && _ofTplFinishEl)    ? _ofTplFinishEl.value    : '',
+          endFinish: (APP_MODE === 'pipe'   && _ofTplEndFinishEl) ? _ofTplEndFinishEl.value : '',
+          coating:   (APP_MODE === 'pipe'   && _ofTplCoatingEl)   ? _ofTplCoatingEl.value   : '',
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
           customer: document.getElementById('inp-customer').value.trim(),
@@ -6814,16 +6956,20 @@ function logRun() {
   }
 
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
-  var inpSpeciesEl = document.getElementById('inp-species');
-  var inpFinishEl  = document.getElementById('inp-finish');
+  var inpSpeciesEl    = document.getElementById('inp-species');
+  var inpFinishEl     = document.getElementById('inp-finish');
+  var inpEndFinishEl  = document.getElementById('inp-endfinish');
+  var inpCoatingEl    = document.getElementById('inp-coating');
   var item = {
     uid: genUid(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
-    species:     (APP_MODE === 'lumber'   && inpSpeciesEl)     ? inpSpeciesEl.value : '',
-    finish:      (APP_MODE === 'alum'     && inpFinishEl)      ? inpFinishEl.value  : '',
+    species:     (APP_MODE === 'lumber'   && inpSpeciesEl)     ? inpSpeciesEl.value    : '',
+    finish:      (APP_MODE === 'alum'     && inpFinishEl)      ? inpFinishEl.value     : '',
     pcWidth:     (APP_MODE === 'precast'  && inpPcWidthEl)     ? (parseFloat(inpPcWidthEl.value) || 0)     : 0,
     pcThickness: (APP_MODE === 'precast'  && inpPcThicknessEl) ? (parseFloat(inpPcThicknessEl.value) || 0) : 0,
+    endFinish:   (APP_MODE === 'pipe'     && inpEndFinishEl)   ? inpEndFinishEl.value  : '',
+    coating:     (APP_MODE === 'pipe'     && inpCoatingEl)     ? inpCoatingEl.value    : '',
     bundles: parseInt(bundles),
     weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
@@ -6851,6 +6997,8 @@ function logRun() {
       (!existing.finish       || !item.finish       || existing.finish       === item.finish) &&
       (!existing.pcWidth      || !item.pcWidth      || existing.pcWidth      === item.pcWidth) &&
       (!existing.pcThickness  || !item.pcThickness  || existing.pcThickness  === item.pcThickness) &&
+      (!existing.endFinish    || !item.endFinish    || existing.endFinish    === item.endFinish) &&
+      (!existing.coating      || !item.coating      || existing.coating      === item.coating) &&
       (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
@@ -6885,6 +7033,8 @@ function logRun() {
   var _inpPrf = document.getElementById('inp-profile'); if (_inpPrf) _inpPrf.value='';
   var _inpPcW = document.getElementById('inp-pc-width'); if (_inpPcW) _inpPcW.value='';
   var _inpPcT = document.getElementById('inp-pc-thickness'); if (_inpPcT) _inpPcT.value='';
+  var _inpEF = document.getElementById('inp-endfinish'); if (_inpEF) _inpEF.value='';
+  var _inpCt = document.getElementById('inp-coating'); if (_inpCt) _inpCt.value='';
   document.getElementById('inp-location').value='';
   document.getElementById('inp-spool-weight').value='';
   document.getElementById('inp-reserve').checked = false;
@@ -7137,7 +7287,9 @@ function renderInventory() {
       item.spec  || '',
       (APP_MODE === 'lumber'  && item.species)                          ? item.species : '',
       (APP_MODE === 'alum'    && item.finish)                           ? item.finish  : '',
-      (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)      ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : ''
+      (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)      ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : '',
+      (APP_MODE === 'pipe'    && item.endFinish)                        ? item.endFinish : '',
+      (APP_MODE === 'pipe'    && item.coating && item.coating !== 'None') ? item.coating : ''
     ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
