@@ -1140,6 +1140,24 @@
             Active key: <span id="tenant-key-display" style="color:var(--accent);letter-spacing:2px;font-weight:600"></span>
           </div>
           <button class="btn" style="margin-top:0;background:var(--steel-light);border:1px solid var(--border);color:var(--text-dim);font-size:12px;padding:8px 14px;letter-spacing:1px" onclick="switchCompany()">🔄 Switch Company</button>
+
+          <!-- Change PIN -->
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🔒 Change PIN</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <input id="change-pin-current" type="password" inputmode="numeric" maxlength="8" placeholder="Current PIN"
+                style="background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:4px;outline:none;-webkit-text-security:disc">
+              <input id="change-pin-new" type="password" inputmode="numeric" maxlength="4" placeholder="New PIN (4 digits)"
+                style="background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:4px;outline:none;-webkit-text-security:disc">
+              <input id="change-pin-confirm" type="password" inputmode="numeric" maxlength="4" placeholder="Confirm new PIN"
+                style="background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;letter-spacing:4px;outline:none;-webkit-text-security:disc">
+              <button onclick="changeTenantPin()"
+                style="background:var(--steel-light);border:1px solid var(--accent);color:var(--accent);padding:9px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;cursor:pointer">
+                Update PIN
+              </button>
+              <div id="change-pin-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:16px;text-align:center"></div>
+            </div>
+          </div>
         </div>
 
         <!-- Backup / Restore -->
@@ -2484,6 +2502,13 @@ var MODES = {
 var TENANT_MODES = {
   // 'EXAMPLE-KEY': 'rebar',
   'NUCOR-SEDALIA-01': 'rebar',
+};
+
+// Default PINs per tenant — used only if no custom PIN is saved in Firebase.
+// Update these when provisioning new tenants.
+var TENANT_PINS = {
+  'NUCOR-SEDALIA-01': '1234',
+  'ADMIN': '0000',
 };
 
 // Active mode ID — loaded from localStorage, defaults to 'rebar'
@@ -8355,17 +8380,21 @@ function clearSavedData() {
 function saveAndRender() { saveData(); renderAll(); renderInventory(); }
 
 // ─── PIN LOCK ────────────────────────────────────────────────────
+// The active PIN for the current tenant session.
+// Set by _showPinOrApp() after checking Firebase, falls back to TENANT_PINS default.
+var _resolvedTenantPin = '';
+
 function pinUnlock() {
   var entered = document.getElementById('pin-input').value;
   var inp = document.getElementById('pin-input');
   var err = document.getElementById('pin-error');
-  if (entered === ADMIN_PIN) {
+  if (_resolvedTenantPin && entered === _resolvedTenantPin) {
     sessionStorage.setItem('rt_unlocked', '1');
     document.getElementById('pin-screen').classList.add('hidden');
     document.documentElement.style.visibility = '';
     inp.classList.remove('error');
     err.textContent = '';
-    document.getElementById('pin-input').value = '';
+    inp.value = '';
   } else {
     inp.classList.add('error');
     err.textContent = 'Incorrect PIN';
@@ -8374,80 +8403,113 @@ function pinUnlock() {
   }
 }
 
-// ─── INIT ────────────────────────────────────────────────────────
-document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
-
-// Apply saved mode on load using the framework (labels + body classes)
-document.body.setAttribute('data-mode', APP_MODE);
-(MODES[APP_MODE] ? MODES[APP_MODE].bodyClasses : []).forEach(function(c) {
-  document.body.classList.add(c);
-});
-// Apply tenant mode lock if key is already in localStorage (returning user)
-// This overrides the saved rt_mode with the locked mode for this tenant.
-applyTenantModeLock();
-applyModeLabels();
-rebuildDropdowns();
-
-// Populate tenant key display in settings
-(function() {
-  var td = document.getElementById('tenant-key-display');
-  if (td && tenantKey) td.textContent = tenantKey;
-})();
-
-// If no tenant key, show the overlay and wait — do not proceed to load data yet
-if (!tenantKey) {
-  document.getElementById('tenant-screen').classList.remove('hidden');
-  document.documentElement.style.visibility = '';
-  setTimeout(function() { document.getElementById('tenant-input').focus(); }, 50);
-  // Override tenantContinue to proceed with init after key is set
-  var _origTenantContinue = tenantContinue;
-  tenantContinue = function() {
-    _origTenantContinue();
-    if (!tenantKey) return; // validation failed
-    // Apply mode lock for this tenant now that key is known, then re-render labels
-    applyTenantModeLock();
-    applyModeLabels();
-    rebuildDropdowns();
-    // Now run the rest of init
-    buildStore();
-    initFirebase();
-    loadData(function(loaded) {
-      populateLocationDropdown('straight');
-      renderAll();
-      renderInventory();
-      renderRunCycle();
-      updateRcBadge();
-      if (sessionStorage.getItem('rt_unlocked') === '1') {
-        document.getElementById('pin-screen').classList.add('hidden');
-        document.documentElement.style.visibility = '';
-      } else {
-        document.documentElement.style.visibility = '';
-        setTimeout(function() { document.getElementById('pin-input').focus(); }, 50);
-      }
-    });
+// Fetch the tenant's PIN from Firebase (custom) or fall back to TENANT_PINS default,
+// then show the PIN screen (or skip it if already unlocked this session).
+function _showPinOrApp() {
+  if (sessionStorage.getItem('rt_unlocked') === '1') {
+    document.getElementById('pin-screen').classList.add('hidden');
+    document.documentElement.style.visibility = '';
+    return;
+  }
+  // Fetch custom PIN — stored at tenants/{key}/settings/pin
+  var pinRef = db ? db.ref('tenants/' + tenantKey + '/settings/pin') : null;
+  var proceed = function(pin) {
+    _resolvedTenantPin = pin || TENANT_PINS[tenantKey] || '1234';
+    document.documentElement.style.visibility = '';
+    setTimeout(function() {
+      var pi = document.getElementById('pin-input');
+      if (pi) pi.focus();
+    }, 50);
   };
-} else {
+  if (pinRef) {
+    pinRef.once('value').then(function(snap) {
+      proceed(snap.val());
+    }).catch(function() {
+      proceed(null);
+    });
+  } else {
+    proceed(null);
+  }
+}
+
+// Runs the full init sequence after tenantKey has been resolved.
+// Called by both the normal tenant-key flow and the admin backdoor flow.
+function _initAfterTenantKey() {
+  applyTenantModeLock();
+  applyModeLabels();
+  rebuildDropdowns();
+  var td = document.getElementById('tenant-key-display');
+  if (td) td.textContent = tenantKey;
   buildStore();
   initFirebase();
   loadData(function(loaded) {
-    if (!loaded) {
-      // No saved data — empty warehouse ready to use
-    }
     populateLocationDropdown('straight');
     renderAll();
     renderInventory();
     renderRunCycle();
     updateRcBadge();
-
-    // Show app — either already unlocked this session or show PIN screen
-    if (sessionStorage.getItem('rt_unlocked') === '1') {
-      document.getElementById('pin-screen').classList.add('hidden');
-      document.documentElement.style.visibility = '';
-    } else {
-      document.documentElement.style.visibility = '';
-      setTimeout(function() { document.getElementById('pin-input').focus(); }, 50);
-    }
+    _showPinOrApp();
   });
+}
+
+// Change PIN — validates current PIN, enforces 4-digit new PIN, saves to Firebase.
+function changeTenantPin() {
+  var cur    = document.getElementById('change-pin-current').value;
+  var nw     = document.getElementById('change-pin-new').value;
+  var cfm    = document.getElementById('change-pin-confirm').value;
+  var status = document.getElementById('change-pin-status');
+  function setStatus(msg, ok) {
+    status.textContent = msg;
+    status.style.color = ok ? 'var(--safe)' : 'var(--hot)';
+  }
+  if (cur !== _resolvedTenantPin) { setStatus('Current PIN is incorrect.', false); return; }
+  if (!/^\d{4}$/.test(nw))        { setStatus('New PIN must be exactly 4 digits.', false); return; }
+  if (nw !== cfm)                  { setStatus('PINs do not match.', false); return; }
+  if (!db) { setStatus('Not connected to Firebase.', false); return; }
+  db.ref('tenants/' + tenantKey + '/settings/pin').set(nw).then(function() {
+    _resolvedTenantPin = nw;
+    ['change-pin-current','change-pin-new','change-pin-confirm'].forEach(function(id) {
+      document.getElementById(id).value = '';
+    });
+    setStatus('PIN updated successfully', true);
+    setTimeout(function() { status.textContent = ''; }, 3000);
+  }).catch(function(e) {
+    setStatus('Save failed: ' + e.message, false);
+  });
+}
+
+// ─── INIT ────────────────────────────────────────────────────────
+document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+// Apply initial mode body classes (may be overridden by applyTenantModeLock inside _initAfterTenantKey)
+document.body.setAttribute('data-mode', APP_MODE);
+(MODES[APP_MODE] ? MODES[APP_MODE].bodyClasses : []).forEach(function(c) {
+  document.body.classList.add(c);
+});
+
+// If no tenant key — show overlay and wait. Patch both entry points so whichever
+// succeeds (normal key entry or admin backdoor) triggers _initAfterTenantKey().
+if (!tenantKey) {
+  document.getElementById('tenant-screen').classList.remove('hidden');
+  document.documentElement.style.visibility = '';
+  setTimeout(function() { document.getElementById('tenant-input').focus(); }, 50);
+
+  var _origTenantContinue = tenantContinue;
+  tenantContinue = function() {
+    _origTenantContinue();
+    if (!tenantKey) return; // validation failed — stay on overlay
+    _initAfterTenantKey();
+  };
+
+  var _origAdminLogin = adminLogin;
+  adminLogin = function() {
+    _origAdminLogin();
+    if (!tenantKey) return; // wrong password — stay on overlay
+    _initAfterTenantKey();
+  };
+} else {
+  // Returning user — tenant key already in localStorage
+  _initAfterTenantKey();
 }
 
 function seedWarehouse() {
