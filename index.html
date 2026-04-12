@@ -2554,6 +2554,8 @@ var MODES = {
 var TENANT_MODES = {
   // 'EXAMPLE-KEY': 'rebar',
   'NUCOR-SEDALIA-01': 'rebar',
+  // ADMIN has no locked mode — can switch freely
+  'ADMIN': null,
 };
 
 // Default PINs per tenant — used only if no custom PIN is saved in Firebase.
@@ -2562,6 +2564,10 @@ var TENANT_PINS = {
   'NUCOR-SEDALIA-01': '1234',
   'ADMIN': '0000',
 };
+
+// Master list of accepted tenant keys — derived from TENANT_MODES so there is
+// only one place to add new customers. Any key not in this list is rejected.
+var VALID_KEYS = Object.keys(TENANT_MODES);
 
 // Active mode ID — loaded from localStorage, defaults to 'rebar'
 // If the tenant has a locked mode, that overrides localStorage.
@@ -8044,7 +8050,15 @@ function offsetDate(d){var dt=new Date();dt.setDate(dt.getDate()+d);return dt.to
 function el(tag,cls){var e=document.createElement(tag);if(cls)e.className=cls;return e;}
 
 // ─── TENANT KEY ──────────────────────────────────────────────────
-var tenantKey = localStorage.getItem('rebartracker_tenant_key') || '';
+var tenantKey = (function() {
+  var stored = localStorage.getItem('rebartracker_tenant_key') || '';
+  // Reject keys that are no longer in the valid list (e.g. revoked tenants)
+  if (stored && VALID_KEYS.indexOf(stored) === -1) {
+    localStorage.removeItem('rebartracker_tenant_key');
+    return '';
+  }
+  return stored;
+}());
 
 var _adminClickCount = 0;
 var _adminClickTimer = null;
@@ -8096,6 +8110,11 @@ function tenantContinue() {
   }
   if (!/^[A-Z0-9-]+$/.test(val)) {
     err.textContent = 'Only letters, numbers, and hyphens allowed.';
+    inp.focus();
+    return;
+  }
+  if (VALID_KEYS.indexOf(val) === -1) {
+    err.textContent = 'Invalid access key. Please contact your administrator.';
     inp.focus();
     return;
   }
