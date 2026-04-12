@@ -533,6 +533,14 @@
   /* Field group: species — lumber yard mode only */
   .mf-species-field { display: none; }
   body[data-mode="lumber"] .mf-species-field { display: block; }
+  /* Field group: profile text input — aluminum extrusion mode only */
+  .mf-profile-field { display: none; }
+  body[data-mode="alum"] .mf-profile-field { display: block; }
+  /* Size select group hidden in aluminum mode (profile replaces it) */
+  body[data-mode="alum"] .alum-size-hide { display: none; }
+  /* Finish field — aluminum extrusion mode only */
+  .mf-finish-field { display: none; }
+  body[data-mode="alum"] .mf-finish-field { display: block; }
 
   /* Mode selector button in header */
   .mode-select-btn {
@@ -795,13 +803,18 @@
           </select>
         </div>
         <div class="form-row">
-          <div class="form-group">
+          <div class="form-group alum-size-hide">
             <label data-mode-label="szLbl">Bar Size</label>
             <select id="inp-size" onchange="calcBundleWeight()">
               <option value=""># Size</option>
               <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
               <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
             </select>
+          </div>
+          <!-- Aluminum extrusion mode — profile/shape text field -->
+          <div class="form-group mf-profile-field">
+            <label data-mode-label="szLbl">Profile / Shape</label>
+            <input type="text" id="inp-profile" placeholder="Shape name or part #" oninput="calcBundleWeight()" autocomplete="off">
           </div>
           <div class="form-group" id="length-group">
             <label>Length</label>
@@ -859,6 +872,20 @@
               <option value="Hem-Fir">Hem-Fir</option>
               <option value="Cedar">Cedar</option>
               <option value="Redwood">Redwood</option>
+            </select>
+          </div>
+        </div>
+        <!-- Aluminum extrusion mode — finish field -->
+        <div class="form-row mf-finish-field">
+          <div class="form-group" style="width:100%">
+            <label>Finish</label>
+            <select id="inp-finish">
+              <option value="">— Finish —</option>
+              <option value="Mill">Mill</option>
+              <option value="Anodized">Anodized</option>
+              <option value="Clear Coat">Clear Coat</option>
+              <option value="Painted">Painted</option>
+              <option value="Powder Coated">Powder Coated</option>
             </select>
           </div>
         </div>
@@ -1133,13 +1160,18 @@
         <div style="margin-bottom:16px;padding:12px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px">
           <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">➕ Add Product to Run Cycle</div>
           <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
-            <div>
+            <div class="alum-size-hide">
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-mode-label="szLbl">Bar Size</div>
               <select id="rc-size" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
                 <option value="">—</option>
                 <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
                 <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
               </select>
+            </div>
+            <!-- Aluminum extrusion mode — profile/shape text field -->
+            <div class="mf-profile-field">
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-mode-label="szLbl">Profile / Shape</div>
+              <input type="text" id="rc-profile" placeholder="Shape or part #" autocomplete="off" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
             </div>
             <div>
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Length (ft)</div>
@@ -1254,13 +1286,18 @@
     <div class="modal-title" style="color:var(--accent)">ADD PRODUCT TO SLOT</div>
     <div id="secondary-slot-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
     <div class="form-row">
-      <div class="form-group">
+      <div class="form-group alum-size-hide">
         <label data-mode-label="szLbl">Bar Size</label>
         <select id="sec-size">
           <option value=""># Size</option>
           <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
           <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
         </select>
+      </div>
+      <!-- Aluminum extrusion mode — profile/shape text field -->
+      <div class="form-group mf-profile-field">
+        <label data-mode-label="szLbl">Profile / Shape</label>
+        <input type="text" id="sec-profile" placeholder="Shape name or part #" autocomplete="off">
       </div>
       <div class="form-group">
         <label>Length</label>
@@ -1310,6 +1347,20 @@
         </select>
       </div>
     </div>
+    <!-- Aluminum extrusion mode — finish field -->
+    <div class="form-row mf-finish-field">
+      <div class="form-group" style="width:100%">
+        <label>Finish</label>
+        <select id="sec-finish">
+          <option value="">— Finish —</option>
+          <option value="Mill">Mill</option>
+          <option value="Anodized">Anodized</option>
+          <option value="Clear Coat">Clear Coat</option>
+          <option value="Painted">Painted</option>
+          <option value="Powder Coated">Powder Coated</option>
+        </select>
+      </div>
+    </div>
     <div class="form-group">
       <label data-mode-label="bundlesCap">Bundles</label>
       <input type="number" id="sec-bundles" placeholder="qty" min="1" inputmode="numeric">
@@ -1338,13 +1389,18 @@
     <div class="modal-title" style="color:var(--accent)">EDIT PRODUCT</div>
     <div id="edit-slot-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
     <div class="form-row">
-      <div class="form-group">
+      <div class="form-group alum-size-hide">
         <label data-mode-label="szLbl">Bar Size</label>
         <select id="edit-size">
           <option value=""># Size</option>
           <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
           <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
         </select>
+      </div>
+      <!-- Aluminum extrusion mode — profile/shape text field -->
+      <div class="form-group mf-profile-field">
+        <label data-mode-label="szLbl">Profile / Shape</label>
+        <input type="text" id="edit-profile" placeholder="Shape name or part #" autocomplete="off">
       </div>
       <div class="form-group">
         <label>Length</label>
@@ -1391,6 +1447,20 @@
           <option value="Hem-Fir">Hem-Fir</option>
           <option value="Cedar">Cedar</option>
           <option value="Redwood">Redwood</option>
+        </select>
+      </div>
+    </div>
+    <!-- Aluminum extrusion mode — finish field -->
+    <div class="form-row mf-finish-field">
+      <div class="form-group" style="width:100%">
+        <label>Finish</label>
+        <select id="edit-finish">
+          <option value="">— Finish —</option>
+          <option value="Mill">Mill</option>
+          <option value="Anodized">Anodized</option>
+          <option value="Clear Coat">Clear Coat</option>
+          <option value="Painted">Painted</option>
+          <option value="Powder Coated">Powder Coated</option>
         </select>
       </div>
     </div>
@@ -1872,6 +1942,58 @@ var MODES = {
     }
   }
 
+  ,
+
+  // ── ALUMINUM EXTRUSION ───────────────────────────────────────────
+  alum: {
+    id: 'alum',
+    name: 'Aluminum Extrusion',
+    description: 'Aluminum extrusion inventory — rack locations, profiles, alloy, temper and finish.',
+    bodyClasses: [],
+    labels: {
+      szLbl:        'Profile / Shape',
+      gradeLbl:     'Alloy',
+      specLbl:      'Temper',
+      bundlesCap:   'Bundles',
+      bundlesCoils: 'Bundles',
+      bdgSfx:       'b',
+      bundles:      'bundles',
+      bundle:       'bundle',
+      bdlAbbr:      'bdl',
+      bdlCap:       'Bundle',
+      piecesPerBdl: 'Pieces per Bundle',
+      pcPerBdl:     'Pc / Bundle',
+      bdlWtCalc:    'BUNDLE WEIGHT (LBS) — calculates pieces',
+      bdlWtShort:   'Bundle Wt (lbs)',
+      prodType:     'Extrusion',
+      prodSpool:    'Coiled Extrusion',
+      wtPerBdl:     'Weight/Bundle',
+      stan:         'Rack Location',
+      stanShort:    'Rack',
+      multiStan:    'Multi-Rack Placement',
+      nextStanSide: 'Next rack side',
+      bdlsHere:     'Bundles to place here',
+      addToStan:    '+ ADD TO RACK',
+      totalBundles: 'Total bundles',
+      secStackDesc: 'Adds on top of existing product in the chosen rack side',
+      gradePrefix:  '',
+      gradeAlert:   'Please select an Alloy.',
+      specAlert:    'Please select a Temper.',
+      sizeAlert:    'Please fill in Profile/Shape and Bundles.',
+      logoSub:      'ALUMINUM EXTRUSION'
+    },
+    dropdowns: {
+      size:      [{v:'',l:'— Profile —'}],
+      areaSize:  [{v:'',l:'— Profile —'}],
+      rcSize:    [{v:'',l:'—'}],
+      grade:     [{v:'',l:'— Alloy —'},{v:'6061',l:'6061'},{v:'6063',l:'6063'},{v:'6005',l:'6005'},{v:'6082',l:'6082'},{v:'7075',l:'7075'},{v:'2024',l:'2024'}],
+      rcGrade:   [{v:'',l:'—'},{v:'6061',l:'6061'},{v:'6063',l:'6063'},{v:'6005',l:'6005'},{v:'6082',l:'6082'},{v:'7075',l:'7075'},{v:'2024',l:'2024'}],
+      spec:      [{v:'',l:'— Temper —'},{v:'T1',l:'T1'},{v:'T4',l:'T4'},{v:'T5',l:'T5'},{v:'T6',l:'T6'},{v:'T52',l:'T52'},{v:'T6511',l:'T6511'}],
+      rcSpec:    [{v:'',l:'—'},{v:'T1',l:'T1'},{v:'T4',l:'T4'},{v:'T5',l:'T5'},{v:'T6',l:'T6'},{v:'T52',l:'T52'},{v:'T6511',l:'T6511'}],
+      productType:[{v:'straight',l:'Extrusion'},{v:'spool',l:'Coiled Extrusion'}]
+    }
+  }
+
   // ── ADD FUTURE MODES HERE ────────────────────────────────────────
   // Copy the structure above. No other code changes are needed.
 
@@ -2256,6 +2378,17 @@ function calcPiecesFromWeight() {
   calcBundleWeight();
 }
 
+// Returns the "size" value for any form prefix, handling aluminum profile text input
+// prefix: 'inp' (main form), 'sec' (secondary), 'edit' (edit modal), 'rc' (run cycle)
+function getFormSize(prefix) {
+  if (APP_MODE === 'alum') {
+    var profileEl = document.getElementById((prefix || 'inp') + '-profile');
+    return profileEl ? profileEl.value.trim() : '';
+  }
+  var sizeEl = document.getElementById((prefix || 'inp') + '-size');
+  return sizeEl ? sizeEl.value : '';
+}
+
 // Parses "2x4", "4x6", etc. → {t: thickness, w: width} for board foot calc
 function parseLumberDims(size) {
   var m = size && size.match(/^(\d+)x(\d+)$/i);
@@ -2269,7 +2402,7 @@ function calcBundleWeight() {
   if (!calcEl) return;
   if (type !== 'straight') { calcEl.style.display = 'none'; return; }
 
-  var size    = document.getElementById('inp-size').value;
+  var size    = getFormSize('inp');
   var lenNum  = getLengthDecimal();
   var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
@@ -2747,9 +2880,12 @@ function makeSlot(id, side) {
     } else {
       // Single product — show detail + customer if present
       var custStr = item.customer || '';
+      // Aluminum mode: show alloy + temper instead of profile name in box
+      var slotLine1 = (APP_MODE === 'alum') ? (item.grade || '—') : item.size;
+      var slotLine2 = (APP_MODE === 'alum') ? (item.spec  || '—') : (item.length ? formatLength(item.length) : 'Coil');
       div.innerHTML =
-        '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+item.size+'</div>'+
-        '<div class="slot-len">'+(item.length ? formatLength(item.length) : 'Coil')+'</div>'+
+        '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+slotLine1+'</div>'+
+        '<div class="slot-len">'+slotLine2+'</div>'+
         '<div class="slot-bdl">'+item.bundles+LBL('bdgSfx')+'</div>'+
         (days!==null?'<div class="slot-dot'+(urgent?' urgent':'')+'"></div>':'')+
         (custStr?'<div class="slot-customer">'+escHtml(custStr)+'</div>':'');
@@ -3226,9 +3362,10 @@ function buildModalRows(item, isSpool, days) {
   if (item.side) rows += mrow('Side', item.side + '-Side');
   rows += mrow(LBL('szLbl'), item.size);
   rows += mrow('Type', isSpool ? LBL('prodSpool') : LBL('prodType'));
-  if (item.grade)   rows += mrow('Grade', LBL('gradePrefix') + item.grade);
+  if (item.grade)   rows += mrow(LBL('gradeLbl'), LBL('gradePrefix') + item.grade);
   if (item.spec)    rows += mrow(LBL('specLbl'), item.spec);
   if (item.species) rows += mrow('Species', item.species);
+  if (item.finish)  rows += mrow('Finish', item.finish);
   rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
@@ -3458,6 +3595,10 @@ function openEditModal(type, idx) {
   document.getElementById('edit-spec').value    = item.spec    || '';
   var editSpeciesEl = document.getElementById('edit-species');
   if (editSpeciesEl) editSpeciesEl.value = item.species || '';
+  var editFinishEl = document.getElementById('edit-finish');
+  if (editFinishEl) editFinishEl.value = item.finish || '';
+  var editProfileEl = document.getElementById('edit-profile');
+  if (editProfileEl) editProfileEl.value = item.size || '';
   document.getElementById('edit-bundles').value = item.bundles || '';
   document.getElementById('edit-heat').value    = item.heat    || '';
   document.getElementById('edit-length-ft').value = lenFt > 0 ? lenFt : '';
@@ -3487,6 +3628,10 @@ function confirmEdit() {
   var newSpec    = document.getElementById('edit-spec').value;
   var editSpeciesEl2 = document.getElementById('edit-species');
   var newSpecies = editSpeciesEl2 ? editSpeciesEl2.value : undefined;
+  var editFinishEl2 = document.getElementById('edit-finish');
+  var newFinish  = editFinishEl2 ? editFinishEl2.value : undefined;
+  var editProfileEl2 = document.getElementById('edit-profile');
+  var newProfileSize = (APP_MODE === 'alum' && editProfileEl2) ? editProfileEl2.value.trim() : undefined;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -3497,10 +3642,12 @@ function confirmEdit() {
   var lenFieldsTouched = ftRaw !== '' || inRaw !== ''; // user explicitly filled or cleared fields
 
   // Apply changes
-  if (newSize)    item.size    = newSize;
+  if (newProfileSize) item.size = newProfileSize; // aluminum: profile text overrides size
+  else if (newSize)   item.size = newSize;
   if (newGrade   !== undefined) item.grade   = newGrade;
   if (newSpec    !== undefined) item.spec    = newSpec;
   if (newSpecies !== undefined) item.species = newSpecies;
+  if (newFinish  !== undefined) item.finish  = newFinish;
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -3567,7 +3714,7 @@ function handleSecondaryOverlayClick(e) {
 
 function confirmAddSecondary() {
   if (!modalLoc) return;
-  var size = document.getElementById('sec-size').value;
+  var size = getFormSize('sec');
   var ftVal = parseFloat(document.getElementById('sec-length-ft').value) || 0;
   var inVal = parseFloat(document.getElementById('sec-length-in').value) || 0;
   var lenDecimal = ftVal + (inVal / 12);
@@ -3577,6 +3724,8 @@ function confirmAddSecondary() {
   var secSpec    = document.getElementById('sec-spec').value;
   var secSpeciesEl = document.getElementById('sec-species');
   var secSpecies = secSpeciesEl ? secSpeciesEl.value : '';
+  var secFinishEl = document.getElementById('sec-finish');
+  var secFinish  = secFinishEl ? secFinishEl.value : '';
   if (!secGrade) { alert(LBL('gradeAlert')); return; }
   if (!secSpec)  { alert(LBL('specAlert')); return; }
 
@@ -3603,7 +3752,7 @@ function confirmAddSecondary() {
   var newItem = {
     uid: genUid(),
     size: size, length: lenDecimal ? String(lenDecimal) : '', type: 'straight',
-    grade: secGrade, spec: secSpec, species: secSpecies,
+    grade: secGrade, spec: secSpec, species: secSpecies, finish: secFinish,
     bundles: bundles,
     weightPerBundleTons: secWtPerBdl,
     weightTons: secWtPerBdl * bundles,
@@ -3618,6 +3767,8 @@ function confirmAddSecondary() {
   document.getElementById('sec-grade').value = '';
   document.getElementById('sec-spec').value = '';
   var _secSp = document.getElementById('sec-species'); if (_secSp) _secSp.value = '';
+  var _secFin = document.getElementById('sec-finish'); if (_secFin) _secFin.value = '';
+  var _secProf = document.getElementById('sec-profile'); if (_secProf) _secProf.value = '';
 
   closeSecondaryModal();
   renderAll();
@@ -3825,9 +3976,10 @@ function openTransferModal() {
           var tfGradeOk   = !existing.grade   || !item.grade   || existing.grade   === item.grade;
           var tfSpecOk    = !existing.spec    || !item.spec    || existing.spec    === item.spec;
           var tfSpeciesOk = !existing.species || !item.species || existing.species === item.species;
+          var tfFinishOk  = !existing.finish  || !item.finish  || existing.finish  === item.finish;
           var tfCustOk    = (existing.customer||'') === (item.customer||'');
           if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-              tfGradeOk && tfSpecOk && tfSpeciesOk && tfCustOk) {
+              tfGradeOk && tfSpecOk && tfSpeciesOk && tfFinishOk && tfCustOk) {
             // Same product (size + length + compatible grade/spec) — allow merge
             opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
             opt.style.fontWeight = 'bold';
@@ -5073,7 +5225,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -5265,6 +5417,7 @@ function runOptimizer() {
               (!rcItem.grade    || !existing.grade    || existing.grade    === rcItem.grade) &&
               (!rcItem.spec     || !existing.spec     || existing.spec     === rcItem.spec) &&
               (!rcItem.species  || !existing.species  || existing.species  === rcItem.species) &&
+              (!rcItem.finish   || !existing.finish   || existing.finish   === rcItem.finish) &&
               (existing.customer||'') === (rcItem.customer||'')) {
             hasSlot = true;
           }
@@ -5519,17 +5672,19 @@ function ofSetMode(mode) {
 // Opens the split modal directly from the log run form — always opens regardless of form state
 function openSplitFromForm() {
   try {
-    var size    = document.getElementById('inp-size').value;
+    var size    = getFormSize('inp');
     var lenNum  = getLengthDecimal();
     var grade   = document.getElementById('inp-grade').value;
     var spec    = document.getElementById('inp-spec').value;
     var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
     var _ofSpeciesEl = document.getElementById('inp-species');
+    var _ofFinishEl  = document.getElementById('inp-finish');
     _of.item = {
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
       species: (APP_MODE === 'lumber' && _ofSpeciesEl) ? _ofSpeciesEl.value : '',
+      finish:  (APP_MODE === 'alum'   && _ofFinishEl)  ? _ofFinishEl.value  : '',
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
@@ -5974,9 +6129,10 @@ function ofClearLogForm() {
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
   var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
   clearLengthInputs();
-  ['inp-size', 'inp-grade', 'inp-spec', 'inp-species', 'inp-location'].forEach(function(id) {
+  ['inp-size', 'inp-grade', 'inp-spec', 'inp-species', 'inp-location', 'inp-finish'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
+  var _inpProf = document.getElementById('inp-profile'); if (_inpProf) _inpProf.value = '';
   var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
   var ss = document.getElementById('inp-secondary'); if (ss) ss.checked = false;
   var sb = document.getElementById('suggestion-box'); if (sb) sb.classList.remove('active');
@@ -6034,10 +6190,12 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
         if (!existing) continue;
         if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
         var curSpecies = (APP_MODE === 'lumber' && document.getElementById('inp-species')) ? document.getElementById('inp-species').value : '';
+        var curFinish  = (APP_MODE === 'alum'   && document.getElementById('inp-finish'))   ? document.getElementById('inp-finish').value   : '';
         if (existing.size === size && parseFloat(existing.length) === length &&
-            (!grade || !existing.grade || existing.grade === grade) &&
-            (!spec  || !existing.spec  || existing.spec  === spec) &&
-            (!curSpecies || !existing.species || existing.species === curSpecies) &&
+            (!grade     || !existing.grade   || existing.grade   === grade) &&
+            (!spec      || !existing.spec    || existing.spec    === spec) &&
+            (!curSpecies|| !existing.species || existing.species === curSpecies) &&
+            (!curFinish || !existing.finish  || existing.finish  === curFinish) &&
             (existing.customer||'') === (customer||'')) {
           pick2 = id;
           var lbl = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
@@ -6096,7 +6254,7 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
 
 function suggestLocation() {
   var type = document.getElementById('inp-type').value;
-  var size = document.getElementById('inp-size').value;
+  var size = getFormSize('inp');
   var length = getLengthDecimal();
   var grade = document.getElementById('inp-grade').value;
   var spec = document.getElementById('inp-spec').value;
@@ -6173,7 +6331,7 @@ function rcOnWeightInput() {
 }
 
 function rcAddItem() {
-  var size    = document.getElementById('rc-size').value;
+  var size    = getFormSize('rc');
   var length  = parseFloat(document.getElementById('rc-length').value) || 0;
   var grade   = document.getElementById('rc-grade').value;
   var spec    = document.getElementById('rc-spec').value;
@@ -6199,7 +6357,8 @@ function rcAddItem() {
   runCycle.push(item);
 
   // Clear form
-  ['rc-size','rc-grade','rc-spec'].forEach(function(id){ document.getElementById(id).value = ''; });
+  ['rc-size','rc-grade','rc-spec'].forEach(function(id){ var el=document.getElementById(id); if(el) el.value = ''; });
+  var rcProf = document.getElementById('rc-profile'); if (rcProf) rcProf.value = '';
   ['rc-length','rc-bundles','rc-pieces','rc-weight'].forEach(function(id){ document.getElementById(id).value = ''; });
 
   renderRunCycle();
@@ -6316,7 +6475,7 @@ function renderRunCycle() {
 function logRun() {
   var locVal = document.getElementById('inp-location').value;
   var type = document.getElementById('inp-type').value;
-  var size = document.getElementById('inp-size').value;
+  var size = getFormSize('inp');
   var length = getLengthDisplay(); // display string e.g. "20'6\""
   var lenNum = getLengthDecimal(); // decimal feet e.g. 20.5
   var bundles = document.getElementById('inp-bundles').value;
@@ -6498,10 +6657,12 @@ function logRun() {
       if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
         // Build item template and hand off to overflow modal
         var _ofTplSpeciesEl = document.getElementById('inp-species');
+        var _ofTplFinishEl  = document.getElementById('inp-finish');
         var ofTemplate = {
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
           species: (APP_MODE === 'lumber' && _ofTplSpeciesEl) ? _ofTplSpeciesEl.value : '',
+          finish:  (APP_MODE === 'alum'   && _ofTplFinishEl)  ? _ofTplFinishEl.value  : '',
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
           customer: document.getElementById('inp-customer').value.trim(),
@@ -6515,11 +6676,13 @@ function logRun() {
 
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
   var inpSpeciesEl = document.getElementById('inp-species');
+  var inpFinishEl  = document.getElementById('inp-finish');
   var item = {
     uid: genUid(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
     species: (APP_MODE === 'lumber' && inpSpeciesEl) ? inpSpeciesEl.value : '',
+    finish:  (APP_MODE === 'alum'   && inpFinishEl)  ? inpFinishEl.value  : '',
     bundles: parseInt(bundles),
     weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
@@ -6544,6 +6707,7 @@ function logRun() {
       (!existing.grade    || !item.grade    || existing.grade    === item.grade) &&
       (!existing.spec     || !item.spec     || existing.spec     === item.spec) &&
       (!existing.species  || !item.species  || existing.species  === item.species) &&
+      (!existing.finish   || !item.finish   || existing.finish   === item.finish) &&
       (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
@@ -6574,6 +6738,8 @@ function logRun() {
   document.getElementById('inp-grade').value='';
   document.getElementById('inp-spec').value='';
   var _inpSp = document.getElementById('inp-species'); if (_inpSp) _inpSp.value='';
+  var _inpFin = document.getElementById('inp-finish'); if (_inpFin) _inpFin.value='';
+  var _inpPrf = document.getElementById('inp-profile'); if (_inpPrf) _inpPrf.value='';
   document.getElementById('inp-location').value='';
   document.getElementById('inp-spool-weight').value='';
   document.getElementById('inp-reserve').checked = false;
@@ -6821,7 +6987,12 @@ function renderInventory() {
     // Product name line — size + length + type
     var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' ' + LBL('bundles'));
     // Grade/spec line
-    var gradeSpec = [item.grade ? (APP_MODE === 'lumber' ? item.grade : 'Gr'+item.grade) : '', item.spec || '', (APP_MODE === 'lumber' && item.species) ? item.species : ''].filter(Boolean).join(' · ');
+    var gradeSpec = [
+      item.grade ? (APP_MODE === 'rebar' ? 'Gr'+item.grade : item.grade) : '',
+      item.spec  || '',
+      (APP_MODE === 'lumber' && item.species) ? item.species : '',
+      (APP_MODE === 'alum'   && item.finish)  ? item.finish  : ''
+    ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
 
