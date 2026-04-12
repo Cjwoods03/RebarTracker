@@ -563,6 +563,12 @@
   body[data-mode="glass"] .product-type-group { display: none; }
   /* Flat Glass — hide pieces-per-bundle/weight section (lite weight calculated from dims) */
   body[data-mode="glass"] .pieces-bdl-group { display: none; }
+  /* Wire/Cable — AWG size and conductor count row */
+  .mf-cable-awg-row { display: none; }
+  body[data-mode="cable"] .mf-cable-awg-row { display: block; }
+  /* Wire/Cable — Insulation Color field */
+  .mf-cable-color-field { display: none; }
+  body[data-mode="cable"] .mf-cable-color-field { display: block; }
 
   /* Mode selector button in header */
   .mode-select-btn {
@@ -959,6 +965,51 @@
           <div class="form-group">
             <label>Height (in)</label>
             <input type="number" id="inp-glass-height" placeholder='e.g. 84' min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
+          </div>
+        </div>
+        <!-- Wire/Cable mode — AWG size and conductor count -->
+        <div class="form-row mf-cable-awg-row">
+          <div class="form-group">
+            <label>AWG / Size</label>
+            <select id="inp-cable-awg">
+              <option value="">— AWG Size —</option>
+              <option value="14 AWG">14 AWG</option>
+              <option value="12 AWG">12 AWG</option>
+              <option value="10 AWG">10 AWG</option>
+              <option value="8 AWG">8 AWG</option>
+              <option value="6 AWG">6 AWG</option>
+              <option value="4 AWG">4 AWG</option>
+              <option value="2 AWG">2 AWG</option>
+              <option value="1/0">1/0</option>
+              <option value="2/0">2/0</option>
+              <option value="3/0">3/0</option>
+              <option value="4/0">4/0</option>
+              <option value="250 MCM">250 MCM</option>
+              <option value="350 MCM">350 MCM</option>
+              <option value="500 MCM">500 MCM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Conductors</label>
+            <select id="inp-cable-conductors">
+              <option value="">— # Cond —</option>
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3">3</option>
+              <option value="4">4</option>
+              <option value="5">5</option>
+              <option value="7">7</option>
+              <option value="12">12</option>
+              <option value="19">19</option>
+              <option value="37">37</option>
+            </select>
+          </div>
+        </div>
+        <!-- Wire/Cable mode — Insulation Color -->
+        <div class="form-row mf-cable-color-field">
+          <div class="form-group" style="width:100%">
+            <label>Insulation Color</label>
+            <input type="text" id="inp-cable-color" placeholder="e.g. Black, Red, Yellow" autocomplete="off">
           </div>
         </div>
         <div id="length-hint" style="display:none"></div>
@@ -1586,6 +1637,51 @@
       <div class="form-group">
         <label>Height (in)</label>
         <input type="number" id="edit-glass-height" placeholder='e.g. 84' min="0" step="any" inputmode="decimal">
+      </div>
+    </div>
+    <!-- Wire/Cable mode — AWG size and conductor count -->
+    <div class="form-row mf-cable-awg-row">
+      <div class="form-group">
+        <label>AWG / Size</label>
+        <select id="edit-cable-awg">
+          <option value="">— AWG Size —</option>
+          <option value="14 AWG">14 AWG</option>
+          <option value="12 AWG">12 AWG</option>
+          <option value="10 AWG">10 AWG</option>
+          <option value="8 AWG">8 AWG</option>
+          <option value="6 AWG">6 AWG</option>
+          <option value="4 AWG">4 AWG</option>
+          <option value="2 AWG">2 AWG</option>
+          <option value="1/0">1/0</option>
+          <option value="2/0">2/0</option>
+          <option value="3/0">3/0</option>
+          <option value="4/0">4/0</option>
+          <option value="250 MCM">250 MCM</option>
+          <option value="350 MCM">350 MCM</option>
+          <option value="500 MCM">500 MCM</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Conductors</label>
+        <select id="edit-cable-conductors">
+          <option value="">— # Cond —</option>
+          <option value="1">1</option>
+          <option value="2">2</option>
+          <option value="3">3</option>
+          <option value="4">4</option>
+          <option value="5">5</option>
+          <option value="7">7</option>
+          <option value="12">12</option>
+          <option value="19">19</option>
+          <option value="37">37</option>
+        </select>
+      </div>
+    </div>
+    <!-- Wire/Cable mode — Insulation Color -->
+    <div class="form-row mf-cable-color-field">
+      <div class="form-group" style="width:100%">
+        <label>Insulation Color</label>
+        <input type="text" id="edit-cable-color" placeholder="e.g. Black, Red, Yellow" autocomplete="off">
       </div>
     </div>
     <div class="form-group">
@@ -2281,6 +2377,59 @@ var MODES = {
     }
   }
 
+  ,
+
+  // ── WIRE & CABLE DISTRIBUTION ────────────────────────────────────
+  cable: {
+    id: 'cable',
+    name: 'Wire & Cable Distribution',
+    description: 'Wire and cable distribution — reel positions, cable types, AWG sizes and footage.',
+    bodyClasses: [],
+    labels: {
+      szLbl:        'Cable Type',
+      gradeLbl:     'Conductor Material',
+      specLbl:      'Voltage Rating',
+      customerLbl:  'Customer',
+      bundlesCap:   'Reels',
+      bundlesCoils: 'Reels',
+      bdgSfx:       'R',
+      bundles:      'reels',
+      bundle:       'reel',
+      bdlAbbr:      'reel',
+      bdlCap:       'Reel',
+      piecesPerBdl: 'Conductors per Reel',
+      pcPerBdl:     'Cond / Reel',
+      bdlWtCalc:    'REEL WEIGHT (LBS)',
+      bdlWtShort:   'Reel Wt (lbs)',
+      prodType:     'Cable Reel',
+      prodSpool:    'Coiled Cable',
+      wtPerBdl:     'Weight/Reel',
+      stan:         'Reel Position',
+      stanShort:    'Pos',
+      multiStan:    'Multi-Position Placement',
+      nextStanSide: 'Next position side',
+      bdlsHere:     'Reels to place here',
+      addToStan:    '+ ADD TO POSITION',
+      totalBundles: 'Total reels',
+      secStackDesc: 'Adds on top of existing product in the chosen reel position side',
+      gradePrefix:  '',
+      gradeAlert:   'Please select a Conductor Material.',
+      specAlert:    'Please select a Voltage Rating.',
+      sizeAlert:    'Please fill in Cable Type and Reels.',
+      logoSub:      'WIRE & CABLE'
+    },
+    dropdowns: {
+      size:      [{v:'',l:'— Cable Type —'},{v:'THHN',l:'THHN'},{v:'XHHW',l:'XHHW'},{v:'MC Cable',l:'MC Cable'},{v:'Armored Cable',l:'Armored Cable'},{v:'Coaxial',l:'Coaxial'},{v:'Fiber Optic',l:'Fiber Optic'},{v:'Control Cable',l:'Control Cable'},{v:'Tray Cable',l:'Tray Cable'}],
+      areaSize:  [{v:'',l:'— Cable Type —'},{v:'THHN',l:'THHN'},{v:'XHHW',l:'XHHW'},{v:'MC Cable',l:'MC Cable'},{v:'Armored Cable',l:'Armored Cable'},{v:'Coaxial',l:'Coaxial'},{v:'Fiber Optic',l:'Fiber Optic'},{v:'Control Cable',l:'Control Cable'},{v:'Tray Cable',l:'Tray Cable'}],
+      rcSize:    [{v:'',l:'—'},{v:'THHN',l:'THHN'},{v:'XHHW',l:'XHHW'},{v:'MC Cable',l:'MC Cable'},{v:'Armored Cable',l:'Armored Cable'},{v:'Coaxial',l:'Coaxial'},{v:'Fiber Optic',l:'Fiber Optic'},{v:'Control Cable',l:'Control Cable'},{v:'Tray Cable',l:'Tray Cable'}],
+      grade:     [{v:'',l:'— Material —'},{v:'Copper',l:'Copper'},{v:'Aluminum',l:'Aluminum'},{v:'Tinned Copper',l:'Tinned Copper'},{v:'Bare Copper',l:'Bare Copper'}],
+      rcGrade:   [{v:'',l:'—'},{v:'Copper',l:'Copper'},{v:'Aluminum',l:'Aluminum'},{v:'Tinned Copper',l:'Tinned Copper'},{v:'Bare Copper',l:'Bare Copper'}],
+      spec:      [{v:'',l:'— Voltage —'},{v:'300V',l:'300V'},{v:'600V',l:'600V'},{v:'1000V',l:'1000V'},{v:'2000V',l:'2000V'},{v:'5KV',l:'5KV'},{v:'15KV',l:'15KV'},{v:'35KV',l:'35KV'}],
+      rcSpec:    [{v:'',l:'—'},{v:'300V',l:'300V'},{v:'600V',l:'600V'},{v:'1000V',l:'1000V'},{v:'2000V',l:'2000V'},{v:'5KV',l:'5KV'},{v:'15KV',l:'15KV'},{v:'35KV',l:'35KV'}],
+      productType:[{v:'straight',l:'Cable Reel'},{v:'spool',l:'Coiled Cable'}]
+    }
+  }
+
   // ── ADD FUTURE MODES HERE ────────────────────────────────────────
   // Copy the structure above. No other code changes are needed.
 
@@ -2693,6 +2842,20 @@ function calcBundleWeight() {
   var lenNum  = getLengthDecimal();
   var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+
+  // ── Wire/Cable: footage totals across reels ──
+  if (APP_MODE === 'cable') {
+    if (!lenNum || !bundles) { calcEl.style.display = 'none'; return; }
+    var totalFt  = lenNum * bundles;
+    var cAwgEl   = document.getElementById('inp-cable-awg');
+    var cAwg     = cAwgEl ? cAwgEl.value : '';
+    var html =
+      '<span style="color:var(--text-dim)">📏 ' + lenNum.toLocaleString() + 'ft/reel × ' + bundles + ' reel' + (bundles !== 1 ? 's' : '') + '</span><br>' +
+      '<strong style="color:var(--accent)">Total footage: ' + totalFt.toLocaleString() + ' ft' + (cAwg ? ' — ' + cAwg : '') + '</strong>';
+    calcEl.innerHTML = html;
+    calcEl.style.display = 'block';
+    return;
+  }
 
   // ── Flat glass: lite weight from width × height × thickness ──
   if (APP_MODE === 'glass') {
@@ -3218,12 +3381,13 @@ function makeSlot(id, side) {
     } else {
       // Single product — show detail + customer if present
       var custStr = item.customer || '';
-      // Aluminum: alloy+temper; precast: element+mix; pipe: size+material; glass: type+thickness
+      // Aluminum: alloy+temper; precast: element+mix; pipe/cable: size+material/AWG; glass: type+thickness
       var slotLine1 = (APP_MODE === 'alum') ? (item.grade || '—') : item.size;
       var slotLine2 = (APP_MODE === 'alum')    ? (item.spec  || '—') :
                       (APP_MODE === 'precast') ? (item.grade || '—') :
                       (APP_MODE === 'pipe')    ? (item.grade || '—') :
                       (APP_MODE === 'glass')   ? (item.grade ? item.grade + 'mm' : '—') :
+                      (APP_MODE === 'cable')   ? (item.cableAwg || (item.length ? formatLength(item.length) : '—')) :
                       (item.length ? formatLength(item.length) : 'Coil');
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+slotLine1+'</div>'+
@@ -3719,7 +3883,14 @@ function buildModalRows(item, isSpool, days) {
     var gSqFt = (item.glassWidth * item.glassHeight) / 144;
     rows += mrow('Size', item.glassWidth + '" \xd7 ' + item.glassHeight + '" (' + gSqFt.toFixed(2) + ' sq ft)');
   }
+  if (item.cableAwg)        rows += mrow('AWG / Size', item.cableAwg);
+  if (item.cableConductors) rows += mrow('Conductors', item.cableConductors + 'C');
+  if (item.cableColor)      rows += mrow('Insulation Color', item.cableColor);
   if (APP_MODE !== 'glass') rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
+  if (APP_MODE === 'cable' && item.length && item.bundles > 1) {
+    var totalFtDisp = (parseFloat(item.length) * item.bundles).toLocaleString();
+    rows += mrow('Total Footage', totalFtDisp + ' ft (' + item.bundles + ' reels)');
+  }
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
     rows += mrow('Total Weight', ((item.spoolWeightLbs/2000)*(item.bundles||0)).toFixed(2) + 't');
@@ -3964,6 +4135,12 @@ function openEditModal(type, idx) {
   if (editGlassWidthEl) editGlassWidthEl.value = item.glassWidth || '';
   var editGlassHeightEl = document.getElementById('edit-glass-height');
   if (editGlassHeightEl) editGlassHeightEl.value = item.glassHeight || '';
+  var editCableAwgEl        = document.getElementById('edit-cable-awg');
+  if (editCableAwgEl)        editCableAwgEl.value        = item.cableAwg        || '';
+  var editCableConductorsEl = document.getElementById('edit-cable-conductors');
+  if (editCableConductorsEl) editCableConductorsEl.value = item.cableConductors || '';
+  var editCableColorEl      = document.getElementById('edit-cable-color');
+  if (editCableColorEl)      editCableColorEl.value      = item.cableColor      || '';
   document.getElementById('edit-bundles').value = item.bundles || '';
   document.getElementById('edit-heat').value    = item.heat    || '';
   document.getElementById('edit-length-ft').value = lenFt > 0 ? lenFt : '';
@@ -4009,6 +4186,12 @@ function confirmEdit() {
   var newGlassWidth  = editGlassWidthEl2  ? (parseFloat(editGlassWidthEl2.value)  || 0) : 0;
   var editGlassHeightEl2 = document.getElementById('edit-glass-height');
   var newGlassHeight = editGlassHeightEl2 ? (parseFloat(editGlassHeightEl2.value) || 0) : 0;
+  var editCableAwgEl2        = document.getElementById('edit-cable-awg');
+  var newCableAwg        = editCableAwgEl2        ? editCableAwgEl2.value        : undefined;
+  var editCableConductorsEl2 = document.getElementById('edit-cable-conductors');
+  var newCableConductors = editCableConductorsEl2 ? editCableConductorsEl2.value : undefined;
+  var editCableColorEl2      = document.getElementById('edit-cable-color');
+  var newCableColor      = editCableColorEl2      ? editCableColorEl2.value      : undefined;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -4029,6 +4212,9 @@ function confirmEdit() {
   if (newEndFinish !== undefined) item.endFinish = newEndFinish;
   if (newCoating   !== undefined) item.coating   = newCoating;
   if (APP_MODE === 'glass') { item.glassWidth = newGlassWidth; item.glassHeight = newGlassHeight; }
+  if (newCableAwg        !== undefined) item.cableAwg        = newCableAwg;
+  if (newCableConductors !== undefined) item.cableConductors = newCableConductors;
+  if (newCableColor      !== undefined) item.cableColor      = newCableColor;
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -5606,7 +5792,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'') + '|' + (item.endFinish||'') + '|' + (item.coating||'') + '|' + (item.glassWidth||'') + '|' + (item.glassHeight||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'') + '|' + (item.endFinish||'') + '|' + (item.coating||'') + '|' + (item.glassWidth||'') + '|' + (item.glassHeight||'') + '|' + (item.cableAwg||'') + '|' + (item.cableConductors||'') + '|' + (item.cableColor||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -6063,17 +6249,23 @@ function openSplitFromForm() {
     var _ofFinishEl      = document.getElementById('inp-finish');
     var _ofEndFinishEl   = document.getElementById('inp-endfinish');
     var _ofCoatingEl     = document.getElementById('inp-coating');
-    var _ofGlassWidthEl  = document.getElementById('inp-glass-width');
-    var _ofGlassHeightEl = document.getElementById('inp-glass-height');
+    var _ofGlassWidthEl      = document.getElementById('inp-glass-width');
+    var _ofGlassHeightEl     = document.getElementById('inp-glass-height');
+    var _ofCableAwgEl        = document.getElementById('inp-cable-awg');
+    var _ofCableConductorsEl = document.getElementById('inp-cable-conductors');
+    var _ofCableColorEl      = document.getElementById('inp-cable-color');
     _of.item = {
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
-      species:     (APP_MODE === 'lumber' && _ofSpeciesEl)     ? _ofSpeciesEl.value     : '',
-      finish:      (APP_MODE === 'alum'   && _ofFinishEl)      ? _ofFinishEl.value      : '',
-      endFinish:   (APP_MODE === 'pipe'   && _ofEndFinishEl)   ? _ofEndFinishEl.value   : '',
-      coating:     (APP_MODE === 'pipe'   && _ofCoatingEl)     ? _ofCoatingEl.value     : '',
-      glassWidth:  (APP_MODE === 'glass'  && _ofGlassWidthEl)  ? (parseFloat(_ofGlassWidthEl.value)  || 0) : 0,
-      glassHeight: (APP_MODE === 'glass'  && _ofGlassHeightEl) ? (parseFloat(_ofGlassHeightEl.value) || 0) : 0,
+      species:         (APP_MODE === 'lumber' && _ofSpeciesEl)         ? _ofSpeciesEl.value         : '',
+      finish:          (APP_MODE === 'alum'   && _ofFinishEl)          ? _ofFinishEl.value          : '',
+      endFinish:       (APP_MODE === 'pipe'   && _ofEndFinishEl)       ? _ofEndFinishEl.value       : '',
+      coating:         (APP_MODE === 'pipe'   && _ofCoatingEl)         ? _ofCoatingEl.value         : '',
+      glassWidth:      (APP_MODE === 'glass'  && _ofGlassWidthEl)      ? (parseFloat(_ofGlassWidthEl.value)  || 0) : 0,
+      glassHeight:     (APP_MODE === 'glass'  && _ofGlassHeightEl)     ? (parseFloat(_ofGlassHeightEl.value) || 0) : 0,
+      cableAwg:        (APP_MODE === 'cable'  && _ofCableAwgEl)        ? _ofCableAwgEl.value        : '',
+      cableConductors: (APP_MODE === 'cable'  && _ofCableConductorsEl) ? _ofCableConductorsEl.value : '',
+      cableColor:      (APP_MODE === 'cable'  && _ofCableColorEl)      ? _ofCableColorEl.value      : '',
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
@@ -6526,8 +6718,11 @@ function ofClearLogForm() {
   var _inpPcT2 = document.getElementById('inp-pc-thickness'); if (_inpPcT2) _inpPcT2.value = '';
   var _inpEF2  = document.getElementById('inp-endfinish');    if (_inpEF2)  _inpEF2.value  = '';
   var _inpCt2  = document.getElementById('inp-coating');      if (_inpCt2)  _inpCt2.value  = '';
-  var _inpGW2  = document.getElementById('inp-glass-width');  if (_inpGW2)  _inpGW2.value  = '';
-  var _inpGH2  = document.getElementById('inp-glass-height'); if (_inpGH2)  _inpGH2.value  = '';
+  var _inpGW2  = document.getElementById('inp-glass-width');       if (_inpGW2)  _inpGW2.value  = '';
+  var _inpGH2  = document.getElementById('inp-glass-height');      if (_inpGH2)  _inpGH2.value  = '';
+  var _inpCA2  = document.getElementById('inp-cable-awg');         if (_inpCA2)  _inpCA2.value  = '';
+  var _inpCC2  = document.getElementById('inp-cable-conductors');  if (_inpCC2)  _inpCC2.value  = '';
+  var _inpCCo2 = document.getElementById('inp-cable-color');       if (_inpCCo2) _inpCCo2.value = '';
   var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
   var ss = document.getElementById('inp-secondary'); if (ss) ss.checked = false;
   var sb = document.getElementById('suggestion-box'); if (sb) sb.classList.remove('active');
@@ -6586,15 +6781,19 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
         if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
         var curSpecies   = (APP_MODE === 'lumber' && document.getElementById('inp-species'))    ? document.getElementById('inp-species').value    : '';
         var curFinish    = (APP_MODE === 'alum'   && document.getElementById('inp-finish'))     ? document.getElementById('inp-finish').value     : '';
-        var curEndFinish = (APP_MODE === 'pipe'   && document.getElementById('inp-endfinish'))  ? document.getElementById('inp-endfinish').value  : '';
-        var curCoating   = (APP_MODE === 'pipe'   && document.getElementById('inp-coating'))    ? document.getElementById('inp-coating').value    : '';
+        var curEndFinish       = (APP_MODE === 'pipe'  && document.getElementById('inp-endfinish'))       ? document.getElementById('inp-endfinish').value       : '';
+        var curCoating         = (APP_MODE === 'pipe'  && document.getElementById('inp-coating'))         ? document.getElementById('inp-coating').value         : '';
+        var curCableAwg        = (APP_MODE === 'cable' && document.getElementById('inp-cable-awg'))       ? document.getElementById('inp-cable-awg').value       : '';
+        var curCableConductors = (APP_MODE === 'cable' && document.getElementById('inp-cable-conductors')) ? document.getElementById('inp-cable-conductors').value : '';
         if (existing.size === size && parseFloat(existing.length) === length &&
-            (!grade        || !existing.grade     || existing.grade     === grade) &&
-            (!spec         || !existing.spec      || existing.spec      === spec) &&
-            (!curSpecies   || !existing.species   || existing.species   === curSpecies) &&
-            (!curFinish    || !existing.finish    || existing.finish    === curFinish) &&
-            (!curEndFinish || !existing.endFinish || existing.endFinish === curEndFinish) &&
-            (!curCoating   || !existing.coating   || existing.coating   === curCoating) &&
+            (!grade               || !existing.grade           || existing.grade           === grade) &&
+            (!spec                || !existing.spec            || existing.spec            === spec) &&
+            (!curSpecies          || !existing.species         || existing.species         === curSpecies) &&
+            (!curFinish           || !existing.finish          || existing.finish          === curFinish) &&
+            (!curEndFinish        || !existing.endFinish       || existing.endFinish       === curEndFinish) &&
+            (!curCoating          || !existing.coating         || existing.coating         === curCoating) &&
+            (!curCableAwg         || !existing.cableAwg        || existing.cableAwg        === curCableAwg) &&
+            (!curCableConductors  || !existing.cableConductors || existing.cableConductors === curCableConductors) &&
             (existing.customer||'') === (customer||'')) {
           pick2 = id;
           var lbl = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
@@ -7047,8 +7246,8 @@ function logRun() {
     return; // handled — skip normal logRun flow below
   }
 
-  // If stanchion side, enforce per-stanchion ft rule (skip for CYCLE, same-product merges, and glass mode)
-  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE' && APP_MODE !== 'glass') {
+  // If stanchion side, enforce per-stanchion ft rule (skip for CYCLE, same-product merges, glass, and cable modes)
+  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE' && APP_MODE !== 'glass' && APP_MODE !== 'cable') {
     var stanKey = loc.slice(0, -1);
     var stanNum = parseInt(stanKey) || stanKey;
     // If the destination already holds the same product, this is a bundle merge —
@@ -7086,17 +7285,23 @@ function logRun() {
         var _ofTplFinishEl      = document.getElementById('inp-finish');
         var _ofTplEndFinishEl   = document.getElementById('inp-endfinish');
         var _ofTplCoatingEl     = document.getElementById('inp-coating');
-        var _ofTplGlassWidthEl  = document.getElementById('inp-glass-width');
-        var _ofTplGlassHeightEl = document.getElementById('inp-glass-height');
+        var _ofTplGlassWidthEl      = document.getElementById('inp-glass-width');
+        var _ofTplGlassHeightEl     = document.getElementById('inp-glass-height');
+        var _ofTplCableAwgEl        = document.getElementById('inp-cable-awg');
+        var _ofTplCableConductorsEl = document.getElementById('inp-cable-conductors');
+        var _ofTplCableColorEl      = document.getElementById('inp-cable-color');
         var ofTemplate = {
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
-          species:     (APP_MODE === 'lumber' && _ofTplSpeciesEl)     ? _ofTplSpeciesEl.value     : '',
-          finish:      (APP_MODE === 'alum'   && _ofTplFinishEl)      ? _ofTplFinishEl.value      : '',
-          endFinish:   (APP_MODE === 'pipe'   && _ofTplEndFinishEl)   ? _ofTplEndFinishEl.value   : '',
-          coating:     (APP_MODE === 'pipe'   && _ofTplCoatingEl)     ? _ofTplCoatingEl.value     : '',
-          glassWidth:  (APP_MODE === 'glass'  && _ofTplGlassWidthEl)  ? (parseFloat(_ofTplGlassWidthEl.value)  || 0) : 0,
-          glassHeight: (APP_MODE === 'glass'  && _ofTplGlassHeightEl) ? (parseFloat(_ofTplGlassHeightEl.value) || 0) : 0,
+          species:         (APP_MODE === 'lumber' && _ofTplSpeciesEl)         ? _ofTplSpeciesEl.value         : '',
+          finish:          (APP_MODE === 'alum'   && _ofTplFinishEl)          ? _ofTplFinishEl.value          : '',
+          endFinish:       (APP_MODE === 'pipe'   && _ofTplEndFinishEl)       ? _ofTplEndFinishEl.value       : '',
+          coating:         (APP_MODE === 'pipe'   && _ofTplCoatingEl)         ? _ofTplCoatingEl.value         : '',
+          glassWidth:      (APP_MODE === 'glass'  && _ofTplGlassWidthEl)      ? (parseFloat(_ofTplGlassWidthEl.value)  || 0) : 0,
+          glassHeight:     (APP_MODE === 'glass'  && _ofTplGlassHeightEl)     ? (parseFloat(_ofTplGlassHeightEl.value) || 0) : 0,
+          cableAwg:        (APP_MODE === 'cable'  && _ofTplCableAwgEl)        ? _ofTplCableAwgEl.value        : '',
+          cableConductors: (APP_MODE === 'cable'  && _ofTplCableConductorsEl) ? _ofTplCableConductorsEl.value : '',
+          cableColor:      (APP_MODE === 'cable'  && _ofTplCableColorEl)      ? _ofTplCableColorEl.value      : '',
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
           customer: document.getElementById('inp-customer').value.trim(),
@@ -7109,10 +7314,13 @@ function logRun() {
   }
 
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
-  var inpSpeciesEl    = document.getElementById('inp-species');
-  var inpFinishEl     = document.getElementById('inp-finish');
-  var inpEndFinishEl  = document.getElementById('inp-endfinish');
-  var inpCoatingEl    = document.getElementById('inp-coating');
+  var inpSpeciesEl         = document.getElementById('inp-species');
+  var inpFinishEl          = document.getElementById('inp-finish');
+  var inpEndFinishEl       = document.getElementById('inp-endfinish');
+  var inpCoatingEl         = document.getElementById('inp-coating');
+  var inpCableAwgEl        = document.getElementById('inp-cable-awg');
+  var inpCableConductorsEl = document.getElementById('inp-cable-conductors');
+  var inpCableColorEl      = document.getElementById('inp-cable-color');
   // Glass: compute weight per lite for weightPerBundleTons field
   var _glassWtPerLite = 0;
   if (APP_MODE === 'glass') {
@@ -7133,8 +7341,11 @@ function logRun() {
     pcThickness:  (APP_MODE === 'precast'  && inpPcThicknessEl) ? (parseFloat(inpPcThicknessEl.value) || 0) : 0,
     endFinish:    (APP_MODE === 'pipe'     && inpEndFinishEl)   ? inpEndFinishEl.value  : '',
     coating:      (APP_MODE === 'pipe'     && inpCoatingEl)     ? inpCoatingEl.value    : '',
-    glassWidth:   (APP_MODE === 'glass'    && inpGlassWidthEl)  ? (parseFloat(inpGlassWidthEl.value) || 0)  : 0,
-    glassHeight:  (APP_MODE === 'glass'    && inpGlassHeightEl) ? (parseFloat(inpGlassHeightEl.value) || 0) : 0,
+    glassWidth:      (APP_MODE === 'glass' && inpGlassWidthEl)        ? (parseFloat(inpGlassWidthEl.value)  || 0) : 0,
+    glassHeight:     (APP_MODE === 'glass' && inpGlassHeightEl)       ? (parseFloat(inpGlassHeightEl.value) || 0) : 0,
+    cableAwg:        (APP_MODE === 'cable' && inpCableAwgEl)          ? inpCableAwgEl.value        : '',
+    cableConductors: (APP_MODE === 'cable' && inpCableConductorsEl)   ? inpCableConductorsEl.value : '',
+    cableColor:      (APP_MODE === 'cable' && inpCableColorEl)        ? inpCableColorEl.value      : '',
     bundles: parseInt(bundles),
     weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : (APP_MODE === 'glass' ? _glassWtPerLite : getCalcBdlTons()),
     weightTons: weightTons,
@@ -7164,8 +7375,11 @@ function logRun() {
       (!existing.pcThickness  || !item.pcThickness  || existing.pcThickness  === item.pcThickness) &&
       (!existing.endFinish    || !item.endFinish    || existing.endFinish    === item.endFinish) &&
       (!existing.coating      || !item.coating      || existing.coating      === item.coating) &&
-      (!existing.glassWidth   || !item.glassWidth   || existing.glassWidth   === item.glassWidth) &&
-      (!existing.glassHeight  || !item.glassHeight  || existing.glassHeight  === item.glassHeight) &&
+      (!existing.glassWidth       || !item.glassWidth       || existing.glassWidth       === item.glassWidth) &&
+      (!existing.glassHeight      || !item.glassHeight      || existing.glassHeight      === item.glassHeight) &&
+      (!existing.cableAwg         || !item.cableAwg         || existing.cableAwg         === item.cableAwg) &&
+      (!existing.cableConductors  || !item.cableConductors  || existing.cableConductors  === item.cableConductors) &&
+      (!existing.cableColor       || !item.cableColor       || existing.cableColor       === item.cableColor) &&
       (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
@@ -7202,8 +7416,11 @@ function logRun() {
   var _inpPcT = document.getElementById('inp-pc-thickness'); if (_inpPcT) _inpPcT.value='';
   var _inpEF  = document.getElementById('inp-endfinish');  if (_inpEF)  _inpEF.value='';
   var _inpCt  = document.getElementById('inp-coating');    if (_inpCt)  _inpCt.value='';
-  var _inpGW  = document.getElementById('inp-glass-width');  if (_inpGW)  _inpGW.value='';
-  var _inpGH  = document.getElementById('inp-glass-height'); if (_inpGH)  _inpGH.value='';
+  var _inpGW  = document.getElementById('inp-glass-width');       if (_inpGW)  _inpGW.value='';
+  var _inpGH  = document.getElementById('inp-glass-height');      if (_inpGH)  _inpGH.value='';
+  var _inpCA  = document.getElementById('inp-cable-awg');         if (_inpCA)  _inpCA.value='';
+  var _inpCC  = document.getElementById('inp-cable-conductors');  if (_inpCC)  _inpCC.value='';
+  var _inpCCo = document.getElementById('inp-cable-color');       if (_inpCCo) _inpCCo.value='';
   document.getElementById('inp-location').value='';
   document.getElementById('inp-spool-weight').value='';
   document.getElementById('inp-reserve').checked = false;
@@ -7459,7 +7676,9 @@ function renderInventory() {
       (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)        ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : '',
       (APP_MODE === 'pipe'    && item.endFinish)                          ? item.endFinish : '',
       (APP_MODE === 'pipe'    && item.coating && item.coating !== 'None') ? item.coating : '',
-      (APP_MODE === 'glass'   && item.glassWidth && item.glassHeight)     ? (item.glassWidth + '"\xd7' + item.glassHeight + '"') : ''
+      (APP_MODE === 'glass'   && item.glassWidth && item.glassHeight)     ? (item.glassWidth + '"\xd7' + item.glassHeight + '"') : '',
+      (APP_MODE === 'cable'   && item.cableAwg)                           ? item.cableAwg : '',
+      (APP_MODE === 'cable'   && item.cableConductors)                    ? (item.cableConductors + 'C') : ''
     ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
