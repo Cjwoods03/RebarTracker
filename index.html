@@ -541,6 +541,13 @@
   /* Finish field — aluminum extrusion mode only */
   .mf-finish-field { display: none; }
   body[data-mode="alum"] .mf-finish-field { display: block; }
+  /* Precast concrete — Width and Thickness dimension fields */
+  .mf-pc-dims-field { display: none; }
+  body[data-mode="precast"] .mf-pc-dims-field { display: block; }
+  /* Precast — hide product type selector (all precast elements are discrete items) */
+  body[data-mode="precast"] .product-type-group { display: none; }
+  /* Precast — hide pieces-per-bundle / bundle weight section (uses concrete weight calc) */
+  body[data-mode="precast"] .pieces-bdl-group { display: none; }
 
   /* Mode selector button in header */
   .mode-select-btn {
@@ -795,7 +802,7 @@
     </button>
     <div class="section-body collapsed" id="body-log">
       <div class="form-wrap">
-        <div class="form-group">
+        <div class="form-group product-type-group">
           <label>Product Type</label>
           <select id="inp-type" onchange="onTypeChange()">
             <option value="straight">Straight Bar</option>
@@ -889,6 +896,17 @@
             </select>
           </div>
         </div>
+        <!-- Precast concrete mode — Width and Thickness fields -->
+        <div class="form-row mf-pc-dims-field">
+          <div class="form-group">
+            <label>Width (ft)</label>
+            <input type="number" id="inp-pc-width" placeholder="e.g. 8" min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
+          </div>
+          <div class="form-group">
+            <label>Thickness (in)</label>
+            <input type="number" id="inp-pc-thickness" placeholder="e.g. 8" min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
+          </div>
+        </div>
         <div id="length-hint" style="display:none"></div>
         <div class="form-group">
           <label data-mode-label="bundlesCoils">Bundles / Coils</label>
@@ -904,15 +922,17 @@
           </select>
         </div>
         <div class="form-group" id="weight-group">
-          <label data-mode-label="piecesPerBdl">Pieces per Bundle</label>
-          <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onPiecesInput()">
-          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-            <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-              <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS) — calculates pieces</label>
-              <button id="log-link-btn" class="link-toggle-btn" onclick="toggleLogLink()" title="Fields linked — click to unlink">⛓</button>
+          <div class="pieces-bdl-group">
+            <label data-mode-label="piecesPerBdl">Pieces per Bundle</label>
+            <input type="number" id="inp-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onPiecesInput()">
+            <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+              <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+                <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS) — calculates pieces</label>
+                <button id="log-link-btn" class="link-toggle-btn" onclick="toggleLogLink()" title="Fields linked — click to unlink">⛓</button>
+              </div>
+              <input type="number" id="inp-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcPiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+              <div id="bdl-wt-hint" style="display:none;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);padding:5px 8px;background:#0d1f10;border-radius:5px;border:1px solid var(--border)"></div>
             </div>
-            <input type="number" id="inp-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcPiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
-            <div id="bdl-wt-hint" style="display:none;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);padding:5px 8px;background:#0d1f10;border-radius:5px;border:1px solid var(--border)"></div>
           </div>
           <div id="weight-calc" style="display:none;margin-top:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;padding:8px 10px;background:#0d1f10;border:1px solid var(--border);border-radius:6px;line-height:1.8"></div>
         </div>
@@ -920,7 +940,7 @@
           <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL FIELDS</div>
           <div class="form-row">
             <div class="form-group">
-              <div class="optional-label"><span>Customer</span><span class="optional-badge">optional</span></div>
+              <div class="optional-label"><span data-mode-label="customerLbl">Customer</span><span class="optional-badge">optional</span></div>
               <input type="text" id="inp-customer" placeholder="Customer name">
             </div>
           </div>
@@ -1464,6 +1484,17 @@
         </select>
       </div>
     </div>
+    <!-- Precast concrete mode — Width and Thickness fields -->
+    <div class="form-row mf-pc-dims-field">
+      <div class="form-group">
+        <label>Width (ft)</label>
+        <input type="number" id="edit-pc-width" placeholder="e.g. 8" min="0" step="any" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label>Thickness (in)</label>
+        <input type="number" id="edit-pc-thickness" placeholder="e.g. 8" min="0" step="any" inputmode="decimal">
+      </div>
+    </div>
     <div class="form-group">
       <label data-mode-label="bundlesCap">Bundles</label>
       <input type="number" id="edit-bundles" placeholder="qty" min="1" inputmode="numeric">
@@ -1822,6 +1853,7 @@ var MODES = {
       totalBundles: 'Total bundles',
       secStackDesc: 'Adds on top of existing product in the chosen stanchion side',
       specLbl:      'Spec',
+      customerLbl:  'Customer',
       gradePrefix:  'Grade ',
       gradeAlert:   'Please select a Grade (40, 60, or 80).',
       specAlert:    'Please select a Spec (A615 or A706).',
@@ -1872,6 +1904,7 @@ var MODES = {
       totalBundles: 'Total lifts',
       secStackDesc: 'Adds on top of existing product in the chosen bay side',
       specLbl:      'Spec',
+      customerLbl:  'Customer',
       gradePrefix:  '',
       gradeAlert:   'Please select a Grade / Designation.',
       specAlert:    'Please select a Spec.',
@@ -1924,6 +1957,7 @@ var MODES = {
       addToStan:    '+ ADD TO BUNK',
       totalBundles: 'Total units',
       secStackDesc: 'Adds on top of existing product in the chosen bunk side',
+      customerLbl:  'Customer',
       gradePrefix:  '',
       gradeAlert:   'Please select a Grade.',
       specAlert:    'Please select a Treatment.',
@@ -1976,6 +2010,7 @@ var MODES = {
       addToStan:    '+ ADD TO RACK',
       totalBundles: 'Total bundles',
       secStackDesc: 'Adds on top of existing product in the chosen rack side',
+      customerLbl:  'Customer',
       gradePrefix:  '',
       gradeAlert:   'Please select an Alloy.',
       specAlert:    'Please select a Temper.',
@@ -1991,6 +2026,59 @@ var MODES = {
       spec:      [{v:'',l:'— Temper —'},{v:'T1',l:'T1'},{v:'T4',l:'T4'},{v:'T5',l:'T5'},{v:'T6',l:'T6'},{v:'T52',l:'T52'},{v:'T6511',l:'T6511'}],
       rcSpec:    [{v:'',l:'—'},{v:'T1',l:'T1'},{v:'T4',l:'T4'},{v:'T5',l:'T5'},{v:'T6',l:'T6'},{v:'T52',l:'T52'},{v:'T6511',l:'T6511'}],
       productType:[{v:'straight',l:'Extrusion'},{v:'spool',l:'Coiled Extrusion'}]
+    }
+  }
+
+  ,
+
+  // ── PRECAST CONCRETE ─────────────────────────────────────────────
+  precast: {
+    id: 'precast',
+    name: 'Precast Concrete',
+    description: 'Precast concrete yard — storage beds/rows, element types, mix design and dimensions.',
+    bodyClasses: [],
+    labels: {
+      szLbl:        'Element Type',
+      gradeLbl:     'Mix Design',
+      specLbl:      'Finish',
+      customerLbl:  'Project / Customer',
+      bundlesCap:   'Pieces',
+      bundlesCoils: 'Pieces',
+      bdgSfx:       'pc',
+      bundles:      'pieces',
+      bundle:       'piece',
+      bdlAbbr:      'pc',
+      bdlCap:       'Piece',
+      piecesPerBdl: 'Pieces per Group',
+      pcPerBdl:     'Pc / Group',
+      bdlWtCalc:    'CONCRETE WEIGHT — calculated from dimensions',
+      bdlWtShort:   'Element Weight',
+      prodType:     'Precast Element',
+      prodSpool:    'Precast Element',
+      wtPerBdl:     'Weight/Piece',
+      stan:         'Storage Bed',
+      stanShort:    'Bed',
+      multiStan:    'Multi-Bed Placement',
+      nextStanSide: 'Next bed side',
+      bdlsHere:     'Pieces to place here',
+      addToStan:    '+ ADD TO BED',
+      totalBundles: 'Total pieces',
+      secStackDesc: 'Adds on top of existing product in the chosen bed side',
+      gradePrefix:  '',
+      gradeAlert:   'Please select a Mix Design.',
+      specAlert:    'Please select a Finish.',
+      sizeAlert:    'Please fill in Element Type and Pieces.',
+      logoSub:      'PRECAST CONCRETE'
+    },
+    dropdowns: {
+      size:      [{v:'',l:'— Element Type —'},{v:'Wall Panel',l:'Wall Panel'},{v:'Beam',l:'Beam'},{v:'Column',l:'Column'},{v:'Slab',l:'Slab'},{v:'Stair',l:'Stair'},{v:'Double Tee',l:'Double Tee'},{v:'Single Tee',l:'Single Tee'}],
+      areaSize:  [{v:'',l:'— Element Type —'},{v:'Wall Panel',l:'Wall Panel'},{v:'Beam',l:'Beam'},{v:'Column',l:'Column'},{v:'Slab',l:'Slab'},{v:'Stair',l:'Stair'},{v:'Double Tee',l:'Double Tee'},{v:'Single Tee',l:'Single Tee'}],
+      rcSize:    [{v:'',l:'—'},{v:'Wall Panel',l:'Wall Panel'},{v:'Beam',l:'Beam'},{v:'Column',l:'Column'},{v:'Slab',l:'Slab'},{v:'Stair',l:'Stair'},{v:'Double Tee',l:'Double Tee'},{v:'Single Tee',l:'Single Tee'}],
+      grade:     [{v:'',l:'— Mix Design —'},{v:'4000 PSI',l:'4000 PSI'},{v:'5000 PSI',l:'5000 PSI'},{v:'6000 PSI',l:'6000 PSI'},{v:'8000 PSI',l:'8000 PSI'}],
+      rcGrade:   [{v:'',l:'—'},{v:'4000 PSI',l:'4000 PSI'},{v:'5000 PSI',l:'5000 PSI'},{v:'6000 PSI',l:'6000 PSI'},{v:'8000 PSI',l:'8000 PSI'}],
+      spec:      [{v:'',l:'— Finish —'},{v:'Smooth',l:'Smooth'},{v:'Exposed Aggregate',l:'Exposed Aggregate'},{v:'Sandblasted',l:'Sandblasted'},{v:'Painted',l:'Painted'},{v:'Architectural',l:'Architectural'}],
+      rcSpec:    [{v:'',l:'—'},{v:'Smooth',l:'Smooth'},{v:'Exposed Aggregate',l:'Exposed Aggregate'},{v:'Sandblasted',l:'Sandblasted'},{v:'Painted',l:'Painted'},{v:'Architectural',l:'Architectural'}],
+      productType:[{v:'straight',l:'Precast Element'}]
     }
   }
 
@@ -2406,6 +2494,29 @@ function calcBundleWeight() {
   var lenNum  = getLengthDecimal();
   var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+
+  // ── Precast concrete: weight from dimensions ──
+  if (APP_MODE === 'precast') {
+    var pcWEl = document.getElementById('inp-pc-width');
+    var pcTEl = document.getElementById('inp-pc-thickness');
+    var pcW = parseFloat(pcWEl ? pcWEl.value : 0) || 0;
+    var pcT = parseFloat(pcTEl ? pcTEl.value : 0) || 0;
+    if (!lenNum || !pcW || !pcT) { calcEl.style.display = 'none'; return; }
+    var cuFt = lenNum * pcW * (pcT / 12);
+    var lbsPerPc = cuFt * 150;
+    var pcBundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+    var html =
+      '<span style="color:var(--text-dim)">📐 ' + lenNum + 'ft × ' + pcW + 'ft wide × ' + pcT + '" thick</span><br>' +
+      '<span style="color:var(--text-dim)">' + cuFt.toFixed(2) + ' cu.ft @ 150 lbs/cu.ft</span> &nbsp;·&nbsp; ' +
+      '<strong style="color:var(--safe)">' + lbsPerPc.toFixed(0) + ' lbs / piece</strong>';
+    if (pcBundles > 0) {
+      var lbsTotal = lbsPerPc * pcBundles;
+      html += '<br><strong style="color:var(--accent)">Total (' + pcBundles + ' pc): ' + lbsTotal.toFixed(0) + ' lbs / ' + (lbsTotal / 2000).toFixed(2) + 't</strong>';
+    }
+    calcEl.innerHTML = html;
+    calcEl.style.display = 'block';
+    return;
+  }
 
   // ── Lumber yard: board feet calculation ──
   if (APP_MODE === 'lumber') {
@@ -2880,9 +2991,11 @@ function makeSlot(id, side) {
     } else {
       // Single product — show detail + customer if present
       var custStr = item.customer || '';
-      // Aluminum mode: show alloy + temper instead of profile name in box
+      // Aluminum mode: show alloy + temper; precast: show element type + mix design
       var slotLine1 = (APP_MODE === 'alum') ? (item.grade || '—') : item.size;
-      var slotLine2 = (APP_MODE === 'alum') ? (item.spec  || '—') : (item.length ? formatLength(item.length) : 'Coil');
+      var slotLine2 = (APP_MODE === 'alum')    ? (item.spec  || '—') :
+                      (APP_MODE === 'precast') ? (item.grade || '—') :
+                      (item.length ? formatLength(item.length) : 'Coil');
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+slotLine1+'</div>'+
         '<div class="slot-len">'+slotLine2+'</div>'+
@@ -3364,8 +3477,10 @@ function buildModalRows(item, isSpool, days) {
   rows += mrow('Type', isSpool ? LBL('prodSpool') : LBL('prodType'));
   if (item.grade)   rows += mrow(LBL('gradeLbl'), LBL('gradePrefix') + item.grade);
   if (item.spec)    rows += mrow(LBL('specLbl'), item.spec);
-  if (item.species) rows += mrow('Species', item.species);
-  if (item.finish)  rows += mrow('Finish', item.finish);
+  if (item.species)     rows += mrow('Species', item.species);
+  if (item.finish)      rows += mrow('Finish', item.finish);
+  if (item.pcWidth)     rows += mrow('Width', item.pcWidth + ' ft');
+  if (item.pcThickness) rows += mrow('Thickness', item.pcThickness + ' in');
   rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
@@ -3387,7 +3502,7 @@ function buildModalRows(item, isSpool, days) {
       '</div></div>';
   }
   if (item.order) rows += mrow('Order #', item.order);
-  if (item.customer) rows += mrow('Customer', item.customer);
+  if (item.customer) rows += mrow(LBL('customerLbl'), item.customer);
   if (item.ship) rows += mrow('Ship Date', item.ship + (days!==null?' ('+days+'d)':''));
   rows += mrow('Logged', item.logged);
   // Split pair note
@@ -3599,6 +3714,10 @@ function openEditModal(type, idx) {
   if (editFinishEl) editFinishEl.value = item.finish || '';
   var editProfileEl = document.getElementById('edit-profile');
   if (editProfileEl) editProfileEl.value = item.size || '';
+  var editPcWidthEl = document.getElementById('edit-pc-width');
+  if (editPcWidthEl) editPcWidthEl.value = item.pcWidth || '';
+  var editPcThicknessEl = document.getElementById('edit-pc-thickness');
+  if (editPcThicknessEl) editPcThicknessEl.value = item.pcThickness || '';
   document.getElementById('edit-bundles').value = item.bundles || '';
   document.getElementById('edit-heat').value    = item.heat    || '';
   document.getElementById('edit-length-ft').value = lenFt > 0 ? lenFt : '';
@@ -3632,6 +3751,10 @@ function confirmEdit() {
   var newFinish  = editFinishEl2 ? editFinishEl2.value : undefined;
   var editProfileEl2 = document.getElementById('edit-profile');
   var newProfileSize = (APP_MODE === 'alum' && editProfileEl2) ? editProfileEl2.value.trim() : undefined;
+  var editPcWidthEl2 = document.getElementById('edit-pc-width');
+  var newPcWidth = editPcWidthEl2 ? (parseFloat(editPcWidthEl2.value) || 0) : 0;
+  var editPcThicknessEl2 = document.getElementById('edit-pc-thickness');
+  var newPcThickness = editPcThicknessEl2 ? (parseFloat(editPcThicknessEl2.value) || 0) : 0;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -3648,6 +3771,7 @@ function confirmEdit() {
   if (newSpec    !== undefined) item.spec    = newSpec;
   if (newSpecies !== undefined) item.species = newSpecies;
   if (newFinish  !== undefined) item.finish  = newFinish;
+  if (APP_MODE === 'precast') { item.pcWidth = newPcWidth; item.pcThickness = newPcThickness; }
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -5225,7 +5349,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -6133,6 +6257,8 @@ function ofClearLogForm() {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var _inpProf = document.getElementById('inp-profile'); if (_inpProf) _inpProf.value = '';
+  var _inpPcW2 = document.getElementById('inp-pc-width'); if (_inpPcW2) _inpPcW2.value = '';
+  var _inpPcT2 = document.getElementById('inp-pc-thickness'); if (_inpPcT2) _inpPcT2.value = '';
   var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
   var ss = document.getElementById('inp-secondary'); if (ss) ss.checked = false;
   var sb = document.getElementById('suggestion-box'); if (sb) sb.classList.remove('active');
@@ -6475,6 +6601,8 @@ function renderRunCycle() {
 function logRun() {
   var locVal = document.getElementById('inp-location').value;
   var type = document.getElementById('inp-type').value;
+  // Precast mode: always treat as straight (discrete elements, no spools)
+  if (APP_MODE === 'precast') type = 'straight';
   var size = getFormSize('inp');
   var length = getLengthDisplay(); // display string e.g. "20'6\""
   var lenNum = getLengthDecimal(); // decimal feet e.g. 20.5
@@ -6519,11 +6647,22 @@ function logRun() {
   if (!spec)  { alert(LBL('specAlert')); return; }
 
   // For spool, get weight from the fixed dropdown (lbs → tons)
+  var inpPcWidthEl     = document.getElementById('inp-pc-width');
+  var inpPcThicknessEl = document.getElementById('inp-pc-thickness');
   var weightTons;
   if (type === 'spool') {
     var spoolLbs = parseFloat(document.getElementById('inp-spool-weight').value) || 0;
     var spoolCoils = parseInt(bundles) || 0;
     weightTons = (spoolLbs / 2000) * spoolCoils;
+  } else if (APP_MODE === 'precast') {
+    var _pcW = parseFloat(inpPcWidthEl ? inpPcWidthEl.value : 0) || 0;
+    var _pcT = parseFloat(inpPcThicknessEl ? inpPcThicknessEl.value : 0) || 0;
+    if (lenNum && _pcW && _pcT) {
+      var _cuFt = lenNum * _pcW * (_pcT / 12);
+      weightTons = (_cuFt * 150 / 2000) * (parseInt(bundles) || 0);
+    } else {
+      weightTons = 0;
+    }
   } else {
     var bdlTons = getCalcBdlTons();
     weightTons = bdlTons * (parseInt(bundles) || 0);
@@ -6681,8 +6820,10 @@ function logRun() {
     uid: genUid(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
-    species: (APP_MODE === 'lumber' && inpSpeciesEl) ? inpSpeciesEl.value : '',
-    finish:  (APP_MODE === 'alum'   && inpFinishEl)  ? inpFinishEl.value  : '',
+    species:     (APP_MODE === 'lumber'   && inpSpeciesEl)     ? inpSpeciesEl.value : '',
+    finish:      (APP_MODE === 'alum'     && inpFinishEl)      ? inpFinishEl.value  : '',
+    pcWidth:     (APP_MODE === 'precast'  && inpPcWidthEl)     ? (parseFloat(inpPcWidthEl.value) || 0)     : 0,
+    pcThickness: (APP_MODE === 'precast'  && inpPcThicknessEl) ? (parseFloat(inpPcThicknessEl.value) || 0) : 0,
     bundles: parseInt(bundles),
     weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
@@ -6704,10 +6845,12 @@ function logRun() {
     var existing = store[loc];
     var canMerge = existing.size === item.size &&
       parseFloat(existing.length) === parseFloat(item.length) &&
-      (!existing.grade    || !item.grade    || existing.grade    === item.grade) &&
-      (!existing.spec     || !item.spec     || existing.spec     === item.spec) &&
-      (!existing.species  || !item.species  || existing.species  === item.species) &&
-      (!existing.finish   || !item.finish   || existing.finish   === item.finish) &&
+      (!existing.grade        || !item.grade        || existing.grade        === item.grade) &&
+      (!existing.spec         || !item.spec         || existing.spec         === item.spec) &&
+      (!existing.species      || !item.species      || existing.species      === item.species) &&
+      (!existing.finish       || !item.finish       || existing.finish       === item.finish) &&
+      (!existing.pcWidth      || !item.pcWidth      || existing.pcWidth      === item.pcWidth) &&
+      (!existing.pcThickness  || !item.pcThickness  || existing.pcThickness  === item.pcThickness) &&
       (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
@@ -6740,6 +6883,8 @@ function logRun() {
   var _inpSp = document.getElementById('inp-species'); if (_inpSp) _inpSp.value='';
   var _inpFin = document.getElementById('inp-finish'); if (_inpFin) _inpFin.value='';
   var _inpPrf = document.getElementById('inp-profile'); if (_inpPrf) _inpPrf.value='';
+  var _inpPcW = document.getElementById('inp-pc-width'); if (_inpPcW) _inpPcW.value='';
+  var _inpPcT = document.getElementById('inp-pc-thickness'); if (_inpPcT) _inpPcT.value='';
   document.getElementById('inp-location').value='';
   document.getElementById('inp-spool-weight').value='';
   document.getElementById('inp-reserve').checked = false;
@@ -6990,8 +7135,9 @@ function renderInventory() {
     var gradeSpec = [
       item.grade ? (APP_MODE === 'rebar' ? 'Gr'+item.grade : item.grade) : '',
       item.spec  || '',
-      (APP_MODE === 'lumber' && item.species) ? item.species : '',
-      (APP_MODE === 'alum'   && item.finish)  ? item.finish  : ''
+      (APP_MODE === 'lumber'  && item.species)                          ? item.species : '',
+      (APP_MODE === 'alum'    && item.finish)                           ? item.finish  : '',
+      (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)      ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : ''
     ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
