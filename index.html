@@ -648,8 +648,8 @@
 
 <!-- PIN LOCK SCREEN -->
 <div id="tenant-screen">
-  <div class="pin-card">
-    <div>
+  <div class="pin-card" style="position:relative">
+    <div onclick="adminLogoClick()" style="cursor:default;user-select:none">
       <div class="pin-logo">RebarTrack</div>
       <div class="pin-logo-sub">COMPANY ACCESS KEY</div>
     </div>
@@ -660,6 +660,14 @@
         onkeydown="if(event.key==='Enter')tenantContinue()">
       <div id="tenant-error" style="color:var(--hot);font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:6px;min-height:16px"></div>
       <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:4px;line-height:1.5">Letters, numbers, and hyphens only. Min 4 characters.<br>Each company's data is stored separately.</div>
+    </div>
+    <!-- Hidden admin password field — revealed after 5 logo clicks -->
+    <div id="admin-pass-wrap" style="display:none;width:100%">
+      <input id="admin-pass-input" type="password" maxlength="30" autocomplete="off" placeholder="Password"
+        style="width:100%;box-sizing:border-box;font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;outline:none;letter-spacing:2px"
+        onkeydown="if(event.key==='Enter')adminLogin()">
+      <button onclick="adminLogin()" style="margin-top:8px;width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text-dim);padding:8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">Login</button>
+      <div id="admin-pass-error" style="color:var(--hot);font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:4px;min-height:14px"></div>
     </div>
     <button id="tenant-submit" onclick="tenantContinue()" style="width:100%">Continue</button>
   </div>
@@ -7922,6 +7930,45 @@ function el(tag,cls){var e=document.createElement(tag);if(cls)e.className=cls;re
 // ─── TENANT KEY ──────────────────────────────────────────────────
 var tenantKey = localStorage.getItem('rebartracker_tenant_key') || '';
 
+var _adminClickCount = 0;
+var _adminClickTimer = null;
+
+function adminLogoClick() {
+  clearTimeout(_adminClickTimer);
+  _adminClickCount++;
+  _adminClickTimer = setTimeout(function() { _adminClickCount = 0; }, 2000);
+  if (_adminClickCount >= 5) {
+    _adminClickCount = 0;
+    var wrap = document.getElementById('admin-pass-wrap');
+    if (wrap) {
+      wrap.style.display = 'block';
+      setTimeout(function() {
+        var inp = document.getElementById('admin-pass-input');
+        if (inp) inp.focus();
+      }, 50);
+    }
+  }
+}
+
+function adminLogin() {
+  var inp = document.getElementById('admin-pass-input');
+  var err = document.getElementById('admin-pass-error');
+  if (!inp) return;
+  var val = inp.value;
+  if (val === ADMIN_PASS) {
+    localStorage.setItem('rebartracker_tenant_key', 'ADMIN');
+    tenantKey = 'ADMIN';
+    document.getElementById('tenant-screen').classList.add('hidden');
+    var td = document.getElementById('tenant-key-display');
+    if (td) td.textContent = 'ADMIN';
+  } else {
+    err.textContent = 'Incorrect password.';
+    inp.value = '';
+    inp.focus();
+    setTimeout(function() { err.textContent = ''; }, 2000);
+  }
+}
+
 function tenantContinue() {
   var inp = document.getElementById('tenant-input');
   var err = document.getElementById('tenant-error');
@@ -8223,6 +8270,7 @@ function importBackup(input) {
 }
 
 var ADMIN_PIN = '1234'; // Change this to your preferred PIN
+var ADMIN_PASS = 'RTADMIN2026'; // Hidden admin backdoor password
 
 function checkAdminPin() {
   var entered = document.getElementById('admin-pin-input').value;
