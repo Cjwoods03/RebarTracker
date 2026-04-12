@@ -530,6 +530,9 @@
   .mode-field { display: none; }
   /* Field group: dimensions (thickness × width) — declared by SSC mode */
   body.mf-dimensions .mode-field { display: block; }
+  /* Field group: species — lumber yard mode only */
+  .mf-species-field { display: none; }
+  body[data-mode="lumber"] .mf-species-field { display: block; }
 
   /* Mode selector button in header */
   .mode-select-btn {
@@ -836,11 +839,26 @@
             </select>
           </div>
           <div class="form-group">
-            <label>Spec</label>
+            <label data-mode-label="specLbl">Spec</label>
             <select id="inp-spec">
               <option value="">— Spec —</option>
               <option value="A615">A615</option>
               <option value="A706">A706</option>
+            </select>
+          </div>
+        </div>
+        <!-- Lumber yard mode — species field -->
+        <div class="form-row mf-species-field">
+          <div class="form-group" style="width:100%">
+            <label>Species</label>
+            <select id="inp-species">
+              <option value="">— Species —</option>
+              <option value="SPF">SPF</option>
+              <option value="Douglas Fir">Douglas Fir</option>
+              <option value="Southern Yellow Pine">Southern Yellow Pine</option>
+              <option value="Hem-Fir">Hem-Fir</option>
+              <option value="Cedar">Cedar</option>
+              <option value="Redwood">Redwood</option>
             </select>
           </div>
         </div>
@@ -1135,7 +1153,7 @@
               </select>
             </div>
             <div>
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Spec</div>
+              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-mode-label="specLbl">Spec</div>
               <select id="rc-spec" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
                 <option value="">—</option>
                 <option>A615</option><option>A706</option>
@@ -1269,11 +1287,26 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Spec</label>
+        <label data-mode-label="specLbl">Spec</label>
         <select id="sec-spec">
           <option value="">— Spec —</option>
           <option value="A615">A615</option>
           <option value="A706">A706</option>
+        </select>
+      </div>
+    </div>
+    <!-- Lumber yard mode — species field -->
+    <div class="form-row mf-species-field">
+      <div class="form-group" style="width:100%">
+        <label>Species</label>
+        <select id="sec-species">
+          <option value="">— Species —</option>
+          <option value="SPF">SPF</option>
+          <option value="Douglas Fir">Douglas Fir</option>
+          <option value="Southern Yellow Pine">Southern Yellow Pine</option>
+          <option value="Hem-Fir">Hem-Fir</option>
+          <option value="Cedar">Cedar</option>
+          <option value="Redwood">Redwood</option>
         </select>
       </div>
     </div>
@@ -1282,7 +1315,7 @@
       <input type="number" id="sec-bundles" placeholder="qty" min="1" inputmode="numeric">
     </div>
     <div class="form-group">
-      <div class="optional-label"><span>Bundle Weight</span><span class="optional-badge">optional</span></div>
+      <div class="optional-label"><span data-mode-label="bdlWtShort">Bundle Weight</span><span class="optional-badge">optional</span></div>
       <div style="display:flex;gap:8px;align-items:center">
         <input type="number" id="sec-weight" placeholder="e.g. 2.5" min="0" step="any" inputmode="decimal" style="flex:1">
         <div class="unit-toggle">
@@ -1338,11 +1371,26 @@
         </select>
       </div>
       <div class="form-group">
-        <label>Spec</label>
+        <label data-mode-label="specLbl">Spec</label>
         <select id="edit-spec">
           <option value="">— Spec —</option>
           <option value="A615">A615</option>
           <option value="A706">A706</option>
+        </select>
+      </div>
+    </div>
+    <!-- Lumber yard mode — species field -->
+    <div class="form-row mf-species-field">
+      <div class="form-group" style="width:100%">
+        <label>Species</label>
+        <select id="edit-species">
+          <option value="">— Species —</option>
+          <option value="SPF">SPF</option>
+          <option value="Douglas Fir">Douglas Fir</option>
+          <option value="Southern Yellow Pine">Southern Yellow Pine</option>
+          <option value="Hem-Fir">Hem-Fir</option>
+          <option value="Cedar">Cedar</option>
+          <option value="Redwood">Redwood</option>
         </select>
       </div>
     </div>
@@ -1703,6 +1751,7 @@ var MODES = {
       addToStan:    '+ ADD TO STANCHION',
       totalBundles: 'Total bundles',
       secStackDesc: 'Adds on top of existing product in the chosen stanchion side',
+      specLbl:      'Spec',
       gradePrefix:  'Grade ',
       gradeAlert:   'Please select a Grade (40, 60, or 80).',
       specAlert:    'Please select a Spec (A615 or A706).',
@@ -1752,6 +1801,7 @@ var MODES = {
       addToStan:    '+ ADD TO BAY',
       totalBundles: 'Total lifts',
       secStackDesc: 'Adds on top of existing product in the chosen bay side',
+      specLbl:      'Spec',
       gradePrefix:  '',
       gradeAlert:   'Please select a Grade / Designation.',
       specAlert:    'Please select a Spec.',
@@ -1767,6 +1817,58 @@ var MODES = {
       spec:      [{v:'',l:'— Spec —'},{v:'ASTM',l:'ASTM'},{v:'AISC',l:'AISC'},{v:'AWS',l:'AWS'}],
       rcSpec:    [{v:'',l:'—'},{v:'ASTM',l:'ASTM'},{v:'AISC',l:'AISC'},{v:'AWS',l:'AWS'}],
       productType:[{v:'straight',l:'Cut-to-Length'},{v:'spool',l:'Structural Shape'}]
+    }
+  }
+
+  ,
+
+  // ── LUMBER YARD ──────────────────────────────────────────────────
+  lumber: {
+    id: 'lumber',
+    name: 'Lumber Yard',
+    description: 'Lumber yard inventory — bunk locations, nominal dimensions, species, grade and treatment.',
+    bodyClasses: [],
+    labels: {
+      szLbl:        'Nominal Dimension',
+      gradeLbl:     'Grade',
+      specLbl:      'Treatment',
+      bundlesCap:   'Units/Packages',
+      bundlesCoils: 'Units/Packages',
+      bdgSfx:       'u',
+      bundles:      'units',
+      bundle:       'unit',
+      bdlAbbr:      'unit',
+      bdlCap:       'Unit',
+      piecesPerBdl: 'Pieces per Unit',
+      pcPerBdl:     'Pc / Unit',
+      bdlWtCalc:    'UNIT WEIGHT (LBS) — board feet calculated below',
+      bdlWtShort:   'Unit Weight',
+      prodType:     'Dimensional Lumber',
+      prodSpool:    'Sheet Goods',
+      wtPerBdl:     'Weight/Unit',
+      stan:         'Bunk Location',
+      stanShort:    'Bunk',
+      multiStan:    'Multi-Bunk Placement',
+      nextStanSide: 'Next bunk side',
+      bdlsHere:     'Units to place here',
+      addToStan:    '+ ADD TO BUNK',
+      totalBundles: 'Total units',
+      secStackDesc: 'Adds on top of existing product in the chosen bunk side',
+      gradePrefix:  '',
+      gradeAlert:   'Please select a Grade.',
+      specAlert:    'Please select a Treatment.',
+      sizeAlert:    'Please fill in Nominal Dimension and Units/Packages.',
+      logoSub:      'LUMBER YARD'
+    },
+    dropdowns: {
+      size:      [{v:'',l:'— Dimension —'},{v:'2x4',l:'2x4'},{v:'2x6',l:'2x6'},{v:'2x8',l:'2x8'},{v:'2x10',l:'2x10'},{v:'2x12',l:'2x12'},{v:'4x4',l:'4x4'},{v:'4x6',l:'4x6'},{v:'4x8',l:'4x8'},{v:'6x6',l:'6x6'},{v:'6x8',l:'6x8'},{v:'8x8',l:'8x8'}],
+      areaSize:  [{v:'',l:'— Dimension —'},{v:'2x4',l:'2x4'},{v:'2x6',l:'2x6'},{v:'2x8',l:'2x8'},{v:'2x10',l:'2x10'},{v:'2x12',l:'2x12'},{v:'4x4',l:'4x4'},{v:'4x6',l:'4x6'},{v:'6x6',l:'6x6'}],
+      rcSize:    [{v:'',l:'—'},{v:'2x4',l:'2x4'},{v:'2x6',l:'2x6'},{v:'2x8',l:'2x8'},{v:'2x10',l:'2x10'},{v:'2x12',l:'2x12'},{v:'4x4',l:'4x4'},{v:'4x6',l:'4x6'},{v:'4x8',l:'4x8'},{v:'6x6',l:'6x6'},{v:'6x8',l:'6x8'},{v:'8x8',l:'8x8'}],
+      grade:     [{v:'',l:'— Grade —'},{v:'#1',l:'#1'},{v:'#2',l:'#2'},{v:'#3',l:'#3'},{v:'Select Structural',l:'Select Structural'},{v:'Stud',l:'Stud'},{v:'Construction',l:'Construction'},{v:'Standard',l:'Standard'}],
+      rcGrade:   [{v:'',l:'—'},{v:'#1',l:'#1'},{v:'#2',l:'#2'},{v:'#3',l:'#3'},{v:'Select Structural',l:'Select Structural'},{v:'Stud',l:'Stud'},{v:'Construction',l:'Construction'},{v:'Standard',l:'Standard'}],
+      spec:      [{v:'',l:'— Treatment —'},{v:'Untreated',l:'Untreated'},{v:'Pressure Treated',l:'Pressure Treated'},{v:'Kiln Dried',l:'Kiln Dried'},{v:'Green',l:'Green'}],
+      rcSpec:    [{v:'',l:'—'},{v:'Untreated',l:'Untreated'},{v:'Pressure Treated',l:'Pressure Treated'},{v:'Kiln Dried',l:'Kiln Dried'},{v:'Green',l:'Green'}],
+      productType:[{v:'straight',l:'Dimensional Lumber'},{v:'spool',l:'Sheet Goods'}]
     }
   }
 
@@ -2154,6 +2256,13 @@ function calcPiecesFromWeight() {
   calcBundleWeight();
 }
 
+// Parses "2x4", "4x6", etc. → {t: thickness, w: width} for board foot calc
+function parseLumberDims(size) {
+  var m = size && size.match(/^(\d+)x(\d+)$/i);
+  if (!m) return null;
+  return { t: parseInt(m[1]), w: parseInt(m[2]) };
+}
+
 function calcBundleWeight() {
   var type    = document.getElementById('inp-type').value;
   var calcEl  = document.getElementById('weight-calc');
@@ -2164,6 +2273,27 @@ function calcBundleWeight() {
   var lenNum  = getLengthDecimal();
   var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+
+  // ── Lumber yard: board feet calculation ──
+  if (APP_MODE === 'lumber') {
+    var dims = parseLumberDims(size);
+    if (!dims || !lenNum || !pieces) { calcEl.style.display = 'none'; return; }
+    var bfPerPc   = (dims.t * dims.w * lenNum) / 12;
+    var bfPerUnit = bfPerPc * pieces;
+    var bfTotal   = bfPerUnit * bundles;
+    var html =
+      '<span style="color:var(--text-dim)">📐 ' + size + ' × ' + lenNum + 'ft × ' + pieces + ' pc/unit</span><br>' +
+      '<span style="color:var(--text-dim)">BF/pc: ' + bfPerPc.toFixed(2) + '</span> &nbsp;·&nbsp; ' +
+      '<strong style="color:var(--safe)">BF/unit: ' + bfPerUnit.toFixed(1) + '</strong>';
+    if (bundles > 0) {
+      html += '<br><strong style="color:var(--accent)">Total (' + bundles + ' units): ' + bfTotal.toFixed(0) + ' board feet</strong>';
+    }
+    calcEl.innerHTML = html;
+    calcEl.style.display = 'block';
+    return;
+  }
+
+  // ── Rebar / SSC: lbs weight calculation ──
   var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
 
   if (!lbsPerFt || !lenNum || !pieces) { calcEl.style.display = 'none'; return; }
@@ -3096,8 +3226,9 @@ function buildModalRows(item, isSpool, days) {
   if (item.side) rows += mrow('Side', item.side + '-Side');
   rows += mrow(LBL('szLbl'), item.size);
   rows += mrow('Type', isSpool ? LBL('prodSpool') : LBL('prodType'));
-  if (item.grade) rows += mrow('Grade', LBL('gradePrefix') + item.grade);
-  if (item.spec)  rows += mrow('Spec', item.spec);
+  if (item.grade)   rows += mrow('Grade', LBL('gradePrefix') + item.grade);
+  if (item.spec)    rows += mrow(LBL('specLbl'), item.spec);
+  if (item.species) rows += mrow('Species', item.species);
   rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
@@ -3325,6 +3456,8 @@ function openEditModal(type, idx) {
   document.getElementById('edit-size').value    = item.size    || '';
   document.getElementById('edit-grade').value   = item.grade   || '';
   document.getElementById('edit-spec').value    = item.spec    || '';
+  var editSpeciesEl = document.getElementById('edit-species');
+  if (editSpeciesEl) editSpeciesEl.value = item.species || '';
   document.getElementById('edit-bundles').value = item.bundles || '';
   document.getElementById('edit-heat').value    = item.heat    || '';
   document.getElementById('edit-length-ft').value = lenFt > 0 ? lenFt : '';
@@ -3352,6 +3485,8 @@ function confirmEdit() {
   var newSize    = document.getElementById('edit-size').value;
   var newGrade   = document.getElementById('edit-grade').value;
   var newSpec    = document.getElementById('edit-spec').value;
+  var editSpeciesEl2 = document.getElementById('edit-species');
+  var newSpecies = editSpeciesEl2 ? editSpeciesEl2.value : undefined;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -3363,8 +3498,9 @@ function confirmEdit() {
 
   // Apply changes
   if (newSize)    item.size    = newSize;
-  if (newGrade !== undefined) item.grade = newGrade;
-  if (newSpec  !== undefined) item.spec  = newSpec;
+  if (newGrade   !== undefined) item.grade   = newGrade;
+  if (newSpec    !== undefined) item.spec    = newSpec;
+  if (newSpecies !== undefined) item.species = newSpecies;
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -3437,8 +3573,10 @@ function confirmAddSecondary() {
   var lenDecimal = ftVal + (inVal / 12);
   var bundles = parseInt(document.getElementById('sec-bundles').value) || 0;
   if (!size || !bundles) { alert('Please fill in ' + LBL('szLbl') + ' and ' + LBL('bdlCap') + 's.'); return; }
-  var secGrade = document.getElementById('sec-grade').value;
-  var secSpec  = document.getElementById('sec-spec').value;
+  var secGrade   = document.getElementById('sec-grade').value;
+  var secSpec    = document.getElementById('sec-spec').value;
+  var secSpeciesEl = document.getElementById('sec-species');
+  var secSpecies = secSpeciesEl ? secSpeciesEl.value : '';
   if (!secGrade) { alert(LBL('gradeAlert')); return; }
   if (!secSpec)  { alert(LBL('specAlert')); return; }
 
@@ -3465,7 +3603,7 @@ function confirmAddSecondary() {
   var newItem = {
     uid: genUid(),
     size: size, length: lenDecimal ? String(lenDecimal) : '', type: 'straight',
-    grade: secGrade, spec: secSpec,
+    grade: secGrade, spec: secSpec, species: secSpecies,
     bundles: bundles,
     weightPerBundleTons: secWtPerBdl,
     weightTons: secWtPerBdl * bundles,
@@ -3479,6 +3617,7 @@ function confirmAddSecondary() {
 
   document.getElementById('sec-grade').value = '';
   document.getElementById('sec-spec').value = '';
+  var _secSp = document.getElementById('sec-species'); if (_secSp) _secSp.value = '';
 
   closeSecondaryModal();
   renderAll();
@@ -3683,11 +3822,12 @@ function openTransferModal() {
         var opt = document.createElement('option');
         opt.value = id;
         if (existing) {
-          var tfGradeOk = !existing.grade || !item.grade || existing.grade === item.grade;
-          var tfSpecOk  = !existing.spec  || !item.spec  || existing.spec  === item.spec;
-          var tfCustOk  = (existing.customer||'') === (item.customer||'');
+          var tfGradeOk   = !existing.grade   || !item.grade   || existing.grade   === item.grade;
+          var tfSpecOk    = !existing.spec    || !item.spec    || existing.spec    === item.spec;
+          var tfSpeciesOk = !existing.species || !item.species || existing.species === item.species;
+          var tfCustOk    = (existing.customer||'') === (item.customer||'');
           if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
-              tfGradeOk && tfSpecOk && tfCustOk) {
+              tfGradeOk && tfSpecOk && tfSpeciesOk && tfCustOk) {
             // Same product (size + length + compatible grade/spec) — allow merge
             opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
             opt.style.fontWeight = 'bold';
@@ -4933,7 +5073,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -5122,8 +5262,9 @@ function runOptimizer() {
           if (existing &&
               existing.size === rcItem.size &&
               parseFloat(existing.length) === rcLen &&
-              (!rcItem.grade || !existing.grade || existing.grade === rcItem.grade) &&
-              (!rcItem.spec  || !existing.spec  || existing.spec  === rcItem.spec) &&
+              (!rcItem.grade    || !existing.grade    || existing.grade    === rcItem.grade) &&
+              (!rcItem.spec     || !existing.spec     || existing.spec     === rcItem.spec) &&
+              (!rcItem.species  || !existing.species  || existing.species  === rcItem.species) &&
               (existing.customer||'') === (rcItem.customer||'')) {
             hasSlot = true;
           }
@@ -5384,9 +5525,11 @@ function openSplitFromForm() {
     var spec    = document.getElementById('inp-spec').value;
     var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
+    var _ofSpeciesEl = document.getElementById('inp-species');
     _of.item = {
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
+      species: (APP_MODE === 'lumber' && _ofSpeciesEl) ? _ofSpeciesEl.value : '',
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
@@ -5831,7 +5974,7 @@ function ofClearLogForm() {
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
   var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
   clearLengthInputs();
-  ['inp-size', 'inp-grade', 'inp-spec', 'inp-location'].forEach(function(id) {
+  ['inp-size', 'inp-grade', 'inp-spec', 'inp-species', 'inp-location'].forEach(function(id) {
     var el = document.getElementById(id); if (el) el.value = '';
   });
   var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
@@ -5890,9 +6033,11 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
         var existing = store[id];
         if (!existing) continue;
         if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
+        var curSpecies = (APP_MODE === 'lumber' && document.getElementById('inp-species')) ? document.getElementById('inp-species').value : '';
         if (existing.size === size && parseFloat(existing.length) === length &&
             (!grade || !existing.grade || existing.grade === grade) &&
             (!spec  || !existing.spec  || existing.spec  === spec) &&
+            (!curSpecies || !existing.species || existing.species === curSpecies) &&
             (existing.customer||'') === (customer||'')) {
           pick2 = id;
           var lbl = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
@@ -5969,7 +6114,7 @@ function suggestLocation() {
   var result = calcSuggestLoc(type, size, length, grade, spec, customer);
   if (!result) {
     if (type === 'spool') alert('All spool rows are full.');
-    else alert('No stanchion slots found that fit '+(length||'')+'ft.');
+    else alert('No ' + LBL('stan').toLowerCase() + ' slots found that fit '+(length||'')+'ft.');
     return;
   }
 
@@ -5977,7 +6122,8 @@ function suggestLocation() {
   if (type === 'spool') {
     document.getElementById('suggestion-loc').textContent = result.loc.replace('RACK-','ROW ');
   } else {
-    document.getElementById('suggestion-loc').textContent = result.loc === 'CYCLE' ? 'CYCLE…' : (result.loc.startsWith('BSU') ? 'B.SU ' : 'STANCHION ') + result.loc;
+    var _locLabel = LBL('stan').toUpperCase();
+    document.getElementById('suggestion-loc').textContent = result.loc === 'CYCLE' ? 'CYCLE…' : (result.loc.startsWith('BSU') ? 'B.SU ' : _locLabel + ' ') + result.loc;
   }
   document.getElementById('suggestion-reason').textContent = result.reason;
   document.getElementById('suggestion-box').classList.add('active');
@@ -6351,9 +6497,11 @@ function logRun() {
       var ofNewBdl = parseInt(bundles) || 0;
       if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
         // Build item template and hand off to overflow modal
+        var _ofTplSpeciesEl = document.getElementById('inp-species');
         var ofTemplate = {
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
+          species: (APP_MODE === 'lumber' && _ofTplSpeciesEl) ? _ofTplSpeciesEl.value : '',
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
           customer: document.getElementById('inp-customer').value.trim(),
@@ -6366,10 +6514,12 @@ function logRun() {
   }
 
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
+  var inpSpeciesEl = document.getElementById('inp-species');
   var item = {
     uid: genUid(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
+    species: (APP_MODE === 'lumber' && inpSpeciesEl) ? inpSpeciesEl.value : '',
     bundles: parseInt(bundles),
     weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
@@ -6391,8 +6541,9 @@ function logRun() {
     var existing = store[loc];
     var canMerge = existing.size === item.size &&
       parseFloat(existing.length) === parseFloat(item.length) &&
-      (!existing.grade || !item.grade || existing.grade === item.grade) &&
-      (!existing.spec  || !item.spec  || existing.spec  === item.spec) &&
+      (!existing.grade    || !item.grade    || existing.grade    === item.grade) &&
+      (!existing.spec     || !item.spec     || existing.spec     === item.spec) &&
+      (!existing.species  || !item.species  || existing.species  === item.species) &&
       (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
@@ -6422,6 +6573,7 @@ function logRun() {
   document.getElementById('inp-size').value='';
   document.getElementById('inp-grade').value='';
   document.getElementById('inp-spec').value='';
+  var _inpSp = document.getElementById('inp-species'); if (_inpSp) _inpSp.value='';
   document.getElementById('inp-location').value='';
   document.getElementById('inp-spool-weight').value='';
   document.getElementById('inp-reserve').checked = false;
@@ -6669,7 +6821,7 @@ function renderInventory() {
     // Product name line — size + length + type
     var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' ' + LBL('bundles'));
     // Grade/spec line
-    var gradeSpec = [item.grade ? 'Gr'+item.grade : '', item.spec || ''].filter(Boolean).join(' ');
+    var gradeSpec = [item.grade ? (APP_MODE === 'lumber' ? item.grade : 'Gr'+item.grade) : '', item.spec || '', (APP_MODE === 'lumber' && item.species) ? item.species : ''].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
 
