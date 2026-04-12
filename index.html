@@ -8471,17 +8471,20 @@ function clearSavedData() {
 function saveAndRender() { saveData(); renderAll(); renderInventory(); }
 
 // ─── PIN LOCK ────────────────────────────────────────────────────
-// The active PIN for the current tenant session.
-// Set by _showPinOrApp() after checking Firebase, falls back to TENANT_PINS default.
-var _resolvedTenantPin = '';
+// Both variables are set together by _showPinOrApp(key) — they always describe
+// the same tenant so the key can never drift away from its PIN.
+var _resolvedTenantPin = ''; // The PIN to check against
+var _resolvedForKey    = ''; // The tenant key that PIN belongs to
 
 function pinUnlock() {
   var entered = document.getElementById('pin-input').value;
   var inp = document.getElementById('pin-input');
   var err = document.getElementById('pin-error');
-  if (_resolvedTenantPin && entered === _resolvedTenantPin) {
+  // Validate against the PIN that was fetched for _resolvedForKey.
+  // Never re-reads tenantKey or localStorage here.
+  if (_resolvedTenantPin && _resolvedForKey && entered === _resolvedTenantPin) {
     sessionStorage.setItem('rt_unlocked', '1');
-    sessionStorage.setItem('rt_unlocked_for', tenantKey);
+    sessionStorage.setItem('rt_unlocked_for', _resolvedForKey);
     document.getElementById('pin-screen').classList.add('hidden');
     document.documentElement.style.visibility = '';
     inp.classList.remove('error');
@@ -8497,31 +8500,27 @@ function pinUnlock() {
 
 // Fetch the tenant's PIN from Firebase (custom) or fall back to TENANT_PINS default,
 // then show the PIN screen (or skip it if already unlocked this session).
-function _showPinOrApp() {
-  // Snapshot the tenant key RIGHT NOW so every reference inside this function —
-  // including the async Firebase callback — uses the same key and cannot drift
-  // if the global tenantKey is ever reassigned before the callback fires.
-  var _key = tenantKey;
-
-  // Session unlock is only valid when it was granted for this specific tenant key.
+// key — the tenant identity decided at access-key entry time, passed explicitly.
+//        Never reads tenantKey global or localStorage so identity cannot drift.
+function _showPinOrApp(key) {
+  // Session unlock is only valid when it was granted for this exact key.
   if (sessionStorage.getItem('rt_unlocked') === '1' &&
-      sessionStorage.getItem('rt_unlocked_for') === _key) {
+      sessionStorage.getItem('rt_unlocked_for') === key) {
     document.getElementById('pin-screen').classList.add('hidden');
     document.documentElement.style.visibility = '';
     return;
   }
 
-  // Fetch custom PIN — stored at tenants/{key}/settings/pin
-  // Uses the snapshotted _key, NOT the global, so the path is always correct.
-  var pinRef = db ? db.ref('tenants/' + _key + '/settings/pin') : null;
+  // Fetch custom PIN from Firebase at the correct tenant path.
+  var pinRef = db ? db.ref('tenants/' + key + '/settings/pin') : null;
 
   var proceed = function(firebasePin) {
-    // Firebase PIN takes precedence; fall back to the default for _key specifically.
-    // Use _key (snapshotted) — never the global tenantKey — so the lookup is
-    // always for the tenant that triggered this auth flow.
+    // Lock in both the PIN and the key it belongs to — atomically.
+    // TENANT_PINS[key] uses the parameter, never the global.
     _resolvedTenantPin = (firebasePin && typeof firebasePin === 'string')
       ? firebasePin
-      : (TENANT_PINS[_key] || '1234');
+      : (TENANT_PINS[key] || '1234');
+    _resolvedForKey = key;
     document.documentElement.style.visibility = '';
     setTimeout(function() {
       var pi = document.getElementById('pin-input');
@@ -8540,14 +8539,15 @@ function _showPinOrApp() {
   }
 }
 
-// Runs the full init sequence after tenantKey has been resolved.
-// Called by both the normal tenant-key flow and the admin backdoor flow.
-function _initAfterTenantKey() {
+// Runs the full init sequence after the tenant identity has been decided.
+// key — the access key that was validated; threaded explicitly to _showPinOrApp
+//        so tenant identity never has to be re-derived from any ambient source.
+function _initAfterTenantKey(key) {
   applyTenantModeLock();
   applyModeLabels();
   rebuildDropdowns();
   var td = document.getElementById('tenant-key-display');
-  if (td) td.textContent = tenantKey;
+  if (td) td.textContent = key;
   buildStore();
   initFirebase();
   loadData(function(loaded) {
@@ -8556,7 +8556,7 @@ function _initAfterTenantKey() {
     renderInventory();
     renderRunCycle();
     updateRcBadge();
-    _showPinOrApp();
+    _showPinOrApp(key); // identity flows through — never re-read from globals
   });
 }
 
@@ -8574,7 +8574,8 @@ function changeTenantPin() {
   if (!/^\d{4}$/.test(nw))        { setStatus('New PIN must be exactly 4 digits.', false); return; }
   if (nw !== cfm)                  { setStatus('PINs do not match.', false); return; }
   if (!db) { setStatus('Not connected to Firebase.', false); return; }
-  db.ref('tenants/' + tenantKey + '/settings/pin').set(nw).then(function() {
+  // Write to the path for the key that was actually authenticated this session.
+  db.ref('tenants/' + _resolvedForKey + '/settings/pin').set(nw).then(function() {
     _resolvedTenantPin = nw;
     ['change-pin-current','change-pin-new','change-pin-confirm'].forEach(function(id) {
       document.getElementById(id).value = '';
@@ -8606,18 +8607,18 @@ if (!tenantKey) {
   tenantContinue = function() {
     _origTenantContinue();
     if (!tenantKey) return; // validation failed — stay on overlay
-    _initAfterTenantKey();
+    _initAfterTenantKey(tenantKey); // identity is now set; pass it explicitly
   };
 
   var _origAdminLogin = adminLogin;
   adminLogin = function() {
     _origAdminLogin();
     if (!tenantKey) return; // wrong password — stay on overlay
-    _initAfterTenantKey();
+    _initAfterTenantKey(tenantKey); // identity is now set; pass it explicitly
   };
 } else {
-  // Returning user — tenant key already in localStorage
-  _initAfterTenantKey();
+  // Returning user — key was validated from localStorage at page load
+  _initAfterTenantKey(tenantKey);
 }
 
 function seedWarehouse() {
