@@ -2476,7 +2476,17 @@ var MODES = {
 
 };
 
+// ─── TENANT MODE LOCKS ───────────────────────────────────────────
+// Maps access keys to their locked industry mode.
+// ADMIN key is intentionally absent — admin can switch freely.
+// Add a new customer entry here when provisioning their access key.
+// Example: 'ACME-STL-2025': 'rebar'
+var TENANT_MODES = {
+  // 'EXAMPLE-KEY': 'rebar',
+};
+
 // Active mode ID — loaded from localStorage, defaults to 'rebar'
+// If the tenant has a locked mode, that overrides localStorage.
 var APP_MODE = (function() {
   var saved = localStorage.getItem('rt_mode');
   return (saved && MODES[saved]) ? saved : 'rebar';
@@ -2487,6 +2497,33 @@ var APP_MODE = (function() {
 function LBL(key) {
   var m = MODES[APP_MODE];
   return (m && m.labels[key] !== undefined) ? m.labels[key] : key;
+}
+
+// applyTenantModeLock() — if the current tenant has a locked mode in TENANT_MODES,
+// forces APP_MODE to that mode and disables the mode selector button.
+// Call this after tenantKey is resolved, before rendering.
+function applyTenantModeLock() {
+  var locked = TENANT_MODES[tenantKey];
+  if (locked && MODES[locked]) {
+    // Force the locked mode — overrides localStorage
+    APP_MODE = locked;
+    localStorage.setItem('rt_mode', APP_MODE);
+    document.body.setAttribute('data-mode', APP_MODE);
+    (MODES[APP_MODE].bodyClasses || []).forEach(function(c) {
+      document.body.classList.add(c);
+    });
+    // Disable the mode selector button
+    var btn = document.getElementById('mode-select-btn');
+    if (btn) {
+      btn.onclick = null;
+      btn.title = 'Mode locked by your access key';
+      btn.style.opacity = '0.7';
+      btn.style.cursor = 'default';
+    }
+    // Update the sub-label to show "(locked)"
+    var sub = document.querySelector('.mode-select-btn-sub');
+    if (sub) sub.textContent = 'locked';
+  }
 }
 
 // applyModeLabels() — reads data-mode-label="key" attributes on DOM elements
@@ -2578,6 +2615,7 @@ function setAppMode(modeId) {
 
 // Mode selector modal
 function openModeSelector() {
+  if (TENANT_MODES[tenantKey] && MODES[TENANT_MODES[tenantKey]]) return; // locked tenant
   var html = Object.keys(MODES).map(function(id) {
     var m = MODES[id];
     var isActive = id === APP_MODE;
@@ -8343,6 +8381,9 @@ document.body.setAttribute('data-mode', APP_MODE);
 (MODES[APP_MODE] ? MODES[APP_MODE].bodyClasses : []).forEach(function(c) {
   document.body.classList.add(c);
 });
+// Apply tenant mode lock if key is already in localStorage (returning user)
+// This overrides the saved rt_mode with the locked mode for this tenant.
+applyTenantModeLock();
 applyModeLabels();
 rebuildDropdowns();
 
@@ -8362,6 +8403,10 @@ if (!tenantKey) {
   tenantContinue = function() {
     _origTenantContinue();
     if (!tenantKey) return; // validation failed
+    // Apply mode lock for this tenant now that key is known, then re-render labels
+    applyTenantModeLock();
+    applyModeLabels();
+    rebuildDropdowns();
     // Now run the rest of init
     buildStore();
     initFirebase();
