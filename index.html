@@ -702,7 +702,7 @@
       <label class="pin-label" for="tenant-input" style="text-align:left;display:block;margin-bottom:6px">Enter your company access key</label>
       <input id="tenant-input" type="text" maxlength="40" autocomplete="off" placeholder="e.g. ACME-WAREHOUSE"
         style="width:100%;box-sizing:border-box;text-transform:uppercase;letter-spacing:2px"
-        onkeydown="if(event.key==='Enter')tenantContinue()">
+        onkeydown="if(event.key==='Enter'){event.preventDefault();tenantContinue();}">
       <div id="tenant-error" style="color:var(--hot);font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:6px;min-height:16px"></div>
       <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-top:4px;line-height:1.5">Letters, numbers, and hyphens only. Min 4 characters.<br>Each company's data is stored separately.</div>
     </div>
@@ -710,11 +710,11 @@
     <div id="admin-pass-wrap" style="display:none;width:100%">
       <input id="admin-pass-input" type="password" maxlength="30" autocomplete="off" placeholder="Password"
         style="width:100%;box-sizing:border-box;font-family:'IBM Plex Mono',monospace;font-size:12px;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;outline:none;letter-spacing:2px"
-        onkeydown="if(event.key==='Enter')adminLogin()">
-      <button onclick="adminLogin()" style="margin-top:8px;width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text-dim);padding:8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">Login</button>
+        onkeydown="if(event.key==='Enter'){event.preventDefault();adminLogin();}">
+      <button type="button" onclick="adminLogin()" style="margin-top:8px;width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text-dim);padding:8px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">Login</button>
       <div id="admin-pass-error" style="color:var(--hot);font-family:'IBM Plex Mono',monospace;font-size:10px;margin-top:4px;min-height:14px"></div>
     </div>
-    <button id="tenant-submit" onclick="tenantContinue()" style="width:100%">Continue</button>
+    <button id="tenant-submit" type="button" onclick="tenantContinue()" style="width:100%">Continue</button>
   </div>
 </div>
 
@@ -726,10 +726,10 @@
     </div>
     <div class="pin-input-wrap">
       <label class="pin-label" for="pin-input">Enter PIN</label>
-      <input id="pin-input" type="tel" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••" onkeydown="if(event.key==='Enter')pinUnlock()">
+      <input id="pin-input" type="tel" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="••••" onkeydown="if(event.key==='Enter'){event.preventDefault();pinUnlock();}">
       <div id="pin-error"></div>
     </div>
-    <button id="pin-submit" onclick="pinUnlock()">Unlock</button>
+    <button id="pin-submit" type="button" onclick="pinUnlock()">Unlock</button>
   </div>
 </div>
 
