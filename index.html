@@ -554,6 +554,15 @@
   /* Pipe/Tube — Coating field */
   .mf-coating-field { display: none; }
   body[data-mode="pipe"] .mf-coating-field { display: block; }
+  /* Flat Glass — Width and Height dimension fields */
+  .mf-glass-dims-field { display: none; }
+  body[data-mode="glass"] .mf-glass-dims-field { display: block; }
+  /* Flat Glass — hide length inputs (sq footage replaces footage tracking) */
+  body[data-mode="glass"] #length-group { display: none; }
+  /* Flat Glass — hide product type (all glass is discrete sheets) */
+  body[data-mode="glass"] .product-type-group { display: none; }
+  /* Flat Glass — hide pieces-per-bundle/weight section (lite weight calculated from dims) */
+  body[data-mode="glass"] .pieces-bdl-group { display: none; }
 
   /* Mode selector button in header */
   .mode-select-btn {
@@ -857,7 +866,7 @@
         <div class="form-row">
           <div class="form-group">
             <label data-mode-label="gradeLbl">Grade</label>
-            <select id="inp-grade">
+            <select id="inp-grade" onchange="calcBundleWeight()">
               <option value="">— Grade —</option>
               <option value="40">Grade 40</option>
               <option value="60">Grade 60</option>
@@ -939,6 +948,17 @@
               <option value="Galvanized">Galvanized</option>
               <option value="Painted">Painted</option>
             </select>
+          </div>
+        </div>
+        <!-- Flat glass mode — Width and Height fields -->
+        <div class="form-row mf-glass-dims-field">
+          <div class="form-group">
+            <label>Width (in)</label>
+            <input type="number" id="inp-glass-width" placeholder='e.g. 48' min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
+          </div>
+          <div class="form-group">
+            <label>Height (in)</label>
+            <input type="number" id="inp-glass-height" placeholder='e.g. 84' min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
           </div>
         </div>
         <div id="length-hint" style="display:none"></div>
@@ -1555,6 +1575,17 @@
           <option value="Galvanized">Galvanized</option>
           <option value="Painted">Painted</option>
         </select>
+      </div>
+    </div>
+    <!-- Flat glass mode — Width and Height fields -->
+    <div class="form-row mf-glass-dims-field">
+      <div class="form-group">
+        <label>Width (in)</label>
+        <input type="number" id="edit-glass-width" placeholder='e.g. 48' min="0" step="any" inputmode="decimal">
+      </div>
+      <div class="form-group">
+        <label>Height (in)</label>
+        <input type="number" id="edit-glass-height" placeholder='e.g. 84' min="0" step="any" inputmode="decimal">
       </div>
     </div>
     <div class="form-group">
@@ -2197,6 +2228,59 @@ var MODES = {
     }
   }
 
+  ,
+
+  // ── FLAT GLASS DISTRIBUTION ──────────────────────────────────────
+  glass: {
+    id: 'glass',
+    name: 'Flat Glass Distribution',
+    description: 'Flat glass distribution — A-frame positions, glass types, thickness and dimensions.',
+    bodyClasses: [],
+    labels: {
+      szLbl:        'Glass Type',
+      gradeLbl:     'Thickness',
+      specLbl:      'Tint / Coating',
+      customerLbl:  'Customer',
+      bundlesCap:   'Lites / Sheets',
+      bundlesCoils: 'Lites / Sheets',
+      bdgSfx:       'L',
+      bundles:      'lites',
+      bundle:       'lite',
+      bdlAbbr:      'lite',
+      bdlCap:       'Lite',
+      piecesPerBdl: 'Lites per Group',
+      pcPerBdl:     'Lites / Group',
+      bdlWtCalc:    'LITE WEIGHT — calculated from dimensions and thickness',
+      bdlWtShort:   'Lite Weight',
+      prodType:     'Flat Glass Sheet',
+      prodSpool:    'Flat Glass Sheet',
+      wtPerBdl:     'Weight/Lite',
+      stan:         'A-Frame Position',
+      stanShort:    'A-Frame',
+      multiStan:    'Multi-A-Frame Placement',
+      nextStanSide: 'Next A-frame side',
+      bdlsHere:     'Lites to place here',
+      addToStan:    '+ ADD TO A-FRAME',
+      totalBundles: 'Total lites',
+      secStackDesc: 'Adds on top of existing product in the chosen A-frame side',
+      gradePrefix:  '',
+      gradeAlert:   'Please select a Thickness.',
+      specAlert:    'Please select a Tint/Coating.',
+      sizeAlert:    'Please fill in Glass Type and Quantity.',
+      logoSub:      'FLAT GLASS'
+    },
+    dropdowns: {
+      size:      [{v:'',l:'— Glass Type —'},{v:'Clear',l:'Clear'},{v:'Tinted',l:'Tinted'},{v:'Tempered',l:'Tempered'},{v:'Laminated',l:'Laminated'},{v:'Low-E',l:'Low-E'},{v:'Insulated',l:'Insulated'},{v:'Frosted',l:'Frosted'},{v:'Patterned',l:'Patterned'}],
+      areaSize:  [{v:'',l:'— Glass Type —'},{v:'Clear',l:'Clear'},{v:'Tinted',l:'Tinted'},{v:'Tempered',l:'Tempered'},{v:'Laminated',l:'Laminated'},{v:'Low-E',l:'Low-E'},{v:'Insulated',l:'Insulated'},{v:'Frosted',l:'Frosted'},{v:'Patterned',l:'Patterned'}],
+      rcSize:    [{v:'',l:'—'},{v:'Clear',l:'Clear'},{v:'Tinted',l:'Tinted'},{v:'Tempered',l:'Tempered'},{v:'Laminated',l:'Laminated'},{v:'Low-E',l:'Low-E'},{v:'Insulated',l:'Insulated'},{v:'Frosted',l:'Frosted'},{v:'Patterned',l:'Patterned'}],
+      grade:     [{v:'',l:'— Thickness —'},{v:'3',l:'3mm'},{v:'4',l:'4mm'},{v:'5',l:'5mm'},{v:'6',l:'6mm'},{v:'8',l:'8mm'},{v:'10',l:'10mm'},{v:'12',l:'12mm'},{v:'19',l:'19mm'}],
+      rcGrade:   [{v:'',l:'—'},{v:'3',l:'3mm'},{v:'4',l:'4mm'},{v:'5',l:'5mm'},{v:'6',l:'6mm'},{v:'8',l:'8mm'},{v:'10',l:'10mm'},{v:'12',l:'12mm'},{v:'19',l:'19mm'}],
+      spec:      [{v:'',l:'— Tint/Coating —'},{v:'Clear',l:'Clear'},{v:'Bronze',l:'Bronze'},{v:'Grey',l:'Grey'},{v:'Green',l:'Green'},{v:'Blue',l:'Blue'},{v:'Low-E Coating',l:'Low-E Coating'},{v:'Reflective',l:'Reflective'}],
+      rcSpec:    [{v:'',l:'—'},{v:'Clear',l:'Clear'},{v:'Bronze',l:'Bronze'},{v:'Grey',l:'Grey'},{v:'Green',l:'Green'},{v:'Blue',l:'Blue'},{v:'Low-E Coating',l:'Low-E Coating'},{v:'Reflective',l:'Reflective'}],
+      productType:[{v:'straight',l:'Flat Glass Sheet'}]
+    }
+  }
+
   // ── ADD FUTURE MODES HERE ────────────────────────────────────────
   // Copy the structure above. No other code changes are needed.
 
@@ -2609,6 +2693,34 @@ function calcBundleWeight() {
   var lenNum  = getLengthDecimal();
   var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
+
+  // ── Flat glass: lite weight from width × height × thickness ──
+  if (APP_MODE === 'glass') {
+    var gwEl  = document.getElementById('inp-glass-width');
+    var ghEl  = document.getElementById('inp-glass-height');
+    var gw    = parseFloat(gwEl  ? gwEl.value  : 0) || 0;
+    var gh    = parseFloat(ghEl  ? ghEl.value  : 0) || 0;
+    var thickMm = parseFloat(document.getElementById('inp-grade').value) || 0;
+    var glQty   = parseInt(document.getElementById('inp-bundles').value) || 0;
+    if (!gw || !gh) { calcEl.style.display = 'none'; return; }
+    var sqFt = (gw * gh) / 144;
+    var sqM  = (gw * gh) / 1550.0031;
+    var kgPerLite  = thickMm ? (2.5 * thickMm * sqM) : 0;
+    var lbsPerLite = kgPerLite * 2.20462;
+    var html =
+      '<span style="color:var(--text-dim)">🪟 ' + gw + '" × ' + gh + '" = ' + sqFt.toFixed(2) + ' sq ft</span><br>' +
+      (thickMm
+        ? '<span style="color:var(--text-dim)">' + sqM.toFixed(3) + ' m² × ' + thickMm + 'mm × 2.5 kg/mm/m²</span> &nbsp;·&nbsp; <strong style="color:var(--safe)">' + lbsPerLite.toFixed(1) + ' lbs / lite</strong>'
+        : '<span style="color:var(--text-dim)">Select thickness for weight calculation</span>');
+    if (glQty > 0 && thickMm) {
+      var lbsTotal  = lbsPerLite * glQty;
+      var sqFtTotal = sqFt * glQty;
+      html += '<br><strong style="color:var(--accent)">Total (' + glQty + ' lites): ' + sqFtTotal.toFixed(1) + ' sq ft · ' + lbsTotal.toFixed(0) + ' lbs / ' + (lbsTotal / 2000).toFixed(2) + 't</strong>';
+    }
+    calcEl.innerHTML = html;
+    calcEl.style.display = 'block';
+    return;
+  }
 
   // ── Precast concrete: weight from dimensions ──
   if (APP_MODE === 'precast') {
@@ -3106,11 +3218,12 @@ function makeSlot(id, side) {
     } else {
       // Single product — show detail + customer if present
       var custStr = item.customer || '';
-      // Aluminum: alloy+temper; precast: element type+mix design; pipe: size+material
+      // Aluminum: alloy+temper; precast: element+mix; pipe: size+material; glass: type+thickness
       var slotLine1 = (APP_MODE === 'alum') ? (item.grade || '—') : item.size;
       var slotLine2 = (APP_MODE === 'alum')    ? (item.spec  || '—') :
                       (APP_MODE === 'precast') ? (item.grade || '—') :
                       (APP_MODE === 'pipe')    ? (item.grade || '—') :
+                      (APP_MODE === 'glass')   ? (item.grade ? item.grade + 'mm' : '—') :
                       (item.length ? formatLength(item.length) : 'Coil');
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+slotLine1+'</div>'+
@@ -3591,7 +3704,10 @@ function buildModalRows(item, isSpool, days) {
   if (item.side) rows += mrow('Side', item.side + '-Side');
   rows += mrow(LBL('szLbl'), item.size);
   rows += mrow('Type', isSpool ? LBL('prodSpool') : LBL('prodType'));
-  if (item.grade)   rows += mrow(LBL('gradeLbl'), LBL('gradePrefix') + item.grade);
+  if (item.grade) {
+    var gradeDisp = (APP_MODE === 'glass') ? item.grade + 'mm' : (LBL('gradePrefix') + item.grade);
+    rows += mrow(LBL('gradeLbl'), gradeDisp);
+  }
   if (item.spec)    rows += mrow(LBL('specLbl'), item.spec);
   if (item.species)     rows += mrow('Species', item.species);
   if (item.finish)      rows += mrow('Finish', item.finish);
@@ -3599,7 +3715,11 @@ function buildModalRows(item, isSpool, days) {
   if (item.pcThickness) rows += mrow('Thickness', item.pcThickness + ' in');
   if (item.endFinish)   rows += mrow('End Finish', item.endFinish);
   if (item.coating)     rows += mrow('Coating', item.coating);
-  rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
+  if (item.glassWidth && item.glassHeight) {
+    var gSqFt = (item.glassWidth * item.glassHeight) / 144;
+    rows += mrow('Size', item.glassWidth + '" \xd7 ' + item.glassHeight + '" (' + gSqFt.toFixed(2) + ' sq ft)');
+  }
+  if (APP_MODE !== 'glass') rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
     rows += mrow('Total Weight', ((item.spoolWeightLbs/2000)*(item.bundles||0)).toFixed(2) + 't');
@@ -3840,6 +3960,10 @@ function openEditModal(type, idx) {
   if (editEndFinishEl) editEndFinishEl.value = item.endFinish || '';
   var editCoatingEl = document.getElementById('edit-coating');
   if (editCoatingEl) editCoatingEl.value = item.coating || '';
+  var editGlassWidthEl = document.getElementById('edit-glass-width');
+  if (editGlassWidthEl) editGlassWidthEl.value = item.glassWidth || '';
+  var editGlassHeightEl = document.getElementById('edit-glass-height');
+  if (editGlassHeightEl) editGlassHeightEl.value = item.glassHeight || '';
   document.getElementById('edit-bundles').value = item.bundles || '';
   document.getElementById('edit-heat').value    = item.heat    || '';
   document.getElementById('edit-length-ft').value = lenFt > 0 ? lenFt : '';
@@ -3881,6 +4005,10 @@ function confirmEdit() {
   var newEndFinish = editEndFinishEl2 ? editEndFinishEl2.value : undefined;
   var editCoatingEl2 = document.getElementById('edit-coating');
   var newCoating = editCoatingEl2 ? editCoatingEl2.value : undefined;
+  var editGlassWidthEl2  = document.getElementById('edit-glass-width');
+  var newGlassWidth  = editGlassWidthEl2  ? (parseFloat(editGlassWidthEl2.value)  || 0) : 0;
+  var editGlassHeightEl2 = document.getElementById('edit-glass-height');
+  var newGlassHeight = editGlassHeightEl2 ? (parseFloat(editGlassHeightEl2.value) || 0) : 0;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -3900,6 +4028,7 @@ function confirmEdit() {
   if (APP_MODE === 'precast') { item.pcWidth = newPcWidth; item.pcThickness = newPcThickness; }
   if (newEndFinish !== undefined) item.endFinish = newEndFinish;
   if (newCoating   !== undefined) item.coating   = newCoating;
+  if (APP_MODE === 'glass') { item.glassWidth = newGlassWidth; item.glassHeight = newGlassHeight; }
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -5477,7 +5606,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'') + '|' + (item.endFinish||'') + '|' + (item.coating||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'') + '|' + (item.endFinish||'') + '|' + (item.coating||'') + '|' + (item.glassWidth||'') + '|' + (item.glassHeight||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -5930,17 +6059,21 @@ function openSplitFromForm() {
     var spec    = document.getElementById('inp-spec').value;
     var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
-    var _ofSpeciesEl   = document.getElementById('inp-species');
-    var _ofFinishEl    = document.getElementById('inp-finish');
-    var _ofEndFinishEl = document.getElementById('inp-endfinish');
-    var _ofCoatingEl   = document.getElementById('inp-coating');
+    var _ofSpeciesEl     = document.getElementById('inp-species');
+    var _ofFinishEl      = document.getElementById('inp-finish');
+    var _ofEndFinishEl   = document.getElementById('inp-endfinish');
+    var _ofCoatingEl     = document.getElementById('inp-coating');
+    var _ofGlassWidthEl  = document.getElementById('inp-glass-width');
+    var _ofGlassHeightEl = document.getElementById('inp-glass-height');
     _of.item = {
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
-      species:   (APP_MODE === 'lumber' && _ofSpeciesEl)   ? _ofSpeciesEl.value   : '',
-      finish:    (APP_MODE === 'alum'   && _ofFinishEl)    ? _ofFinishEl.value    : '',
-      endFinish: (APP_MODE === 'pipe'   && _ofEndFinishEl) ? _ofEndFinishEl.value : '',
-      coating:   (APP_MODE === 'pipe'   && _ofCoatingEl)   ? _ofCoatingEl.value   : '',
+      species:     (APP_MODE === 'lumber' && _ofSpeciesEl)     ? _ofSpeciesEl.value     : '',
+      finish:      (APP_MODE === 'alum'   && _ofFinishEl)      ? _ofFinishEl.value      : '',
+      endFinish:   (APP_MODE === 'pipe'   && _ofEndFinishEl)   ? _ofEndFinishEl.value   : '',
+      coating:     (APP_MODE === 'pipe'   && _ofCoatingEl)     ? _ofCoatingEl.value     : '',
+      glassWidth:  (APP_MODE === 'glass'  && _ofGlassWidthEl)  ? (parseFloat(_ofGlassWidthEl.value)  || 0) : 0,
+      glassHeight: (APP_MODE === 'glass'  && _ofGlassHeightEl) ? (parseFloat(_ofGlassHeightEl.value) || 0) : 0,
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
@@ -6391,8 +6524,10 @@ function ofClearLogForm() {
   var _inpProf = document.getElementById('inp-profile'); if (_inpProf) _inpProf.value = '';
   var _inpPcW2 = document.getElementById('inp-pc-width'); if (_inpPcW2) _inpPcW2.value = '';
   var _inpPcT2 = document.getElementById('inp-pc-thickness'); if (_inpPcT2) _inpPcT2.value = '';
-  var _inpEF2  = document.getElementById('inp-endfinish');  if (_inpEF2)  _inpEF2.value  = '';
-  var _inpCt2  = document.getElementById('inp-coating');    if (_inpCt2)  _inpCt2.value  = '';
+  var _inpEF2  = document.getElementById('inp-endfinish');    if (_inpEF2)  _inpEF2.value  = '';
+  var _inpCt2  = document.getElementById('inp-coating');      if (_inpCt2)  _inpCt2.value  = '';
+  var _inpGW2  = document.getElementById('inp-glass-width');  if (_inpGW2)  _inpGW2.value  = '';
+  var _inpGH2  = document.getElementById('inp-glass-height'); if (_inpGH2)  _inpGH2.value  = '';
   var rs = document.getElementById('inp-reserve'); if (rs) rs.checked = false;
   var ss = document.getElementById('inp-secondary'); if (ss) ss.checked = false;
   var sb = document.getElementById('suggestion-box'); if (sb) sb.classList.remove('active');
@@ -6739,8 +6874,8 @@ function renderRunCycle() {
 function logRun() {
   var locVal = document.getElementById('inp-location').value;
   var type = document.getElementById('inp-type').value;
-  // Precast mode: always treat as straight (discrete elements, no spools)
-  if (APP_MODE === 'precast') type = 'straight';
+  // Precast / glass mode: always treat as straight (discrete items, no spools)
+  if (APP_MODE === 'precast' || APP_MODE === 'glass') type = 'straight';
   var size = getFormSize('inp');
   var length = getLengthDisplay(); // display string e.g. "20'6\""
   var lenNum = getLengthDecimal(); // decimal feet e.g. 20.5
@@ -6778,15 +6913,18 @@ function logRun() {
   }
 
   if (!size || !bundles) { alert(LBL('sizeAlert')); return; }
-  if (type==='straight' && !lenNum) { alert('Please enter a length.'); return; }
+  // Glass mode: no length — width × height replaces footage tracking
+  if (type==='straight' && !lenNum && APP_MODE !== 'glass') { alert('Please enter a length.'); return; }
   var grade = document.getElementById('inp-grade').value;
   var spec  = document.getElementById('inp-spec').value;
   if (!grade) { alert(LBL('gradeAlert')); return; }
   if (!spec)  { alert(LBL('specAlert')); return; }
 
   // For spool, get weight from the fixed dropdown (lbs → tons)
-  var inpPcWidthEl     = document.getElementById('inp-pc-width');
-  var inpPcThicknessEl = document.getElementById('inp-pc-thickness');
+  var inpPcWidthEl      = document.getElementById('inp-pc-width');
+  var inpPcThicknessEl  = document.getElementById('inp-pc-thickness');
+  var inpGlassWidthEl   = document.getElementById('inp-glass-width');
+  var inpGlassHeightEl  = document.getElementById('inp-glass-height');
   var weightTons;
   if (type === 'spool') {
     var spoolLbs = parseFloat(document.getElementById('inp-spool-weight').value) || 0;
@@ -6798,6 +6936,17 @@ function logRun() {
     if (lenNum && _pcW && _pcT) {
       var _cuFt = lenNum * _pcW * (_pcT / 12);
       weightTons = (_cuFt * 150 / 2000) * (parseInt(bundles) || 0);
+    } else {
+      weightTons = 0;
+    }
+  } else if (APP_MODE === 'glass') {
+    var _gw = parseFloat(inpGlassWidthEl ? inpGlassWidthEl.value : 0) || 0;
+    var _gh = parseFloat(inpGlassHeightEl ? inpGlassHeightEl.value : 0) || 0;
+    var _gThick = parseFloat(document.getElementById('inp-grade').value) || 0;
+    if (_gw && _gh && _gThick) {
+      var _gSqM = (_gw * _gh) / 1550.0031;
+      var _gLbsPerLite = (2.5 * _gThick * _gSqM) * 2.20462;
+      weightTons = (_gLbsPerLite / 2000) * (parseInt(bundles) || 0);
     } else {
       weightTons = 0;
     }
@@ -6898,8 +7047,8 @@ function logRun() {
     return; // handled — skip normal logRun flow below
   }
 
-  // If stanchion side, enforce per-stanchion ft rule (skip for CYCLE and same-product merges)
-  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE') {
+  // If stanchion side, enforce per-stanchion ft rule (skip for CYCLE, same-product merges, and glass mode)
+  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE' && APP_MODE !== 'glass') {
     var stanKey = loc.slice(0, -1);
     var stanNum = parseInt(stanKey) || stanKey;
     // If the destination already holds the same product, this is a bundle merge —
@@ -6933,17 +7082,21 @@ function logRun() {
       var ofNewBdl = parseInt(bundles) || 0;
       if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
         // Build item template and hand off to overflow modal
-        var _ofTplSpeciesEl   = document.getElementById('inp-species');
-        var _ofTplFinishEl    = document.getElementById('inp-finish');
-        var _ofTplEndFinishEl = document.getElementById('inp-endfinish');
-        var _ofTplCoatingEl   = document.getElementById('inp-coating');
+        var _ofTplSpeciesEl     = document.getElementById('inp-species');
+        var _ofTplFinishEl      = document.getElementById('inp-finish');
+        var _ofTplEndFinishEl   = document.getElementById('inp-endfinish');
+        var _ofTplCoatingEl     = document.getElementById('inp-coating');
+        var _ofTplGlassWidthEl  = document.getElementById('inp-glass-width');
+        var _ofTplGlassHeightEl = document.getElementById('inp-glass-height');
         var ofTemplate = {
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
-          species:   (APP_MODE === 'lumber' && _ofTplSpeciesEl)   ? _ofTplSpeciesEl.value   : '',
-          finish:    (APP_MODE === 'alum'   && _ofTplFinishEl)    ? _ofTplFinishEl.value    : '',
-          endFinish: (APP_MODE === 'pipe'   && _ofTplEndFinishEl) ? _ofTplEndFinishEl.value : '',
-          coating:   (APP_MODE === 'pipe'   && _ofTplCoatingEl)   ? _ofTplCoatingEl.value   : '',
+          species:     (APP_MODE === 'lumber' && _ofTplSpeciesEl)     ? _ofTplSpeciesEl.value     : '',
+          finish:      (APP_MODE === 'alum'   && _ofTplFinishEl)      ? _ofTplFinishEl.value      : '',
+          endFinish:   (APP_MODE === 'pipe'   && _ofTplEndFinishEl)   ? _ofTplEndFinishEl.value   : '',
+          coating:     (APP_MODE === 'pipe'   && _ofTplCoatingEl)     ? _ofTplCoatingEl.value     : '',
+          glassWidth:  (APP_MODE === 'glass'  && _ofTplGlassWidthEl)  ? (parseFloat(_ofTplGlassWidthEl.value)  || 0) : 0,
+          glassHeight: (APP_MODE === 'glass'  && _ofTplGlassHeightEl) ? (parseFloat(_ofTplGlassHeightEl.value) || 0) : 0,
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
           customer: document.getElementById('inp-customer').value.trim(),
@@ -6960,18 +7113,30 @@ function logRun() {
   var inpFinishEl     = document.getElementById('inp-finish');
   var inpEndFinishEl  = document.getElementById('inp-endfinish');
   var inpCoatingEl    = document.getElementById('inp-coating');
+  // Glass: compute weight per lite for weightPerBundleTons field
+  var _glassWtPerLite = 0;
+  if (APP_MODE === 'glass') {
+    var _gw2 = parseFloat(inpGlassWidthEl ? inpGlassWidthEl.value : 0) || 0;
+    var _gh2 = parseFloat(inpGlassHeightEl ? inpGlassHeightEl.value : 0) || 0;
+    var _gt2 = parseFloat(grade) || 0;
+    if (_gw2 && _gh2 && _gt2) {
+      _glassWtPerLite = ((2.5 * _gt2 * (_gw2 * _gh2 / 1550.0031)) * 2.20462) / 2000;
+    }
+  }
   var item = {
     uid: genUid(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
-    species:     (APP_MODE === 'lumber'   && inpSpeciesEl)     ? inpSpeciesEl.value    : '',
-    finish:      (APP_MODE === 'alum'     && inpFinishEl)      ? inpFinishEl.value     : '',
-    pcWidth:     (APP_MODE === 'precast'  && inpPcWidthEl)     ? (parseFloat(inpPcWidthEl.value) || 0)     : 0,
-    pcThickness: (APP_MODE === 'precast'  && inpPcThicknessEl) ? (parseFloat(inpPcThicknessEl.value) || 0) : 0,
-    endFinish:   (APP_MODE === 'pipe'     && inpEndFinishEl)   ? inpEndFinishEl.value  : '',
-    coating:     (APP_MODE === 'pipe'     && inpCoatingEl)     ? inpCoatingEl.value    : '',
+    species:      (APP_MODE === 'lumber'   && inpSpeciesEl)     ? inpSpeciesEl.value    : '',
+    finish:       (APP_MODE === 'alum'     && inpFinishEl)      ? inpFinishEl.value     : '',
+    pcWidth:      (APP_MODE === 'precast'  && inpPcWidthEl)     ? (parseFloat(inpPcWidthEl.value) || 0)     : 0,
+    pcThickness:  (APP_MODE === 'precast'  && inpPcThicknessEl) ? (parseFloat(inpPcThicknessEl.value) || 0) : 0,
+    endFinish:    (APP_MODE === 'pipe'     && inpEndFinishEl)   ? inpEndFinishEl.value  : '',
+    coating:      (APP_MODE === 'pipe'     && inpCoatingEl)     ? inpCoatingEl.value    : '',
+    glassWidth:   (APP_MODE === 'glass'    && inpGlassWidthEl)  ? (parseFloat(inpGlassWidthEl.value) || 0)  : 0,
+    glassHeight:  (APP_MODE === 'glass'    && inpGlassHeightEl) ? (parseFloat(inpGlassHeightEl.value) || 0) : 0,
     bundles: parseInt(bundles),
-    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
+    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : (APP_MODE === 'glass' ? _glassWtPerLite : getCalcBdlTons()),
     weightTons: weightTons,
     spoolWeightLbs: spoolLbsStored,
     customer: document.getElementById('inp-customer').value.trim(),
@@ -6999,6 +7164,8 @@ function logRun() {
       (!existing.pcThickness  || !item.pcThickness  || existing.pcThickness  === item.pcThickness) &&
       (!existing.endFinish    || !item.endFinish    || existing.endFinish    === item.endFinish) &&
       (!existing.coating      || !item.coating      || existing.coating      === item.coating) &&
+      (!existing.glassWidth   || !item.glassWidth   || existing.glassWidth   === item.glassWidth) &&
+      (!existing.glassHeight  || !item.glassHeight  || existing.glassHeight  === item.glassHeight) &&
       (existing.customer||'') === (item.customer||'');
     if (canMerge) {
       existing.bundles += item.bundles;
@@ -7033,8 +7200,10 @@ function logRun() {
   var _inpPrf = document.getElementById('inp-profile'); if (_inpPrf) _inpPrf.value='';
   var _inpPcW = document.getElementById('inp-pc-width'); if (_inpPcW) _inpPcW.value='';
   var _inpPcT = document.getElementById('inp-pc-thickness'); if (_inpPcT) _inpPcT.value='';
-  var _inpEF = document.getElementById('inp-endfinish'); if (_inpEF) _inpEF.value='';
-  var _inpCt = document.getElementById('inp-coating'); if (_inpCt) _inpCt.value='';
+  var _inpEF  = document.getElementById('inp-endfinish');  if (_inpEF)  _inpEF.value='';
+  var _inpCt  = document.getElementById('inp-coating');    if (_inpCt)  _inpCt.value='';
+  var _inpGW  = document.getElementById('inp-glass-width');  if (_inpGW)  _inpGW.value='';
+  var _inpGH  = document.getElementById('inp-glass-height'); if (_inpGH)  _inpGH.value='';
   document.getElementById('inp-location').value='';
   document.getElementById('inp-spool-weight').value='';
   document.getElementById('inp-reserve').checked = false;
@@ -7283,13 +7452,14 @@ function renderInventory() {
     var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' ' + LBL('bundles'));
     // Grade/spec line
     var gradeSpec = [
-      item.grade ? (APP_MODE === 'rebar' ? 'Gr'+item.grade : item.grade) : '',
+      item.grade ? (APP_MODE === 'rebar' ? 'Gr'+item.grade : (APP_MODE === 'glass' ? item.grade + 'mm' : item.grade)) : '',
       item.spec  || '',
-      (APP_MODE === 'lumber'  && item.species)                          ? item.species : '',
-      (APP_MODE === 'alum'    && item.finish)                           ? item.finish  : '',
-      (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)      ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : '',
-      (APP_MODE === 'pipe'    && item.endFinish)                        ? item.endFinish : '',
-      (APP_MODE === 'pipe'    && item.coating && item.coating !== 'None') ? item.coating : ''
+      (APP_MODE === 'lumber'  && item.species)                            ? item.species : '',
+      (APP_MODE === 'alum'    && item.finish)                             ? item.finish  : '',
+      (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)        ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : '',
+      (APP_MODE === 'pipe'    && item.endFinish)                          ? item.endFinish : '',
+      (APP_MODE === 'pipe'    && item.coating && item.coating !== 'None') ? item.coating : '',
+      (APP_MODE === 'glass'   && item.glassWidth && item.glassHeight)     ? (item.glassWidth + '"\xd7' + item.glassHeight + '"') : ''
     ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
