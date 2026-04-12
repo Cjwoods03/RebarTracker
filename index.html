@@ -8498,25 +8498,37 @@ function pinUnlock() {
 // Fetch the tenant's PIN from Firebase (custom) or fall back to TENANT_PINS default,
 // then show the PIN screen (or skip it if already unlocked this session).
 function _showPinOrApp() {
-  // Session unlock is only valid when it was granted for the current tenant key.
-  // This prevents stale unlocks (from old auth system or a different company) from
-  // bypassing PIN entry.
+  // Snapshot the tenant key RIGHT NOW so every reference inside this function —
+  // including the async Firebase callback — uses the same key and cannot drift
+  // if the global tenantKey is ever reassigned before the callback fires.
+  var _key = tenantKey;
+
+  // Session unlock is only valid when it was granted for this specific tenant key.
   if (sessionStorage.getItem('rt_unlocked') === '1' &&
-      sessionStorage.getItem('rt_unlocked_for') === tenantKey) {
+      sessionStorage.getItem('rt_unlocked_for') === _key) {
     document.getElementById('pin-screen').classList.add('hidden');
     document.documentElement.style.visibility = '';
     return;
   }
+
   // Fetch custom PIN — stored at tenants/{key}/settings/pin
-  var pinRef = db ? db.ref('tenants/' + tenantKey + '/settings/pin') : null;
-  var proceed = function(pin) {
-    _resolvedTenantPin = pin || TENANT_PINS[tenantKey] || '1234';
+  // Uses the snapshotted _key, NOT the global, so the path is always correct.
+  var pinRef = db ? db.ref('tenants/' + _key + '/settings/pin') : null;
+
+  var proceed = function(firebasePin) {
+    // Firebase PIN takes precedence; fall back to the default for _key specifically.
+    // Use _key (snapshotted) — never the global tenantKey — so the lookup is
+    // always for the tenant that triggered this auth flow.
+    _resolvedTenantPin = (firebasePin && typeof firebasePin === 'string')
+      ? firebasePin
+      : (TENANT_PINS[_key] || '1234');
     document.documentElement.style.visibility = '';
     setTimeout(function() {
       var pi = document.getElementById('pin-input');
       if (pi) pi.focus();
     }, 50);
   };
+
   if (pinRef) {
     pinRef.once('value').then(function(snap) {
       proceed(snap.val());
