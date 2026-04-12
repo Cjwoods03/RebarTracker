@@ -1202,7 +1202,7 @@
     <button class="section-header" onclick="toggleSection('import',this)">
       <div class="sec-header-left">
         <span class="sec-icon">📥</span>
-        <span class="sec-title">Import from EBS</span>
+        <span class="sec-title">Import</span>
       </div>
       <div class="sec-header-right">
         <span class="sec-chevron">▼</span>
@@ -1211,11 +1211,10 @@
     <div class="section-body collapsed" id="body-import">
       <div style="padding:16px">
 
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:14px;line-height:1.6">
-          Upload a CSV exported from EBS. RebarTrack will read each row and let you map columns to fields before importing.
-          <br><br>
-          <strong style="color:var(--text)">Expected columns (any order):</strong><br>
-          Heat #, Bar Size, Length (ft), Bundles/Coils, Weight, Ship Date, Order #, Customer
+        <div style="margin-bottom:14px">
+          <div id="import-profile-name" style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--accent);margin-bottom:6px"></div>
+          <div id="import-profile-desc" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);line-height:1.6;margin-bottom:10px"></div>
+          <button class="btn" style="margin-top:0;background:var(--steel-light);border:1px solid var(--border);color:var(--text-dim);font-size:12px;padding:8px 14px" onclick="downloadImportTemplate()">⬇ Download template</button>
         </div>
 
         <!-- Backup / Restore -->
@@ -1248,7 +1247,7 @@
         </div>
 
         <!-- EBS Locator Code Editor -->
-        <div style="margin-bottom:18px">
+        <div class="import-ebs-only" style="margin-bottom:18px">
           <button class="btn" style="margin-top:0;background:var(--steel-light);border:1px solid var(--border);color:var(--accent);font-size:13px;padding:10px 16px;width:100%;text-align:left;display:flex;align-items:center;gap:8px;letter-spacing:1px" onclick="toggleLocatorEditor(this)">
             <span>🔗</span> <span>EBS LOCATOR CODES</span> <span id="locator-editor-chevron" style="margin-left:auto;font-size:11px;color:var(--text-dim)">▼ expand</span>
           </button>
@@ -1288,7 +1287,7 @@
         </div>
 
         <!-- ── FULL INVENTORY IMPORT ── -->
-        <div style="margin-top:24px;border-top:1px solid var(--border);padding-top:18px">
+        <div class="import-ebs-only" style="margin-top:24px;border-top:1px solid var(--border);padding-top:18px">
           <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
             <span style="font-size:16px">🔄</span>
             <span style="font-family:'Bebas Neue',sans-serif;font-size:16px;letter-spacing:2px;color:var(--accent)">FULL INVENTORY IMPORT</span>
@@ -2569,6 +2568,85 @@ var TENANT_MODES = {
 var TENANT_PINS = {
   'NUCOR-SEDALIA-01': '1234',
   'ADMIN': '0000',
+};
+
+// ─── IMPORT PROFILES ─────────────────────────────────────────────
+// Each profile defines the column set, auto-match hints, and location-parsing
+// strategy for a particular source system. Add new profiles here; assign them
+// in TENANT_IMPORT_PROFILES below.
+var IMPORT_PROFILES = {
+  'ebs': {
+    name: 'Oracle EBS',
+    description: 'Oracle E-Business Suite CSV export.<br>Upload a CSV from an EBS On-Hand or similar report. RebarTrack will map EBS columns to warehouse fields.',
+    columns: [
+      { key:'location', label:'EBS Location',       hint:'EBS locator code (e.g. B5.A, SB.7.1)' },
+      { key:'heat',     label:'Heat #',             hint:'Heat number' },
+      { key:'lpn',      label:'LPN #',              hint:'License Plate Number' },
+      { key:'size',     label:'Description',        hint:'EBS item description — size, grade, spec, length parsed automatically' },
+      { key:'length',   label:'Length (ft)',         hint:'Length in feet' },
+      { key:'bundles',  label:'Bundles / Coils',    hint:'Bundle or coil count' },
+      { key:'weight',   label:'Weight (lbs / PriQty)', hint:'PriQty or weight column (lbs)' },
+      { key:'ship',     label:'Ship Date',          hint:'Ship or due date' },
+      { key:'order',    label:'Order #',            hint:'Order or PO number' },
+      { key:'customer', label:'Customer',           hint:'Customer name' },
+      { key:'type',     label:'Product Type',       hint:'Optional — overrides EBS location prefix' },
+    ],
+    // Auto-match: replicates the existing EBS header detection logic exactly.
+    autoMatch: function(key, hl) {
+      if (key==='location') return hl==='locator' || hl==='locator code';
+      if (key==='lpn')      return hl==='lpn' || hl==='lpn number' || hl.indexOf('lpn')===0;
+      if (key==='size')     return hl==='description' || hl.indexOf('description')!==-1 || hl.indexOf('desc')!==-1;
+      if (key==='weight')   return hl==='priqty' || hl.indexOf('priqty')!==-1 || hl.indexOf('weight')!==-1 || hl.indexOf('wt')!==-1 || hl.indexOf('lbs')!==-1;
+      if (key==='heat')     return hl.indexOf('heat')!==-1 || hl==='ht';
+      if (key==='length')   return hl.indexOf('length')!==-1 || hl==='len' || hl==='ft';
+      if (key==='bundles')  return hl.indexOf('bundle')!==-1 || hl.indexOf('coil')!==-1 || hl==='quantity';
+      if (key==='ship')     return hl.indexOf('ship')!==-1 || hl.indexOf('date')!==-1 || hl.indexOf('due')!==-1;
+      if (key==='order')    return hl.indexOf('order')!==-1 || hl==='po';
+      if (key==='customer') return hl.indexOf('customer')!==-1 || hl.indexOf('client')!==-1;
+      if (key==='type')     return hl==='type' || hl.indexOf('product type')!==-1;
+      return false;
+    },
+    parseLocation: 'ebs',   // use parseEBSLocation()
+  },
+  'generic': {
+    name: 'Generic CSV',
+    description: 'Standard RebarTrack CSV format.<br>Column headers should match the template exactly. Download the template for the expected column names.',
+    columns: [
+      { key:'location', label:'Location',     hint:'Warehouse slot ID (e.g. 1A, RACK-7.1, CYCLE)' },
+      { key:'heat',     label:'Heat #',       hint:'Heat number' },
+      { key:'lpn',      label:'LPN #',        hint:'LPN number (optional)' },
+      { key:'size',     label:'Bar Size',     hint:'Bar size (e.g. #5, #8)' },
+      { key:'length',   label:'Length (ft)',  hint:'Length in feet' },
+      { key:'bundles',  label:'Bundles',      hint:'Number of bundles or coils' },
+      { key:'weight',   label:'Weight (tons)',hint:'Bundle weight in tons' },
+      { key:'ship',     label:'Ship Date',    hint:'Ship date (YYYY-MM-DD)' },
+      { key:'order',    label:'Order #',      hint:'Order number' },
+      { key:'customer', label:'Customer',     hint:'Customer name' },
+      { key:'type',     label:'Product Type', hint:'"straight" or "spool"' },
+    ],
+    autoMatch: function(key, hl) {
+      if (key==='location') return hl==='location' || hl==='loc' || hl==='slot';
+      if (key==='heat')     return hl==='heat' || hl==='heat #' || hl==='ht';
+      if (key==='lpn')      return hl==='lpn';
+      if (key==='size')     return hl==='size' || hl==='bar size' || hl==='bar';
+      if (key==='length')   return hl.indexOf('length')!==-1 || hl==='len' || hl==='ft';
+      if (key==='bundles')  return hl==='bundles' || hl==='bundle' || hl==='coils' || hl==='coil' || hl==='qty' || hl==='quantity';
+      if (key==='weight')   return hl.indexOf('weight')!==-1 || hl==='wt' || hl==='tons';
+      if (key==='ship')     return hl==='ship date' || hl.indexOf('ship')!==-1;
+      if (key==='order')    return hl.indexOf('order')!==-1 || hl==='po';
+      if (key==='customer') return hl.indexOf('customer')!==-1 || hl==='client';
+      if (key==='type')     return hl==='type' || hl.indexOf('product type')!==-1;
+      return false;
+    },
+    parseLocation: 'direct', // use the location value as-is
+  },
+};
+
+// Maps each tenant access key to its import profile ID.
+// null or missing = use 'generic' profile.
+var TENANT_IMPORT_PROFILES = {
+  'NUCOR-SEDALIA-01': 'ebs',
+  'ADMIN': null,
 };
 
 // Master list of accepted tenant keys — union of TENANT_MODES and TENANT_PINS
@@ -4985,20 +5063,45 @@ function getLocatorCode(slotId) {
 var csvRows = [];
 var csvHeaders = [];
 
-// RebarTrack fields the user can map CSV columns to
-var CSV_FIELDS = [
-  { key:'location', label:'EBS Location' },
-  { key:'heat',     label:'Heat #' },
-  { key:'lpn',      label:'LPN #' },
-  { key:'size',     label:'Bar Size / Description' },
-  { key:'length',   label:'Length (ft)' },
-  { key:'bundles',  label:'Bundles / Coils' },
-  { key:'weight',   label:'Bundle Weight' },
-  { key:'ship',     label:'Ship Date' },
-  { key:'order',    label:'Order #' },
-  { key:'customer', label:'Customer' },
-  { key:'type',     label:'Product Type' },
-];
+// Returns the import profile object for the currently authenticated tenant.
+function getActiveImportProfile() {
+  var profileId = TENANT_IMPORT_PROFILES[tenantKey];
+  return (profileId && IMPORT_PROFILES[profileId]) ? IMPORT_PROFILES[profileId] : IMPORT_PROFILES['generic'];
+}
+
+// Updates the import panel header, description, and visibility of EBS-only
+// sections based on the active profile. Called after tenantKey is resolved.
+function updateImportProfileUI() {
+  var profile = getActiveImportProfile();
+  var isEbs = (profile === IMPORT_PROFILES['ebs']);
+
+  var nameEl = document.getElementById('import-profile-name');
+  if (nameEl) nameEl.textContent = profile.name;
+
+  var descEl = document.getElementById('import-profile-desc');
+  if (descEl) descEl.innerHTML = profile.description;
+
+  // EBS-only sections: locator code editor and Full Yard Import
+  var ebsSections = document.querySelectorAll('.import-ebs-only');
+  ebsSections.forEach(function(el) { el.style.display = isEbs ? '' : 'none'; });
+}
+
+// Generates and downloads a CSV template file with the active profile's
+// column headers so users know exactly what columns to provide.
+function downloadImportTemplate() {
+  var profile = getActiveImportProfile();
+  var headers = profile.columns.map(function(c) { return '"' + c.label + '"'; });
+  var csv = headers.join(',') + '\n';
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'rebartrack-template-' + profile.name.toLowerCase().replace(/\s+/g, '-') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(function() { URL.revokeObjectURL(url); }, 5000);
+}
 
 function onCSVFileSelected(input) {
   var file = input.files[0];
@@ -5109,27 +5212,14 @@ function parseCSV(text) {
 }
 
 function renderCSVMapper() {
+  var profile = getActiveImportProfile();
   var wrap = document.getElementById('csv-column-map');
   var noMatch = '<option value="">— skip —</option>';
   var html = '';
-  CSV_FIELDS.forEach(function(field) {
-    // Auto-detect best matching column
+  profile.columns.forEach(function(field) {
     var autoMatch = '';
     csvHeaders.forEach(function(h) {
-      var hl = h.toLowerCase().trim();
-      if (!autoMatch) {
-        if (field.key === 'location' && (hl === 'locator' || hl === 'locator code')) autoMatch = h;
-        if (field.key === 'lpn'      && (hl === 'lpn' || hl === 'lpn number' || hl.startsWith('lpn'))) autoMatch = h;
-        if (field.key === 'size'     && (hl === 'description' || hl.includes('description') || hl.includes('desc'))) autoMatch = h;
-        if (field.key === 'weight'   && (hl === 'priqty' || hl.includes('priqty') || hl.includes('weight') || hl.includes('wt') || hl.includes('lbs'))) autoMatch = h;
-        if (field.key === 'heat'     && (hl.includes('heat') || hl === 'ht')) autoMatch = h;
-        if (field.key === 'length'   && (hl.includes('length') || hl === 'len' || hl === 'ft')) autoMatch = h;
-        if (field.key === 'bundles'  && (hl.includes('bundle') || hl.includes('coil') || hl === 'quantity')) autoMatch = h;
-        if (field.key === 'ship'     && (hl.includes('ship') || hl.includes('date') || hl.includes('due'))) autoMatch = h;
-        if (field.key === 'order'    && (hl.includes('order') || hl === 'po')) autoMatch = h;
-        if (field.key === 'customer' && (hl.includes('customer') || hl.includes('client'))) autoMatch = h;
-        if (field.key === 'type'     && (hl === 'type' || hl.includes('product type'))) autoMatch = h;
-      }
+      if (!autoMatch && profile.autoMatch(field.key, h.toLowerCase().trim())) autoMatch = h;
     });
     html += '<div class="csv-map-row">' +
       '<div class="csv-map-label">' + field.label + '</div>' +
@@ -5157,7 +5247,8 @@ function renderCSVPreview() {
 
 function getCSVMap() {
   var map = {};
-  CSV_FIELDS.forEach(function(f) {
+  var profile = getActiveImportProfile();
+  profile.columns.forEach(function(f) {
     var sel = document.getElementById('csvmap-' + f.key);
     if (sel && sel.value) map[f.key] = sel.value;
   });
@@ -5199,8 +5290,9 @@ function parseEBSLocation(raw) {
 
 function runCSVImport() {
   var map = getCSVMap();
+  var profile = getActiveImportProfile();
   if (!map.size && !map.heat && !map.location) {
-    showCSVError('Please map at least the EBS Location or Bar Size column.');
+    showCSVError('Please map at least the Location or Bar Size column.');
     return;
   }
 
@@ -5224,8 +5316,8 @@ function runCSVImport() {
       var cust    = map.customer ? (row[map.customer]||'').trim() : '';
       var typeRaw = map.type     ? (row[map.type]||'').toLowerCase() : '';
 
-      // Parse EBS location code
-      var loc = parseEBSLocation(ebsLoc);
+      // Parse location code — route through profile
+      var loc = (profile.parseLocation === 'ebs') ? parseEBSLocation(ebsLoc) : (ebsLoc || null);
 
       // Grade and spec extracted from description
       var gradeSpec = { grade: '', spec: '' };
@@ -5290,15 +5382,27 @@ function runCSVImport() {
       // Bundle count — if each row is one LPN/bundle, count = 1 per row
       var bdlCount = parseInt(bdlStr) || 1;
 
-      // Determine type — driven entirely by EBS location prefix
-      // SB. prefix = spool rack, anything else = straight bar
+      // Determine type — EBS profile: driven by SB. prefix; generic: type column or RACK- prefix
       var type;
-      if (ebsLoc && /^SB\./i.test(ebsLoc.trim())) {
-        type = 'spool';
-      } else if (loc && loc.startsWith('RACK-')) {
-        type = 'spool'; // fallback if loc was already parsed
+      if (profile.parseLocation === 'ebs') {
+        if (ebsLoc && /^SB\./i.test(ebsLoc.trim())) {
+          type = 'spool';
+        } else if (loc && loc.startsWith('RACK-')) {
+          type = 'spool';
+        } else {
+          type = 'straight';
+        }
       } else {
-        type = 'straight'; // all stanchion locations are straight bar
+        // Generic profile: use type column if mapped, else infer from RACK- prefix
+        if (typeRaw === 'spool' || typeRaw === 'coil') {
+          type = 'spool';
+        } else if (typeRaw === 'straight' || typeRaw === 'bar') {
+          type = 'straight';
+        } else if (loc && loc.startsWith('RACK-')) {
+          type = 'spool';
+        } else {
+          type = 'straight';
+        }
       }
 
       // If no parsed loc from EBS code, auto-assign
@@ -8556,6 +8660,7 @@ function _initAfterTenantKey(key) {
     renderInventory();
     renderRunCycle();
     updateRcBadge();
+    updateImportProfileUI();
     _showPinOrApp(key); // identity flows through — never re-read from globals
   });
 }
