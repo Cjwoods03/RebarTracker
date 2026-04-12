@@ -8,10 +8,16 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>RebarTrack</title>
 <script>
-  // Hide app content immediately if not yet unlocked — prevents any flash
-  if (sessionStorage.getItem('rt_unlocked') !== '1') {
-    document.documentElement.style.visibility = 'hidden';
-  }
+  // Hide app content immediately if not yet unlocked — prevents any flash.
+  // Session unlock is scoped to the specific tenant key so switching companies
+  // or stale session state from a previous auth system cannot bypass PIN entry.
+  (function() {
+    var unlockedFor = sessionStorage.getItem('rt_unlocked_for');
+    var storedKey   = localStorage.getItem('rebartracker_tenant_key');
+    if (sessionStorage.getItem('rt_unlocked') !== '1' || unlockedFor !== storedKey) {
+      document.documentElement.style.visibility = 'hidden';
+    }
+  }());
 </script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
@@ -2565,9 +2571,14 @@ var TENANT_PINS = {
   'ADMIN': '0000',
 };
 
-// Master list of accepted tenant keys — derived from TENANT_MODES so there is
-// only one place to add new customers. Any key not in this list is rejected.
-var VALID_KEYS = Object.keys(TENANT_MODES);
+// Master list of accepted tenant keys — union of TENANT_MODES and TENANT_PINS
+// so a key present in either constant is always accepted.
+var VALID_KEYS = (function() {
+  var seen = {};
+  Object.keys(TENANT_MODES).forEach(function(k) { seen[k] = true; });
+  Object.keys(TENANT_PINS).forEach(function(k) { seen[k] = true; });
+  return Object.keys(seen);
+}());
 
 // Active mode ID — loaded from localStorage, defaults to 'rebar'
 // If the tenant has a locked mode, that overrides localStorage.
@@ -8470,6 +8481,7 @@ function pinUnlock() {
   var err = document.getElementById('pin-error');
   if (_resolvedTenantPin && entered === _resolvedTenantPin) {
     sessionStorage.setItem('rt_unlocked', '1');
+    sessionStorage.setItem('rt_unlocked_for', tenantKey);
     document.getElementById('pin-screen').classList.add('hidden');
     document.documentElement.style.visibility = '';
     inp.classList.remove('error');
@@ -8486,7 +8498,11 @@ function pinUnlock() {
 // Fetch the tenant's PIN from Firebase (custom) or fall back to TENANT_PINS default,
 // then show the PIN screen (or skip it if already unlocked this session).
 function _showPinOrApp() {
-  if (sessionStorage.getItem('rt_unlocked') === '1') {
+  // Session unlock is only valid when it was granted for the current tenant key.
+  // This prevents stale unlocks (from old auth system or a different company) from
+  // bypassing PIN entry.
+  if (sessionStorage.getItem('rt_unlocked') === '1' &&
+      sessionStorage.getItem('rt_unlocked_for') === tenantKey) {
     document.getElementById('pin-screen').classList.add('hidden');
     document.documentElement.style.visibility = '';
     return;
