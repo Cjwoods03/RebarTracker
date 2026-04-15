@@ -7799,8 +7799,9 @@ function populateLocationDropdown(type) {
 
     var order = orderedStanchions();
     order.forEach(function(s) {
-      // Skip free-stack zones (e.g. stanchion 1, 22) — open floor areas, not grid slots
-      if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+      // Skip free-stack zones (stanchions 1 & 22) — represented as AREA1/AREA22 above, not grid slots.
+      // s === 1 is a hard exclude; the freeStack check covers any other zones that may be added later.
+      if (s === 1 || (stanchionCapacity[s] && stanchionCapacity[s].freeStack)) return;
       var used=stanchionFtUsed(s); var maxFt=maxFtForStanchion(s); var rem=maxFt-used;
       var label = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
       var sidesToShow = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
