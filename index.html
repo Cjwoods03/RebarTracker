@@ -6248,14 +6248,20 @@ function runOptimizer() {
       order.forEach(function(s) {
         if (hasSlot) return;
         if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
-        if (rcLen > 0 && rcLen > stanchionFtRemaining(s)) return;
+        // Footage check is applied per-slot below — NOT at stanchion level — so same-product
+        // merges on footage-full stanchions are still considered valid candidates.
         var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
         sides.forEach(function(side) {
           if (hasSlot) return;
           var sid = s + side;
           // Compatible = empty slot, or same product already here
           var existing = store[sid];
-          if (!existing && slotAvailable(sid)) { hasSlot = true; return; }
+          if (!existing && slotAvailable(sid)) {
+            // Empty slot — only valid if there is footage room on this stanchion
+            if (rcLen > 0 && rcLen > stanchionFtRemaining(s)) return;
+            hasSlot = true;
+            return;
+          }
           if (existing &&
               existing.size === rcItem.size &&
               parseFloat(existing.length) === rcLen &&
@@ -6264,6 +6270,7 @@ function runOptimizer() {
               (!rcItem.species  || !existing.species  || existing.species  === rcItem.species) &&
               (!rcItem.finish   || !existing.finish   || existing.finish   === rcItem.finish) &&
               (existing.customer||'') === (rcItem.customer||'')) {
+            // Same-product merge — footage not checked (same length already counted on this stanchion)
             hasSlot = true;
           }
         });
@@ -7047,10 +7054,14 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
   function isFSBlocked(stanKey) { return !!(stanchionCapacity[stanKey] && stanchionCapacity[stanKey].freeStack); }
 
   // Pass 1: matching product already stored — merge
+  // Footage limits are intentionally NOT enforced here. A same-product merge only adds bundles
+  // to a side that already holds this length, so the stanchion footage total does not change.
+  // Only physical stanchion capacity (bundle count / weight) may block a same-product merge.
   if (size && length > 0) {
     for (var si=0; si<stanchionOrder.length && !pick2; si++) {
       var s = stanchionOrder[si];
       if (isFSBlocked(s)) continue;
+      // No stanchionFtRemaining check — same-product merges bypass footage limits (see comment above)
       var allSides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
       for (var j=0; j<allSides.length && !pick2; j++) {
         var id = s + allSides[j];
