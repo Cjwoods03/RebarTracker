@@ -7839,10 +7839,28 @@ function populateLocationDropdown(type) {
     cycleOpt.textContent = '🔄 CYCLE… — overflow stack';
     sel.appendChild(cycleOpt);
   } else {
+    var curSpoolSize = document.getElementById('inp-size').value;
     Object.keys(SPOOL_SECTIONS).forEach(function(sec){
       SPOOL_SECTIONS[sec].forEach(function(rack){
-        var rid='RACK-'+rack;
-        if (!store[rid]){var opt=document.createElement('option');opt.value=rid;opt.textContent='Row '+rack;sel.appendChild(opt);}
+        var rid = 'RACK-' + rack;
+        var opt = document.createElement('option');
+        opt.value = rid;
+        var existing = store[rid];
+        if (existing) {
+          var maxCap = RACK_MAX_SPOOLS[rack];
+          var isFull = maxCap && existing.bundles >= maxCap;
+          var isSameSize = curSpoolSize && existing.size === curSpoolSize;
+          var coilInfo = existing.size + ' (' + existing.bundles + (maxCap ? '/' + maxCap : '') + ' coils)';
+          if (!isSameSize || isFull) {
+            opt.textContent = '⊗ Row ' + rack + ' — ' + coilInfo;
+            opt.disabled = true;
+          } else {
+            opt.textContent = 'Row ' + rack + ' — ' + coilInfo;
+          }
+        } else {
+          opt.textContent = 'Row ' + rack;
+        }
+        sel.appendChild(opt);
       });
     });
   }
