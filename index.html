@@ -7722,7 +7722,22 @@ function logRun() {
       var maxFt = maxFtForStanchion(stanNum);
       var usedFt = stanchionFtUsed(stanNum);
       var remainFt = maxFt - usedFt;
-      if (lenNum > remainFt) {
+      // Secondary onto an occupied slot: only the footage DELTA matters.
+      // If the new item is shorter than (or equal to) the current longest bar on
+      // this side it adds zero footage — skip the check entirely.
+      // If it's longer, only block if the delta exceeds remaining footage.
+      var isSecondaryLog = document.getElementById('inp-secondary').checked;
+      if (isSecondaryLog && destExisting) {
+        var currentMaxOnSide = slotAllItems(loc).reduce(function(m, it) {
+          return Math.max(m, parseFloat(it.length) || 0);
+        }, 0);
+        var ftDelta = lenNum - currentMaxOnSide;
+        if (ftDelta > 0 && ftDelta > remainFt) {
+          alert('⛔ This secondary item ('+lenNum+'ft) would add '+ftDelta.toFixed(1)+'ft to '+LBL('stan')+' '+stanNum+' (currently '+usedFt+'ft used of '+maxFt+'ft max, '+remainFt.toFixed(1)+'ft remaining).\n\nPlease choose a different '+LBL('stan').toLowerCase()+' or side.');
+          return;
+        }
+        // ftDelta <= 0 or within budget — no block
+      } else if (lenNum > remainFt) {
         alert('⛔ This run is '+lenNum+'ft but '+LBL('stan')+' '+stanNum+' only has '+remainFt.toFixed(1)+'ft remaining ('+usedFt+'ft used of '+maxFt+'ft max).\n\nPlease choose a different '+LBL('stan').toLowerCase()+' or side.');
         return;
       }
