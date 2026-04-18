@@ -5238,6 +5238,8 @@ function _doPrimaryAreaTransfer(dest, side) {
     var srcAArrb = srcIsA1b ? area1Stacks : area22Stacks;
     var srcAIdx  = srcAArrb.findIndex(function(s){ return s.id === srcAIdb; });
     if (srcAIdx > -1) srcAArrb.splice(srcAIdx, 1);
+    if (area1Stacks.length === 0) area1NextId = 1;
+    if (area22Stacks.length === 0) area22NextId = 1;
     var srcAInvIdx = inventory.findIndex(function(i){ return i.uid && srcItem.uid && i.uid === srcItem.uid; });
     if (srcAInvIdx > -1) inventory.splice(srcAInvIdx, 1);
   } else {
@@ -5381,6 +5383,8 @@ function _confirmAreaSourceTransfer(dest) {
   // Remove from source area array + inventory
   var srcIdx0 = srcArr.findIndex(function(s){ return s.id === srcAreaId; });
   if (srcIdx0 > -1) srcArr.splice(srcIdx0, 1);
+  if (isA1 && area1Stacks.length === 0) area1NextId = 1;
+  if (!isA1 && area22Stacks.length === 0) area22NextId = 1;
   var srcInvIdx0 = inventory.findIndex(function(i){ return i.uid && srcItem.uid && i.uid === srcItem.uid; });
   if (srcInvIdx0 > -1) inventory.splice(srcInvIdx0, 1);
 
@@ -5527,6 +5531,7 @@ function clearSlot() {
     var idx1 = area1Stacks.findIndex(function(s){return s.id===sid1;});
     var removedA1 = idx1 > -1 ? area1Stacks[idx1] : null;
     if (idx1>-1) area1Stacks.splice(idx1,1);
+    if (area1Stacks.length === 0) area1NextId = 1;
     var ii1 = inventory.findIndex(function(i){
       return removedA1 && removedA1.uid ? i.uid === removedA1.uid : (i.id===sid1 && i.loc==='AREA-1');
     });
@@ -5536,6 +5541,7 @@ function clearSlot() {
     var idx = area22Stacks.findIndex(function(s){return s.id===sid;});
     var removedA22 = idx > -1 ? area22Stacks[idx] : null;
     if (idx>-1) area22Stacks.splice(idx,1);
+    if (area22Stacks.length === 0) area22NextId = 1;
     var ii = inventory.findIndex(function(i){
       return removedA22 && removedA22.uid ? i.uid === removedA22.uid : (i.id===sid && i.loc==='AREA-22');
     });
