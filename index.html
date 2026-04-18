@@ -4643,6 +4643,8 @@ function openSecondaryTransfer(slotId, idx) {
   // List all stanchion sides — no ft restriction for secondary items
   var order = orderedStanchions();
   order.forEach(function(s) {
+    // Skip free-stack zones (stanchion 1 & 22) — not grid-addressable
+    if (s === 1 || (stanchionCapacity[s] && stanchionCapacity[s].freeStack)) return;
     var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
     sides.forEach(function(side) {
       var id = s + side;
@@ -4780,6 +4782,8 @@ function openTransferModal() {
     var srcStan = modalLoc.slice(0, -1);
     var srcFt = parseFloat(item.length) || 0;
     order.forEach(function(s) {
+      // Skip free-stack zones (stanchion 1 & 22) — not grid-addressable
+      if (s === 1 || (stanchionCapacity[s] && stanchionCapacity[s].freeStack)) return;
       var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
       sides.forEach(function(side) {
         var id = s + side;
