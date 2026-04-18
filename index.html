@@ -6248,6 +6248,8 @@ function runFullYardImport() {
   inventory     = [];
   area22Stacks  = [];
   area22NextId  = 1;
+  area1Stacks   = [];
+  area1NextId   = 1;
   scrapSlots    = {};
   holdSlots     = {};
   redTagSlots   = {};
@@ -9078,6 +9080,10 @@ function loadData(callback) {
       area22NextId  = payload.area22NextId  || 1;
       area1Stacks   = payload.area1Stacks   || [];
       area1NextId   = payload.area1NextId   || 1;
+      var _needsReset = false;
+      if (area1Stacks.length === 0 && area1NextId > 1)   { area1NextId  = 1; _needsReset = true; }
+      if (area22Stacks.length === 0 && area22NextId > 1) { area22NextId = 1; _needsReset = true; }
+      if (_needsReset) saveData();
       // Section 7 dynamic racks
       if (payload.sec7Racks) {
         SPOOL_SECTIONS[7] = payload.sec7Racks;
