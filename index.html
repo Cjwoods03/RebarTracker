@@ -1929,18 +1929,44 @@
         <option value="spool">Spooled / Coil</option>
       </select>
     </div>
+    <div class="form-group">
+      <label data-mode-label="szLbl">Bar Size</label>
+      <select id="a1-size">
+        <option value=""># Size</option>
+        <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+        <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Length</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div style="flex:1;position:relative">
+          <input type="number" id="a1-length-ft" placeholder="ft" min="0" max="80" inputmode="numeric" oninput="calcA1BdlWeight()" style="width:100%;padding-right:28px">
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">ft</span>
+        </div>
+        <div style="flex:1;position:relative">
+          <input type="number" id="a1-length-in" placeholder="in" min="0" max="11" inputmode="numeric" oninput="calcA1BdlWeight()" style="width:100%;padding-right:28px">
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">in</span>
+        </div>
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group">
-        <label data-mode-label="szLbl">Bar Size</label>
-        <select id="a1-size">
-          <option value=""># Size</option>
-          <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
-          <option>#7</option><option>#8</option>
+        <label data-mode-label="gradeLbl">Grade</label>
+        <select id="a1-grade">
+          <option value="">— Grade —</option>
+          <option value="40">Grade 40</option>
+          <option value="60">Grade 60</option>
+          <option value="80">Grade 80</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Length (ft)</label>
-        <input type="number" id="a1-length" placeholder="ft or blank for coil" min="1" inputmode="decimal">
+        <label data-mode-label="specLbl">Spec</label>
+        <select id="a1-spec">
+          <option value="">— Spec —</option>
+          <option value="A615">A615</option>
+          <option value="A706">A706</option>
+        </select>
       </div>
     </div>
     <div class="form-group">
@@ -1955,6 +1981,14 @@
         <option value="6800">6,800 LBS (3.4 tons)</option>
         <option value="9600">9,600 LBS (4.8 tons)</option>
       </select>
+    </div>
+    <div class="form-group" id="a1-weight-group">
+      <label data-mode-label="piecesPerBdl">Pieces per Bundle</label>
+      <input type="number" id="a1-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="calcA1BdlWeight()">
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;display:block;margin-bottom:4px" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS)</label>
+        <input type="number" id="a1-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+      </div>
     </div>
     <div style="margin: 12px 0 10px; border-top: 1px solid var(--border); padding-top: 10px;">
       <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL</div>
@@ -2005,25 +2039,51 @@
         <option value="spool">Spooled / Coil</option>
       </select>
     </div>
+    <div class="form-group">
+      <label data-mode-label="szLbl">Bar Size</label>
+      <select id="a22-size">
+        <option value=""># Size</option>
+        <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
+        <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label>Length</label>
+      <div style="display:flex;gap:6px;align-items:center">
+        <div style="flex:1;position:relative">
+          <input type="number" id="a22-length-ft" placeholder="ft" min="0" max="80" inputmode="numeric" oninput="calcA22BdlWeight()" style="width:100%;padding-right:28px">
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">ft</span>
+        </div>
+        <div style="flex:1;position:relative">
+          <input type="number" id="a22-length-in" placeholder="in" min="0" max="11" inputmode="numeric" oninput="calcA22BdlWeight()" style="width:100%;padding-right:28px">
+          <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">in</span>
+        </div>
+      </div>
+    </div>
     <div class="form-row">
       <div class="form-group">
-        <label data-mode-label="szLbl">Bar Size</label>
-        <select id="a22-size">
-          <option value=""># Size</option>
-          <option>#3</option><option>#4</option><option>#5</option><option>#6</option>
-          <option>#7</option><option>#8</option>
+        <label data-mode-label="gradeLbl">Grade</label>
+        <select id="a22-grade">
+          <option value="">— Grade —</option>
+          <option value="40">Grade 40</option>
+          <option value="60">Grade 60</option>
+          <option value="80">Grade 80</option>
         </select>
       </div>
       <div class="form-group">
-        <label>Length (ft)</label>
-        <input type="number" id="a22-length" placeholder="ft or blank for coil" min="1" inputmode="decimal">
+        <label data-mode-label="specLbl">Spec</label>
+        <select id="a22-spec">
+          <option value="">— Spec —</option>
+          <option value="A615">A615</option>
+          <option value="A706">A706</option>
+        </select>
       </div>
     </div>
     <div class="form-group">
       <label data-mode-label="bundlesCoils">Bundles / Coils</label>
       <input type="number" id="a22-bundles" placeholder="qty" min="1" inputmode="numeric">
     </div>
-    <!-- Spool coil weight for area 22 — shown when type is spool -->
+    <!-- Spool coil weight — shown when type is spool -->
     <div class="form-group" id="a22-spool-weight-group" style="display:none">
       <label>Coil Weight</label>
       <select id="a22-spool-weight">
@@ -2032,6 +2092,15 @@
         <option value="6800">6,800 LBS (3.4 tons)</option>
         <option value="9600">9,600 LBS (4.8 tons)</option>
       </select>
+    </div>
+    <!-- Straight bar weight — shown when type is straight -->
+    <div class="form-group" id="a22-weight-group">
+      <label data-mode-label="piecesPerBdl">Pieces per Bundle</label>
+      <input type="number" id="a22-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="calcA22BdlWeight()">
+      <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+        <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;display:block;margin-bottom:4px" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS)</label>
+        <input type="number" id="a22-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+      </div>
     </div>
     <div style="margin: 12px 0 10px; border-top: 1px solid var(--border); padding-top: 10px;">
       <div style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:10px;">OPTIONAL</div>
@@ -3775,18 +3844,32 @@ function makeArea22Stack(stack) {
 // ─── AREA 22 MODAL ───────────────────────────────────────────────
 function onA22TypeChange() {
   var type = document.getElementById('a22-type').value;
-  var swg = document.getElementById('a22-spool-weight-group');
-  swg.style.display = type === 'spool' ? 'block' : 'none';
+  document.getElementById('a22-spool-weight-group').style.display = type === 'spool' ? 'block' : 'none';
+  document.getElementById('a22-weight-group').style.display = type === 'spool' ? 'none' : 'block';
   if (type !== 'spool') document.getElementById('a22-spool-weight').value = '';
 }
 
+function calcA22BdlWeight() {
+  var size = document.getElementById('a22-size').value;
+  var ft = parseFloat(document.getElementById('a22-length-ft').value) || 0;
+  var inches = parseFloat(document.getElementById('a22-length-in').value) || 0;
+  var lenNum = ft + inches / 12;
+  var pieces = parseInt(document.getElementById('a22-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  document.getElementById('a22-bdl-wt').value = (lbsPerFt && lenNum && pieces) ? Math.round(lbsPerFt * lenNum * pieces) : '';
+}
+
 function openA22Modal() {
-  ['a22-heat','a22-bundles','a22-order','a22-ship','a22-customer','a22-length'].forEach(function(id) { document.getElementById(id).value=''; });
+  ['a22-heat','a22-bundles','a22-order','a22-ship','a22-customer',
+   'a22-length-ft','a22-length-in','a22-pieces','a22-bdl-wt'].forEach(function(id) { document.getElementById(id).value=''; });
   document.getElementById('a22-size').value = '';
+  document.getElementById('a22-grade').value = '';
+  document.getElementById('a22-spec').value = '';
   document.getElementById('a22-type').value = 'straight';
   document.getElementById('a22-side').value = 'A';
   document.getElementById('a22-spool-weight').value = '';
   document.getElementById('a22-spool-weight-group').style.display = 'none';
+  document.getElementById('a22-weight-group').style.display = 'block';
   document.getElementById('a22-modal-overlay').classList.add('active');
 }
 function closeA22Modal() { document.getElementById('a22-modal-overlay').classList.remove('active'); }
@@ -3795,21 +3878,38 @@ function handleA22OverlayClick(e) { if (e.target===document.getElementById('a22-
 function addToArea22() {
   var type = document.getElementById('a22-type').value;
   var size = document.getElementById('a22-size').value;
-  var length = document.getElementById('a22-length').value.trim();
-  var bundles = document.getElementById('a22-bundles').value;
+  var ft = parseFloat(document.getElementById('a22-length-ft').value) || 0;
+  var inches = parseFloat(document.getElementById('a22-length-in').value) || 0;
+  var lenNum = ft + inches / 12;
+  var length = lenNum ? String(lenNum) : '';
+  var bundles = parseInt(document.getElementById('a22-bundles').value) || 0;
   var side = document.getElementById('a22-side').value || 'A';
   if (!size || !bundles) { alert(LBL('sizeAlert')); return; }
+  var grade = document.getElementById('a22-grade').value;
+  var spec  = document.getElementById('a22-spec').value;
   var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a22-spool-weight').value)||0) : 0;
+  var pieces = parseInt(document.getElementById('a22-pieces').value) || 0;
+  var bdlWtLbs = parseFloat(document.getElementById('a22-bdl-wt').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  var weightPerBundleTons, weightTons;
+  if (type === 'spool') {
+    weightPerBundleTons = spoolLbs > 0 ? spoolLbs / 2000 : 0;
+    weightTons = weightPerBundleTons * bundles;
+  } else {
+    weightPerBundleTons = (lbsPerFt && lenNum && pieces) ? (lbsPerFt * lenNum * pieces) / 2000 : (bdlWtLbs / 2000);
+    weightTons = weightPerBundleTons * bundles;
+  }
   var stack = {
     uid: genUid(),
     id: 'S'+String(area22NextId++).padStart(2,'0'),
     side: side,
     heat: document.getElementById('a22-heat').value.trim(),
-    size: size, length: length, type: type, grade: '', spec: '',
-    bundles: parseInt(bundles),
+    size: size, length: length, type: type, grade: grade, spec: spec,
+    bundles: bundles,
+    pieces: pieces,
     spoolWeightLbs: spoolLbs,
-    weightPerBundleTons: spoolLbs > 0 ? spoolLbs/2000 : 0,
-    weightTons: spoolLbs > 0 ? (spoolLbs/2000)*(parseInt(bundles)||0) : 0,
+    weightPerBundleTons: weightPerBundleTons,
+    weightTons: weightTons,
     ship: document.getElementById('a22-ship').value,
     order: document.getElementById('a22-order').value.trim(),
     customer: document.getElementById('a22-customer').value.trim(),
@@ -3909,9 +4009,19 @@ function makeArea1Stack(stack) {
 // ─── AREA 1 MODAL ────────────────────────────────────────────────
 function onA1TypeChange() {
   var type = document.getElementById('a1-type').value;
-  var swg = document.getElementById('a1-spool-weight-group');
-  swg.style.display = type === 'spool' ? 'block' : 'none';
+  document.getElementById('a1-spool-weight-group').style.display = type === 'spool' ? 'block' : 'none';
+  document.getElementById('a1-weight-group').style.display = type === 'spool' ? 'none' : 'block';
   if (type !== 'spool') document.getElementById('a1-spool-weight').value = '';
+}
+
+function calcA1BdlWeight() {
+  var size = document.getElementById('a1-size').value;
+  var ft = parseFloat(document.getElementById('a1-length-ft').value) || 0;
+  var inches = parseFloat(document.getElementById('a1-length-in').value) || 0;
+  var lenNum = ft + inches / 12;
+  var pieces = parseInt(document.getElementById('a1-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  document.getElementById('a1-bdl-wt').value = (lbsPerFt && lenNum && pieces) ? Math.round(lbsPerFt * lenNum * pieces) : '';
 }
 
 function openA1ModalForSide(side) {
@@ -3920,12 +4030,16 @@ function openA1ModalForSide(side) {
 }
 
 function openA1Modal() {
-  ['a1-heat','a1-bundles','a1-order','a1-ship','a1-customer','a1-length'].forEach(function(id) { document.getElementById(id).value=''; });
+  ['a1-heat','a1-bundles','a1-order','a1-ship','a1-customer',
+   'a1-length-ft','a1-length-in','a1-pieces','a1-bdl-wt'].forEach(function(id) { document.getElementById(id).value=''; });
   document.getElementById('a1-size').value = '';
+  document.getElementById('a1-grade').value = '';
+  document.getElementById('a1-spec').value = '';
   document.getElementById('a1-type').value = 'straight';
   document.getElementById('a1-side').value = 'A';
   document.getElementById('a1-spool-weight').value = '';
   document.getElementById('a1-spool-weight-group').style.display = 'none';
+  document.getElementById('a1-weight-group').style.display = 'block';
   document.getElementById('a1-modal-overlay').classList.add('active');
 }
 function closeA1Modal() { document.getElementById('a1-modal-overlay').classList.remove('active'); }
@@ -3934,22 +4048,39 @@ function handleA1OverlayClick(e) { if (e.target===document.getElementById('a1-mo
 function addToArea1() {
   var type = document.getElementById('a1-type').value;
   var size = document.getElementById('a1-size').value;
-  var length = document.getElementById('a1-length').value ? parseFloat(document.getElementById('a1-length').value) : null;
+  var ft = parseFloat(document.getElementById('a1-length-ft').value) || 0;
+  var inches = parseFloat(document.getElementById('a1-length-in').value) || 0;
+  var lenNum = ft + inches / 12;
+  var length = lenNum ? String(lenNum) : '';
   var bundles = parseInt(document.getElementById('a1-bundles').value) || 0;
   var side = document.getElementById('a1-side').value || 'A';
   if (!size) { alert('Please select a ' + LBL('szLbl').toLowerCase() + '.'); return; }
   if (!bundles) { alert('Please enter ' + LBL('bundle') + ' quantity.'); return; }
+  var grade = document.getElementById('a1-grade').value;
+  var spec  = document.getElementById('a1-spec').value;
   var spoolLbs = (type==='spool') ? (parseFloat(document.getElementById('a1-spool-weight').value)||0) : 0;
+  var pieces = parseInt(document.getElementById('a1-pieces').value) || 0;
+  var bdlWtLbs = parseFloat(document.getElementById('a1-bdl-wt').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  var weightPerBundleTons, weightTons;
+  if (type === 'spool') {
+    weightPerBundleTons = spoolLbs > 0 ? spoolLbs / 2000 : 0;
+    weightTons = weightPerBundleTons * bundles;
+  } else {
+    weightPerBundleTons = (lbsPerFt && lenNum && pieces) ? (lbsPerFt * lenNum * pieces) / 2000 : (bdlWtLbs / 2000);
+    weightTons = weightPerBundleTons * bundles;
+  }
   var stack = {
     uid: genUid(),
     id: 'P'+String(area1NextId++).padStart(2,'0'),
     side: side,
     heat: document.getElementById('a1-heat').value.trim(),
-    size: size, length: length, type: type, grade: '', spec: '',
+    size: size, length: length, type: type, grade: grade, spec: spec,
     bundles: bundles,
+    pieces: pieces,
     spoolWeightLbs: spoolLbs,
-    weightPerBundleTons: spoolLbs > 0 ? spoolLbs/2000 : 0,
-    weightTons: spoolLbs > 0 ? (spoolLbs/2000)*(parseInt(bundles)||0) : 0,
+    weightPerBundleTons: weightPerBundleTons,
+    weightTons: weightTons,
     ship: document.getElementById('a1-ship').value,
     order: document.getElementById('a1-order').value.trim(),
     customer: document.getElementById('a1-customer').value.trim(),
@@ -7544,12 +7675,18 @@ function logRun() {
   if (locVal==='AREA1'||suggestedLoc==='AREA1') {
     document.getElementById('a1-type').value=type;
     document.getElementById('a1-size').value=size;
-    document.getElementById('a1-length').value=lenNum || '';
+    document.getElementById('a1-length-ft').value=document.getElementById('inp-length-ft').value;
+    document.getElementById('a1-length-in').value=document.getElementById('inp-length-in').value;
+    document.getElementById('a1-grade').value=document.getElementById('inp-grade').value;
+    document.getElementById('a1-spec').value=document.getElementById('inp-spec').value;
     document.getElementById('a1-bundles').value=bundles;
     document.getElementById('a1-customer').value=document.getElementById('inp-customer').value.trim();
+    document.getElementById('a1-pieces').value=document.getElementById('inp-pieces').value;
+    document.getElementById('a1-bdl-wt').value=document.getElementById('inp-bdl-wt').value;
     if (type==='spool') {
       document.getElementById('a1-spool-weight').value = document.getElementById('inp-spool-weight').value;
       document.getElementById('a1-spool-weight-group').style.display = 'block';
+      document.getElementById('a1-weight-group').style.display = 'none';
     }
     document.getElementById('a1-modal-overlay').classList.add('active');
     return;
@@ -7559,13 +7696,19 @@ function logRun() {
   if (locVal==='AREA22'||suggestedLoc==='AREA22') {
     document.getElementById('a22-type').value=type;
     document.getElementById('a22-size').value=size;
-    document.getElementById('a22-length').value=lenNum || '';
+    document.getElementById('a22-length-ft').value=document.getElementById('inp-length-ft').value;
+    document.getElementById('a22-length-in').value=document.getElementById('inp-length-in').value;
+    document.getElementById('a22-grade').value=document.getElementById('inp-grade').value;
+    document.getElementById('a22-spec').value=document.getElementById('inp-spec').value;
     document.getElementById('a22-bundles').value=bundles;
     document.getElementById('a22-customer').value=document.getElementById('inp-customer').value.trim();
+    document.getElementById('a22-pieces').value=document.getElementById('inp-pieces').value;
+    document.getElementById('a22-bdl-wt').value=document.getElementById('inp-bdl-wt').value;
     // Pass spool weight if applicable
     if (type==='spool') {
       document.getElementById('a22-spool-weight').value = document.getElementById('inp-spool-weight').value;
       document.getElementById('a22-spool-weight-group').style.display = 'block';
+      document.getElementById('a22-weight-group').style.display = 'none';
     }
     document.getElementById('a22-modal-overlay').classList.add('active');
     return;
