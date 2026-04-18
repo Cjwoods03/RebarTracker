@@ -4904,16 +4904,28 @@ function confirmSecondaryTransfer() {
 
 function openTransferModal() {
   if (!modalLoc) return;
-  if (modalLoc.startsWith('A22:')) {
-    showScrapToast('Area 22 transfers: clear this stack and re-log to a different location.');
-    return;
+
+  // Resolve source item — area stacks live in area arrays, not store[]
+  var isAreaSrc = modalLoc.startsWith('A1:') || modalLoc.startsWith('A22:');
+  var srcAreaZone = null, areaArr = null, areaId = null;
+  var item;
+  if (isAreaSrc) {
+    var srcIsA1 = modalLoc.startsWith('A1:');
+    srcAreaZone = srcIsA1 ? 'AREA1' : 'AREA22';
+    areaId = srcIsA1 ? modalLoc.replace('A1:','') : modalLoc.replace('A22:','');
+    areaArr = srcIsA1 ? area1Stacks : area22Stacks;
+    item = areaArr.find(function(s){ return s.id === areaId; });
+  } else {
+    item = store[modalLoc];
   }
-  var item = store[modalLoc];
   if (!item) return;
 
   // Show from info
+  var fromLabel = isAreaSrc
+    ? (srcAreaZone === 'AREA1' ? 'Area 1' : 'Area 22') + ' ' + areaId + ' (' + (item.side||'A') + '-Side)'
+    : modalLoc;
   document.getElementById('transfer-from-info').innerHTML =
-    '<strong style="color:var(--text)">From:</strong> ' + modalLoc +
+    '<strong style="color:var(--text)">From:</strong> ' + fromLabel +
     ' &nbsp;·&nbsp; ' + item.size +
     (item.length ? ' · ' + formatLength(item.length) : ' · Coil') +
     ' &nbsp;·&nbsp; ' + item.bundles + (item.type==='spool'?' coils':' bundles');
@@ -4929,7 +4941,7 @@ function openTransferModal() {
     Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
       SPOOL_SECTIONS[sec].forEach(function(rack) {
         var rid = 'RACK-'+rack;
-        if (rid === modalLoc) return; // skip current
+        if (rid === modalLoc) return;
         var maxCap = RACK_MAX_SPOOLS[rack];
         var existing = store[rid];
         var existingCoils = existing ? existing.bundles : 0;
@@ -4942,14 +4954,19 @@ function openTransferModal() {
       });
     });
   } else {
-    // Straight bar: Area 1 and Area 22 free-stack options first
-    var a1o = document.createElement('option'); a1o.value='AREA1'; a1o.textContent='★ Area 1 — Open Stack Zone'; sel.appendChild(a1o);
-    var a22o = document.createElement('option'); a22o.value='AREA22'; a22o.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(a22o);
+    // Straight bar: free-stack area options first (skip current area for area sources)
+    if (srcAreaZone !== 'AREA1') {
+      var a1o = document.createElement('option'); a1o.value='AREA1'; a1o.textContent='★ Area 1 — Open Stack Zone'; sel.appendChild(a1o);
+    }
+    if (srcAreaZone !== 'AREA22') {
+      var a22o = document.createElement('option'); a22o.value='AREA22'; a22o.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(a22o);
+    }
     // Then all stanchion sides with enough footage
     var length = parseFloat(item.length) || 0;
     var order = orderedStanchions();
-    var srcStan = modalLoc.slice(0, -1);
-    var srcFt = parseFloat(item.length) || 0;
+    // srcStan/srcFt only relevant for same-stanchion effective-remaining (not applicable for area sources)
+    var srcStan = isAreaSrc ? null : modalLoc.slice(0, -1);
+    var srcFt   = isAreaSrc ? 0    : (parseFloat(item.length) || 0);
     order.forEach(function(s) {
       // Skip free-stack zones (stanchion 1 & 22) — not grid-addressable
       if (s === 1 || (stanchionCapacity[s] && stanchionCapacity[s].freeStack)) return;
@@ -4957,9 +4974,9 @@ function openTransferModal() {
       sides.forEach(function(side) {
         var id = s + side;
         if (id === modalLoc) return;
-        // Effective remaining: if same stanchion, source footage will be freed
         var rawRemaining = stanchionFtRemaining(s);
-        var effectiveRemaining = (String(s) === String(srcStan)) ? rawRemaining + srcFt : rawRemaining;
+        // Area source frees no stanchion footage; stanchion source frees footage on its own stanchion
+        var effectiveRemaining = (!isAreaSrc && String(s) === String(srcStan)) ? rawRemaining + srcFt : rawRemaining;
         var existing = store[id];
         var label = (s==='BSU'?'B.SU':LBL('stan')+' '+s) + ' ' + side + '-side';
         var opt = document.createElement('option');
@@ -4972,11 +4989,9 @@ function openTransferModal() {
           var tfCustOk    = (existing.customer||'') === (item.customer||'');
           if (existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
               tfGradeOk && tfSpecOk && tfSpeciesOk && tfFinishOk && tfCustOk) {
-            // Same product (size + length + compatible grade/spec) — allow merge
             opt.textContent = '★ ' + label + ' — MERGE ' + existing.size + ' ' + formatLength(existing.length) + ' (' + existing.bundles + '+' + item.bundles + ' bundles)';
             opt.style.fontWeight = 'bold';
           } else {
-            // Different product — cannot merge
             opt.disabled = true;
             opt.textContent = label + ' — occupied: ' + existing.size + ' ' + formatLength(existing.length||'') + ' (different product)';
           }
@@ -5050,13 +5065,26 @@ function executeAreaTransfer(side) {
 
 function _doPrimaryAreaTransfer(dest, side) {
   if (!modalLoc) return;
-  var srcItem = store[modalLoc];
+
+  // Source can be a stanchion/rack slot OR an area stack
+  var isSrcArea = modalLoc.startsWith('A1:') || modalLoc.startsWith('A22:');
+  var srcItem, srcFromLabel;
+  if (isSrcArea) {
+    var srcIsA1  = modalLoc.startsWith('A1:');
+    var srcAId   = srcIsA1 ? modalLoc.replace('A1:','') : modalLoc.replace('A22:','');
+    var srcAArr  = srcIsA1 ? area1Stacks : area22Stacks;
+    srcItem = srcAArr.find(function(s){ return s.id === srcAId; });
+    srcFromLabel = (srcIsA1 ? 'Area 1' : 'Area 22') + ' ' + srcAId;
+  } else {
+    srcItem = store[modalLoc];
+    srcFromLabel = modalLoc;
+  }
   if (!srcItem) return;
 
   var newStack = JSON.parse(JSON.stringify(srcItem));
   newStack.uid  = genUid();
   newStack.side = side;
-  newStack.logged = 'transferred from ' + modalLoc + ' — ' + new Date().toLocaleTimeString();
+  newStack.logged = 'transferred from ' + srcFromLabel + ' — ' + new Date().toLocaleTimeString();
 
   if (dest === 'AREA1') {
     newStack.id  = 'P' + String(area1NextId++).padStart(2, '0');
@@ -5069,17 +5097,27 @@ function _doPrimaryAreaTransfer(dest, side) {
   }
   inventory.push(newStack);
 
-  clearSecondaryItems(modalLoc);
-  store[modalLoc] = null;
-  for (var i = inventory.length - 1; i >= 0; i--) {
-    if (inventory[i].loc === modalLoc) inventory.splice(i, 1);
+  // Clear source
+  if (isSrcArea) {
+    var srcIsA1b = modalLoc.startsWith('A1:');
+    var srcAIdb  = srcIsA1b ? modalLoc.replace('A1:','') : modalLoc.replace('A22:','');
+    var srcAArrb = srcIsA1b ? area1Stacks : area22Stacks;
+    var srcAIdx  = srcAArrb.findIndex(function(s){ return s.id === srcAIdb; });
+    if (srcAIdx > -1) srcAArrb.splice(srcAIdx, 1);
+    var srcAInvIdx = inventory.findIndex(function(i){ return i.uid && srcItem.uid && i.uid === srcItem.uid; });
+    if (srcAInvIdx > -1) inventory.splice(srcAInvIdx, 1);
+  } else {
+    clearSecondaryItems(modalLoc);
+    store[modalLoc] = null;
+    for (var i = inventory.length - 1; i >= 0; i--) {
+      if (inventory[i].loc === modalLoc) inventory.splice(i, 1);
+    }
   }
 
-  var fromId = modalLoc;
   var zoneName = dest === 'AREA1' ? 'Area 1' : 'Area 22';
   closeTransferModal();
   closeModal();
-  showScrapToast('✓ Transferred from ' + fromId + ' → ' + zoneName + ' ' + side + '-Side'); saveData();
+  showScrapToast('✓ Transferred from ' + srcFromLabel + ' → ' + zoneName + ' ' + side + '-Side'); saveData();
   renderAll(); renderInventory();
   setTimeout(function() {
     var el = document.getElementById(dest === 'AREA1' ? 'area1-block' : 'area22-block');
@@ -5128,10 +5166,112 @@ function _doSecAreaTransfer(dest, side) {
   }, 200);
 }
 
+function _confirmAreaSourceTransfer(dest) {
+  var isA1 = modalLoc.startsWith('A1:');
+  var srcAreaId = isA1 ? modalLoc.replace('A1:','') : modalLoc.replace('A22:','');
+  var srcArr = isA1 ? area1Stacks : area22Stacks;
+  var srcItem = srcArr.find(function(s){ return s.id === srcAreaId; });
+  if (!srcItem) return;
+
+  var hint = document.getElementById('transfer-hint');
+
+  // Cross-area → side picker
+  if (dest === 'AREA1' || dest === 'AREA22') { _showSidePicker(dest, false); return; }
+
+  var isSpool = srcItem.type === 'spool';
+
+  // Footage check for stanchion destinations
+  if (!isSpool && !dest.startsWith('RACK-')) {
+    var destStan = dest.slice(0, -1);
+    var stanNum  = parseInt(destStan) || destStan;
+    var length   = parseFloat(srcItem.length) || 0;
+    var destItem0 = store[dest];
+    var isMerge0 = destItem0 &&
+      destItem0.size === srcItem.size && parseFloat(destItem0.length) === parseFloat(srcItem.length) &&
+      (!destItem0.grade || !srcItem.grade || destItem0.grade === srcItem.grade) &&
+      (!destItem0.spec  || !srcItem.spec  || destItem0.spec  === srcItem.spec) &&
+      (destItem0.customer||'') === (srcItem.customer||'');
+    if (!isMerge0 && length > 0) {
+      var remainFt0 = maxFtForStanchion(stanNum) - stanchionFtUsed(stanNum);
+      if (length > remainFt0) {
+        hint.className = 'length-hint over';
+        hint.textContent = '⛔ Not enough space — only ' + remainFt0.toFixed(0) + 'ft available on that stanchion.';
+        hint.style.display = 'block';
+        return;
+      }
+    }
+  }
+
+  // Capacity check for rack destinations
+  if (isSpool && dest.startsWith('RACK-')) {
+    var rackKey0 = dest.replace('RACK-','');
+    var maxCap0 = RACK_MAX_SPOOLS[rackKey0];
+    var rackExist = store[dest];
+    var rackCoils = rackExist ? rackExist.bundles : 0;
+    if (maxCap0 && rackCoils + srcItem.bundles > maxCap0) {
+      hint.className = 'length-hint over';
+      hint.textContent = '⛔ Row ' + rackKey0 + ' only has ' + (maxCap0 - rackCoils) + ' spots remaining.';
+      hint.style.display = 'block';
+      return;
+    }
+  }
+
+  // Write to destination
+  var destItem2 = store[dest];
+  if (destItem2) {
+    var gradeOk0 = !destItem2.grade || !srcItem.grade || destItem2.grade === srcItem.grade;
+    var specOk0  = !destItem2.spec  || !srcItem.spec  || destItem2.spec  === srcItem.spec;
+    var custOk0  = (destItem2.customer||'') === (srcItem.customer||'');
+    if (destItem2.size !== srcItem.size || parseFloat(destItem2.length) !== parseFloat(srcItem.length) || !gradeOk0 || !specOk0 || !custOk0) {
+      hint.className = 'length-hint over';
+      hint.textContent = '⛔ Destination has ' + destItem2.size + ' ' + (destItem2.length||'') + 'ft — can only merge identical product (same size, length, grade, spec, customer).';
+      hint.style.display = 'block';
+      return;
+    }
+    destItem2.bundles += srcItem.bundles;
+    if (destItem2.weightPerBundleTons) destItem2.weightTons = destItem2.weightPerBundleTons * destItem2.bundles;
+    if (!destItem2.grade && srcItem.grade) destItem2.grade = srcItem.grade;
+    if (!destItem2.spec  && srcItem.spec)  destItem2.spec  = srcItem.spec;
+    var di0 = inventory.find(function(i){ return i.uid === destItem2.uid; });
+    if (di0) { di0.bundles = destItem2.bundles; di0.weightTons = destItem2.weightTons;
+               if (!di0.grade && srcItem.grade) di0.grade = srcItem.grade;
+               if (!di0.spec  && srcItem.spec)  di0.spec  = srcItem.spec; }
+  } else {
+    var moved0 = JSON.parse(JSON.stringify(srcItem));
+    moved0.loc = dest;
+    moved0.logged = 'transferred from ' + (isA1 ? 'Area 1' : 'Area 22') + ' ' + srcAreaId + ' — ' + new Date().toLocaleTimeString();
+    store[dest] = moved0;
+    inventory.push(moved0);
+  }
+
+  // Remove from source area array + inventory
+  var srcIdx0 = srcArr.findIndex(function(s){ return s.id === srcAreaId; });
+  if (srcIdx0 > -1) srcArr.splice(srcIdx0, 1);
+  var srcInvIdx0 = inventory.findIndex(function(i){ return i.uid && srcItem.uid && i.uid === srcItem.uid; });
+  if (srcInvIdx0 > -1) inventory.splice(srcInvIdx0, 1);
+
+  var fromLabel = (isA1 ? 'Area 1' : 'Area 22') + ' ' + srcAreaId;
+  closeTransferModal();
+  closeModal();
+  showScrapToast('✓ Transferred from ' + fromLabel + ' → ' + dest.replace('RACK-','Row ')); saveData();
+  renderAll(); renderInventory();
+  if (dest.startsWith('RACK-') && currentMapSection !== 'spool') { setMapSection('spool', null); renderAll(); }
+  setTimeout(function() {
+    var e = document.getElementById('slot-'+dest);
+    if (e) e.scrollIntoView({ behavior:'smooth', block:'center' });
+  }, 200);
+}
+
 function confirmTransfer() {
   var dest = document.getElementById('transfer-dest').value;
   if (!dest) { alert('Please select a destination.'); return; }
   if (!modalLoc) return;
+
+  // Area stack source — routed to dedicated handler
+  if (modalLoc.startsWith('A1:') || modalLoc.startsWith('A22:')) {
+    _confirmAreaSourceTransfer(dest);
+    return;
+  }
 
   var srcItem = store[modalLoc];
   if (!srcItem) return;
