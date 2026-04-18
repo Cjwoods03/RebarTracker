@@ -1832,6 +1832,14 @@
       <button class="btn btn-primary" style="margin-top:0;background:#4ab8ff;color:#001540" onclick="document.getElementById('transfer-modal-overlay').dataset.mode==='secondary'?confirmSecondaryTransfer():confirmTransfer()">CONFIRM TRANSFER</button>
       <button class="btn-close-modal" onclick="closeTransferModal()">Cancel</button>
     </div>
+    <div id="transfer-side-picker" style="display:none;margin-top:14px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--text-dim);margin-bottom:10px">Which side of the stack zone?</div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-primary" style="margin-top:0;flex:1;background:#4ab8ff;color:#001540" onclick="executeAreaTransfer('A')">A-SIDE</button>
+        <button class="btn btn-primary" style="margin-top:0;flex:1;background:#4ab8ff;color:#001540" onclick="executeAreaTransfer('B')">B-SIDE</button>
+      </div>
+      <button class="btn-close-modal" style="margin-top:8px;width:100%" onclick="cancelAreaTransfer()">Back</button>
+    </div>
   </div>
 </div>
 
@@ -4640,6 +4648,10 @@ function openSecondaryTransfer(slotId, idx) {
   var sel = document.getElementById('transfer-dest');
   sel.innerHTML = '<option value="">— Select destination —</option>';
 
+  // Area 1 and Area 22 free-stack options first
+  var sa1o = document.createElement('option'); sa1o.value='AREA1'; sa1o.textContent='★ Area 1 — Open Stack Zone'; sel.appendChild(sa1o);
+  var sa22o = document.createElement('option'); sa22o.value='AREA22'; sa22o.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(sa22o);
+
   // List all stanchion sides — no ft restriction for secondary items
   var order = orderedStanchions();
   order.forEach(function(s) {
@@ -4670,6 +4682,9 @@ function confirmSecondaryTransfer() {
   var dest = document.getElementById('transfer-dest').value;
   if (!dest) { alert('Please select a destination.'); return; }
   if (secTransferSlot === null || secTransferIdx === null) return;
+
+  // Free-stack area destination — show side picker before writing
+  if (dest === 'AREA1' || dest === 'AREA22') { _showSidePicker(dest, true); return; }
 
   var extras = storeExtra[secTransferSlot] || [];
   var ei = extras[secTransferIdx];
@@ -4776,7 +4791,10 @@ function openTransferModal() {
       });
     });
   } else {
-    // Straight bar: list all stanchion sides with enough footage
+    // Straight bar: Area 1 and Area 22 free-stack options first
+    var a1o = document.createElement('option'); a1o.value='AREA1'; a1o.textContent='★ Area 1 — Open Stack Zone'; sel.appendChild(a1o);
+    var a22o = document.createElement('option'); a22o.value='AREA22'; a22o.textContent='★ Area 22 — Open Stack Zone'; sel.appendChild(a22o);
+    // Then all stanchion sides with enough footage
     var length = parseFloat(item.length) || 0;
     var order = orderedStanchions();
     var srcStan = modalLoc.slice(0, -1);
@@ -4832,11 +4850,131 @@ function closeTransferModal() {
   document.getElementById('transfer-modal-overlay').classList.remove('active');
   document.getElementById('transfer-modal-overlay').dataset.mode = '';
   secTransferSlot = null;
-  secTransferIdx = null;
+  secTransferIdx  = null;
+  _pendingAreaDest = null;
+  _pendingAreaSec  = false;
+  // Reset side-picker visibility
+  document.getElementById('transfer-side-picker').style.display = 'none';
+  document.getElementById('transfer-dest').closest('.form-group').style.display = '';
+  document.querySelector('[onclick*="confirmTransfer"]').closest('div').style.display = '';
 }
 
 function handleTransferOverlayClick(e) {
   if (e.target === document.getElementById('transfer-modal-overlay')) closeTransferModal();
+}
+
+// Pending area-transfer state for the side-picker step
+var _pendingAreaDest = null;   // 'AREA1' or 'AREA22'
+var _pendingAreaSec  = false;  // true when coming from secondary transfer
+
+function _showSidePicker(dest, isSec) {
+  _pendingAreaDest = dest;
+  _pendingAreaSec  = isSec;
+  document.getElementById('transfer-dest').closest('.form-group').style.display = 'none';
+  document.querySelector('[onclick*="confirmTransfer"]').closest('div').style.display = 'none';
+  document.getElementById('transfer-hint').style.display = 'none';
+  document.getElementById('transfer-side-picker').style.display = 'block';
+}
+
+function cancelAreaTransfer() {
+  _pendingAreaDest = null;
+  _pendingAreaSec  = false;
+  document.getElementById('transfer-side-picker').style.display = 'none';
+  document.getElementById('transfer-dest').closest('.form-group').style.display = '';
+  document.querySelector('[onclick*="confirmTransfer"]').closest('div').style.display = '';
+}
+
+function executeAreaTransfer(side) {
+  var dest = _pendingAreaDest;
+  var isSec = _pendingAreaSec;
+  _pendingAreaDest = null;
+  _pendingAreaSec  = false;
+
+  if (isSec) {
+    _doSecAreaTransfer(dest, side);
+  } else {
+    _doPrimaryAreaTransfer(dest, side);
+  }
+}
+
+function _doPrimaryAreaTransfer(dest, side) {
+  if (!modalLoc) return;
+  var srcItem = store[modalLoc];
+  if (!srcItem) return;
+
+  var newStack = JSON.parse(JSON.stringify(srcItem));
+  newStack.uid  = genUid();
+  newStack.side = side;
+  newStack.logged = 'transferred from ' + modalLoc + ' — ' + new Date().toLocaleTimeString();
+
+  if (dest === 'AREA1') {
+    newStack.id  = 'P' + String(area1NextId++).padStart(2, '0');
+    newStack.loc = 'AREA-1';
+    area1Stacks.push(newStack);
+  } else {
+    newStack.id  = 'S' + String(area22NextId++).padStart(2, '0');
+    newStack.loc = 'AREA-22';
+    area22Stacks.push(newStack);
+  }
+  inventory.push(newStack);
+
+  clearSecondaryItems(modalLoc);
+  store[modalLoc] = null;
+  for (var i = inventory.length - 1; i >= 0; i--) {
+    if (inventory[i].loc === modalLoc) inventory.splice(i, 1);
+  }
+
+  var fromId = modalLoc;
+  var zoneName = dest === 'AREA1' ? 'Area 1' : 'Area 22';
+  closeTransferModal();
+  closeModal();
+  showScrapToast('✓ Transferred from ' + fromId + ' → ' + zoneName + ' ' + side + '-Side'); saveData();
+  renderAll(); renderInventory();
+  setTimeout(function() {
+    var el = document.getElementById(dest === 'AREA1' ? 'area1-block' : 'area22-block');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 150);
+}
+
+function _doSecAreaTransfer(dest, side) {
+  if (secTransferSlot === null || secTransferIdx === null) return;
+  var extras = storeExtra[secTransferSlot] || [];
+  var ei = extras[secTransferIdx];
+  if (!ei) return;
+
+  var newStack = JSON.parse(JSON.stringify(ei));
+  newStack.uid  = genUid();
+  newStack.side = side;
+  newStack.logged = 'transferred from ' + secTransferSlot + ' — ' + new Date().toLocaleTimeString();
+
+  if (dest === 'AREA1') {
+    newStack.id  = 'P' + String(area1NextId++).padStart(2, '0');
+    newStack.loc = 'AREA-1';
+    area1Stacks.push(newStack);
+  } else {
+    newStack.id  = 'S' + String(area22NextId++).padStart(2, '0');
+    newStack.loc = 'AREA-22';
+    area22Stacks.push(newStack);
+  }
+  inventory.push(newStack);
+
+  extras.splice(secTransferIdx, 1);
+  if (extras.length === 0) delete storeExtra[secTransferSlot];
+  var srcInvIdx = inventory.findIndex(function(i){ return i.uid && ei.uid && i.uid === ei.uid; });
+  if (srcInvIdx > -1) inventory.splice(srcInvIdx, 1);
+
+  var fromSlot = secTransferSlot;
+  secTransferSlot = null;
+  secTransferIdx  = null;
+  var zoneName = dest === 'AREA1' ? 'Area 1' : 'Area 22';
+  closeTransferModal();
+  renderAll(); renderInventory();
+  renderSecondaryList(fromSlot);
+  showScrapToast('Secondary item moved to ' + zoneName + ' ' + side + '-Side'); saveData();
+  setTimeout(function() {
+    var el = document.getElementById(dest === 'AREA1' ? 'area1-block' : 'area22-block');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }, 200);
 }
 
 function confirmTransfer() {
@@ -4855,6 +4993,9 @@ function confirmTransfer() {
   if (srcExtras > 0) {
     if (!confirm('⚠️ This slot has ' + srcExtras + ' secondary item' + (srcExtras !== 1 ? 's' : '') + ' that will be removed when the primary is transferred.\n\nContinue?')) return;
   }
+
+  // Free-stack area destination — show side picker before writing
+  if (dest === 'AREA1' || dest === 'AREA22') { _showSidePicker(dest, false); return; }
 
   // Validate destination
   if (!isSpool) {
