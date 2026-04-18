@@ -1984,10 +1984,14 @@
     </div>
     <div class="form-group" id="a1-weight-group">
       <label data-mode-label="piecesPerBdl">Pieces per Bundle</label>
-      <input type="number" id="a1-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="calcA1BdlWeight()">
+      <input type="number" id="a1-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onA1PiecesInput()">
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-        <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;display:block;margin-bottom:4px" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS)</label>
-        <input type="number" id="a1-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS)</label>
+          <button id="a1-link-btn" class="link-toggle-btn" onclick="toggleA1Link()" title="Fields linked — click to unlink">⛓</button>
+        </div>
+        <input type="number" id="a1-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcA1PiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+        <div id="a1-bdl-wt-hint" style="display:none;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);padding:5px 8px;background:#0d1f10;border-radius:5px;border:1px solid var(--border)"></div>
       </div>
     </div>
     <div style="margin: 12px 0 10px; border-top: 1px solid var(--border); padding-top: 10px;">
@@ -2096,10 +2100,14 @@
     <!-- Straight bar weight — shown when type is straight -->
     <div class="form-group" id="a22-weight-group">
       <label data-mode-label="piecesPerBdl">Pieces per Bundle</label>
-      <input type="number" id="a22-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="calcA22BdlWeight()">
+      <input type="number" id="a22-pieces" placeholder="e.g. 20" min="1" inputmode="numeric" oninput="onA22PiecesInput()">
       <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-        <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;display:block;margin-bottom:4px" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS)</label>
-        <input type="number" id="a22-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+          <label style="font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;letter-spacing:1px;margin-bottom:0;flex:1" data-mode-label="bdlWtCalc">BUNDLE WEIGHT (LBS)</label>
+          <button id="a22-link-btn" class="link-toggle-btn" onclick="toggleA22Link()" title="Fields linked — click to unlink">⛓</button>
+        </div>
+        <input type="number" id="a22-bdl-wt" placeholder="e.g. 600" min="0" inputmode="decimal" oninput="calcA22PiecesFromWeight()" style="width:100%;padding:10px 12px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:8px;font-size:16px;font-family:'IBM Plex Mono',monospace;box-sizing:border-box">
+        <div id="a22-bdl-wt-hint" style="display:none;margin-top:5px;font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--accent);padding:5px 8px;background:#0d1f10;border-radius:5px;border:1px solid var(--border)"></div>
       </div>
     </div>
     <div style="margin: 12px 0 10px; border-top: 1px solid var(--border); padding-top: 10px;">
@@ -3056,6 +3064,8 @@ function getCalcBdlTons() {
 var _syncingWeightFields = false;
 var _logRunLinked = true;
 var _rcLinked = true;
+var _a1Linked  = true;
+var _a22Linked = true;
 
 function updateLinkBtn(id, linked) {
   var btn = document.getElementById(id);
@@ -3070,6 +3080,14 @@ function toggleLogLink() {
 function toggleRcLink() {
   _rcLinked = !_rcLinked;
   updateLinkBtn('rc-link-btn', _rcLinked);
+}
+function toggleA1Link() {
+  _a1Linked = !_a1Linked;
+  updateLinkBtn('a1-link-btn', _a1Linked);
+}
+function toggleA22Link() {
+  _a22Linked = !_a22Linked;
+  updateLinkBtn('a22-link-btn', _a22Linked);
 }
 
 // Called when pieces/bundle is typed directly — auto-fills bundle weight field
@@ -3141,6 +3159,118 @@ function calcPiecesFromWeight() {
   hint.style.display = 'block';
   _syncingWeightFields = false;
   calcBundleWeight();
+}
+
+// ─── AREA 1 MODAL WEIGHT AUTO-CALC ───────────────────────────────
+function _areaLenNum(pfx) {
+  var ft = parseFloat(document.getElementById(pfx+'-length-ft').value) || 0;
+  var inn = parseFloat(document.getElementById(pfx+'-length-in').value) || 0;
+  return ft + inn / 12;
+}
+
+function onA1PiecesInput() {
+  if (!_a1Linked) return;
+  if (_syncingWeightFields) return;
+  _syncingWeightFields = true;
+  var size = document.getElementById('a1-size').value;
+  var lenNum = _areaLenNum('a1');
+  var pieces = parseInt(document.getElementById('a1-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  var hint = document.getElementById('a1-bdl-wt-hint');
+  if (lbsPerFt && lenNum && pieces) {
+    var lbsPerPiece = lbsPerFt * lenNum;
+    var bdlWt = Math.round(lbsPerPiece * pieces);
+    document.getElementById('a1-bdl-wt').value = bdlWt;
+    hint.style.color = 'var(--accent)';
+    hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + bdlWt + ' lbs/bdl';
+    hint.style.display = 'block';
+  } else {
+    document.getElementById('a1-bdl-wt').value = '';
+    hint.style.display = 'none';
+  }
+  _syncingWeightFields = false;
+}
+
+function calcA1PiecesFromWeight() {
+  if (!_a1Linked) return;
+  if (_syncingWeightFields) return;
+  _syncingWeightFields = true;
+  var size = document.getElementById('a1-size').value;
+  var lenNum = _areaLenNum('a1');
+  var bdlWt = parseFloat(document.getElementById('a1-bdl-wt').value) || 0;
+  var hint = document.getElementById('a1-bdl-wt-hint');
+  if (!bdlWt) { hint.style.display = 'none'; _syncingWeightFields = false; return; }
+  if (!size || !lenNum) {
+    hint.textContent = '⚠ Enter bar size and length first';
+    hint.style.color = 'var(--warn)'; hint.style.display = 'block';
+    _syncingWeightFields = false; return;
+  }
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (!lbsPerFt) {
+    hint.textContent = '⚠ No weight data for ' + size;
+    hint.style.color = 'var(--warn)'; hint.style.display = 'block';
+    _syncingWeightFields = false; return;
+  }
+  var lbsPerPiece = lbsPerFt * lenNum;
+  var pieces = Math.max(1, Math.round(bdlWt / lbsPerPiece));
+  document.getElementById('a1-pieces').value = pieces;
+  hint.style.color = 'var(--accent)';
+  hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + pieces + ' pc/bdl';
+  hint.style.display = 'block';
+  _syncingWeightFields = false;
+}
+
+// ─── AREA 22 MODAL WEIGHT AUTO-CALC ──────────────────────────────
+function onA22PiecesInput() {
+  if (!_a22Linked) return;
+  if (_syncingWeightFields) return;
+  _syncingWeightFields = true;
+  var size = document.getElementById('a22-size').value;
+  var lenNum = _areaLenNum('a22');
+  var pieces = parseInt(document.getElementById('a22-pieces').value) || 0;
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  var hint = document.getElementById('a22-bdl-wt-hint');
+  if (lbsPerFt && lenNum && pieces) {
+    var lbsPerPiece = lbsPerFt * lenNum;
+    var bdlWt = Math.round(lbsPerPiece * pieces);
+    document.getElementById('a22-bdl-wt').value = bdlWt;
+    hint.style.color = 'var(--accent)';
+    hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + bdlWt + ' lbs/bdl';
+    hint.style.display = 'block';
+  } else {
+    document.getElementById('a22-bdl-wt').value = '';
+    hint.style.display = 'none';
+  }
+  _syncingWeightFields = false;
+}
+
+function calcA22PiecesFromWeight() {
+  if (!_a22Linked) return;
+  if (_syncingWeightFields) return;
+  _syncingWeightFields = true;
+  var size = document.getElementById('a22-size').value;
+  var lenNum = _areaLenNum('a22');
+  var bdlWt = parseFloat(document.getElementById('a22-bdl-wt').value) || 0;
+  var hint = document.getElementById('a22-bdl-wt-hint');
+  if (!bdlWt) { hint.style.display = 'none'; _syncingWeightFields = false; return; }
+  if (!size || !lenNum) {
+    hint.textContent = '⚠ Enter bar size and length first';
+    hint.style.color = 'var(--warn)'; hint.style.display = 'block';
+    _syncingWeightFields = false; return;
+  }
+  var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
+  if (!lbsPerFt) {
+    hint.textContent = '⚠ No weight data for ' + size;
+    hint.style.color = 'var(--warn)'; hint.style.display = 'block';
+    _syncingWeightFields = false; return;
+  }
+  var lbsPerPiece = lbsPerFt * lenNum;
+  var pieces = Math.max(1, Math.round(bdlWt / lbsPerPiece));
+  document.getElementById('a22-pieces').value = pieces;
+  hint.style.color = 'var(--accent)';
+  hint.textContent = lbsPerPiece.toFixed(2) + ' lbs/pc  →  ' + pieces + ' pc/bdl';
+  hint.style.display = 'block';
+  _syncingWeightFields = false;
 }
 
 // Returns the "size" value for any form prefix, handling aluminum profile text input
@@ -3880,6 +4010,8 @@ function openA22Modal() {
   document.getElementById('a22-spool-weight').value = '';
   document.getElementById('a22-spool-weight-group').style.display = 'none';
   document.getElementById('a22-weight-group').style.display = 'block';
+  document.getElementById('a22-bdl-wt-hint').style.display = 'none';
+  _a22Linked = true; updateLinkBtn('a22-link-btn', true);
   document.getElementById('a22-modal-overlay').classList.add('active');
 }
 function closeA22Modal() { document.getElementById('a22-modal-overlay').classList.remove('active'); }
@@ -4060,6 +4192,8 @@ function openA1Modal() {
   document.getElementById('a1-spool-weight').value = '';
   document.getElementById('a1-spool-weight-group').style.display = 'none';
   document.getElementById('a1-weight-group').style.display = 'block';
+  document.getElementById('a1-bdl-wt-hint').style.display = 'none';
+  _a1Linked = true; updateLinkBtn('a1-link-btn', true);
   document.getElementById('a1-modal-overlay').classList.add('active');
 }
 function closeA1Modal() { document.getElementById('a1-modal-overlay').classList.remove('active'); }
