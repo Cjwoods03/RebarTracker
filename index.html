@@ -3633,9 +3633,19 @@ function buildArea22HorizCol() {
   var col = el('div','horiz-area22-col');
   var numLabel = el('div','horiz-area22-num'); numLabel.textContent = '22 — OPEN'; col.appendChild(numLabel);
   var inner = el('div','horiz-area22-inner'); inner.id = 'area22-block';
-  area22Stacks.forEach(function(stack) { inner.appendChild(makeArea22Stack(stack)); });
-  var addBtn = el('div','area22-stack add-btn'); addBtn.innerHTML = '+'; addBtn.addEventListener('click', openA22Modal);
-  inner.appendChild(addBtn);
+  var sides = el('div','area22-sides');
+  ['A','B'].forEach(function(side) {
+    var sc = el('div','area22-side-col');
+    var sl = el('div','area22-side-label'); sl.textContent = side + '-Side'; sc.appendChild(sl);
+    var sd = el('div','area22-stacks');
+    area22Stacks.filter(function(s){ return (s.side||'A')===side; }).forEach(function(stack){ sd.appendChild(makeArea22Stack(stack)); });
+    var addBtn = el('div','area22-stack add-btn'); addBtn.innerHTML = '+';
+    addBtn.title = 'Add to ' + side + '-Side';
+    addBtn.addEventListener('click', function(){ openA22ModalForSide(side); });
+    sd.appendChild(addBtn);
+    sc.appendChild(sd); sides.appendChild(sc);
+  });
+  inner.appendChild(sides);
   col.appendChild(inner);
   return col;
 }
@@ -3981,9 +3991,19 @@ function buildArea1HorizCol() {
   var col = el('div','horiz-area22-col');
   var numLabel = el('div','horiz-area22-num'); numLabel.textContent = '1 — OPEN'; col.appendChild(numLabel);
   var inner = el('div','horiz-area22-inner'); inner.id = 'area1-block';
-  area1Stacks.forEach(function(stack) { inner.appendChild(makeArea1Stack(stack)); });
-  var addBtn = el('div','area22-stack add-btn'); addBtn.innerHTML = '+'; addBtn.addEventListener('click', openA1Modal);
-  inner.appendChild(addBtn);
+  var sides = el('div','area22-sides');
+  ['A','B'].forEach(function(side) {
+    var sc = el('div','area22-side-col');
+    var sl = el('div','area22-side-label'); sl.textContent = side + '-Side'; sc.appendChild(sl);
+    var sd = el('div','area22-stacks');
+    area1Stacks.filter(function(s){ return (s.side||'A')===side; }).forEach(function(stack){ sd.appendChild(makeArea1Stack(stack)); });
+    var addBtn = el('div','area22-stack add-btn'); addBtn.innerHTML = '+';
+    addBtn.title = 'Add to ' + side + '-Side';
+    addBtn.addEventListener('click', function(){ openA1ModalForSide(side); });
+    sd.appendChild(addBtn);
+    sc.appendChild(sd); sides.appendChild(sc);
+  });
+  inner.appendChild(sides);
   col.appendChild(inner);
   return col;
 }
