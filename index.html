@@ -6645,31 +6645,44 @@ function ofRefreshOverflowDropdown() {
       if (used[id]) return;
       if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) return;
       var existing = store[id];
+      var lbl = (s === 'BSU') ? 'B.SU' : LBL('stan') + ' ' + s;
+      var opt = document.createElement('option');
+      opt.value = id;
       if (existing) {
-        // Only allow if same product (bundle merge)
+        // Only allow if same product (bundle merge) — show others disabled
         var same = existing.size === item.size &&
           parseFloat(existing.length) === lenNum &&
           (!item.grade || !existing.grade || existing.grade === item.grade) &&
           (!item.spec  || !existing.spec  || existing.spec  === item.spec) &&
           (existing.customer||'') === (item.customer||'');
-        if (!same) return;
+        if (!same) {
+          opt.disabled = true;
+          opt.style.opacity = '0.7';
+          opt.textContent = '⊗ ' + lbl + ' ' + side + '-side — occupied: ' + existing.size + ' ' + formatLength(String(existing.length || '')) + ' (different product)';
+          sel.appendChild(opt);
+          return;
+        }
       } else {
-        // Empty — check footage
-        if (lenNum > 0 && lenNum > stanchionFtRemaining(s)) return;
+        // Empty — show disabled if insufficient footage
+        var ftRemNum = stanchionFtRemaining(s);
+        if (lenNum > 0 && lenNum > ftRemNum) {
+          opt.disabled = true;
+          opt.style.opacity = '0.7';
+          opt.textContent = '⊗ ' + lbl + ' ' + side + '-side — empty (only ' + ftRemNum.toFixed(0) + 'ft avail, need ' + lenNum + 'ft)';
+          sel.appendChild(opt);
+          return;
+        }
       }
       var maxBdl = (capData && capData.maxBundlesPerSide) ? capData.maxBundlesPerSide : 99999;
       var usedBdl = existing ? (existing.bundles || 0) : 0;
       var availBdl = maxBdl - usedBdl;
       if (availBdl <= 0) return;
 
-      var lbl = (s === 'BSU') ? 'B.SU' : LBL('stan') + ' ' + s;
       var ftRem = stanchionFtRemaining(s).toFixed(0);
       var desc = lbl + ' ' + side + '-side';
       desc += existing
         ? ' — ' + existing.size + ' ' + formatLength(String(existing.length || '')) + ' (' + usedBdl + ' ' + LBL('bdlAbbr') + ') · ' + availBdl + ' cap remain'
         : ' — empty · ' + ftRem + 'ft avail · ' + availBdl + ' cap';
-      var opt = document.createElement('option');
-      opt.value = id;
       opt.textContent = desc;
       sel.appendChild(opt);
     });
@@ -6805,19 +6818,32 @@ function ofFillSplitSel(selId, excludeVal) {
       var opt = document.createElement('option');
       opt.value = id;
       if (existing) {
-        // Allow only matching product (merge) — skip different product
+        // Allow only matching product (merge) — disable different product
         var isSame = item.size && existing.size === item.size &&
           (!lenNum || parseFloat(existing.length) === lenNum) &&
           (!item.grade || !existing.grade || existing.grade === item.grade) &&
           (!item.spec  || !existing.spec  || existing.spec  === item.spec) &&
           (existing.customer||'') === (item.customer||'');
-        if (!isSame) return;
+        if (!isSame) {
+          opt.disabled = true;
+          opt.style.opacity = '0.7';
+          opt.textContent = '⊗ ' + lbl + ' ' + side + '-side — occupied: ' + existing.size + ' ' + formatLength(String(existing.length || '')) + ' (different product)';
+          sel.appendChild(opt);
+          return;
+        }
         opt.textContent = '★ ' + lbl + ' ' + side + '-side — ' + existing.size + ' ' +
           formatLength(String(existing.length || '')) + ' (' + existing.bundles + ' bdl) MERGE';
       } else {
-        // Empty — check footage
-        if (lenNum > 0 && lenNum > stanchionFtRemaining(s)) return;
-        opt.textContent = lbl + ' ' + side + '-side (' + stanchionFtRemaining(s).toFixed(0) + 'ft avail)';
+        // Empty — disable if insufficient footage
+        var ftRemNum = stanchionFtRemaining(s);
+        if (lenNum > 0 && lenNum > ftRemNum) {
+          opt.disabled = true;
+          opt.style.opacity = '0.7';
+          opt.textContent = '⊗ ' + lbl + ' ' + side + '-side — empty (only ' + ftRemNum.toFixed(0) + 'ft avail, need ' + lenNum + 'ft)';
+          sel.appendChild(opt);
+          return;
+        }
+        opt.textContent = lbl + ' ' + side + '-side (' + ftRemNum.toFixed(0) + 'ft avail)';
       }
       sel.appendChild(opt);
     });
