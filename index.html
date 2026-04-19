@@ -9784,6 +9784,10 @@ function renderLoadStateButtons(load) {
     html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--safe);padding:10px 12px;background:#0d1f10;border:1px solid var(--safe);border-radius:6px;flex:1">✓ Shipped by ' + escapeHtml(load.shippedBy || '?') + ' at ' + new Date(load.shippedAt).toLocaleString() + '</div>';
   }
 
+  if (load.status === 'staged' || load.status === 'shipped') {
+    html += '<button onclick="openBOLModal(\'' + load.id + '\')" style="padding:12px 20px;background:#bb88ff;color:#001540;border:none;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;font-weight:bold">📄 BOL</button>';
+  }
+
   container.innerHTML = html;
 }
 
@@ -10356,10 +10360,19 @@ function subscribeBOLs() {
   bolsRef.on('value', function(snap) { bols = snap.val() || {}; });
 }
 
+// ─── SHIPPED BUNDLES CACHE ───────────────────────────────────────────────────
+var shippedBundlesCache = {};
+var shippedBundlesRef = null;
+
+function subscribeShippedBundles() {
+  if (shippedBundlesRef) shippedBundlesRef.off();
+  shippedBundlesRef = ref('shippedBundles');
+  shippedBundlesRef.on('value', function(snap) { shippedBundlesCache = snap.val() || {}; });
+}
+
 // ─── BOL DATA + MODAL ────────────────────────────────────────────────────────
 function findInShippedBundles(uid) {
-  // Stub — shipped bundle data will be fetched from shippedBundles archive in a later session
-  return null;
+  return shippedBundlesCache[uid] || null;
 }
 
 function buildBOLData(loadId, options) {
@@ -10482,8 +10495,167 @@ function renderBOLModal() {
 }
 
 function generateBOLPDF() {
-  // Stub — PDF generation will be implemented in the next session
-  alert('PDF generation coming in next session.');
+  if (!_bolDraft) return;
+  // Capture latest edits from preview
+  _bolDraft.carrier.proNumber = document.getElementById('bol-pro').value.trim();
+  _bolDraft.isHazmat = document.getElementById('bol-hazmat').checked;
+  _bolDraft.specialInstructions = document.getElementById('bol-notes').value.trim();
+
+  var d = _bolDraft;
+  var doc = new jspdf.jsPDF({ unit: 'pt', format: 'letter' });
+  var W = doc.internal.pageSize.getWidth();
+  var M = 40;
+
+  // Title
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(16);
+  doc.text('STRAIGHT BILL OF LADING', W/2, 50, { align: 'center' });
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Non-Negotiable', W/2, 66, { align: 'center' });
+
+  // BOL # + Date (top-right)
+  doc.setFontSize(10);
+  doc.setFont('helvetica', 'bold');
+  doc.text('BOL #: ' + d.bolNumber, W - M, 50, { align: 'right' });
+  doc.text('Date: ' + d.date, W - M, 64, { align: 'right' });
+
+  // Divider
+  doc.setDrawColor(0);
+  doc.setLineWidth(1);
+  doc.line(M, 80, W - M, 80);
+
+  // Parties — two columns
+  var partyY = 90;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('FROM (SHIPPER)', M, partyY);
+  doc.text('TO (CONSIGNEE)', W/2 + 10, partyY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+
+  var shipperLines = [d.shipper.name, d.shipper.addressLine1, d.shipper.addressLine2, [d.shipper.city, d.shipper.state, d.shipper.zip].filter(Boolean).join(', '), d.shipper.phone].filter(Boolean);
+  var consigneeLines = [d.consignee.name, d.consignee.addressLine1, d.consignee.addressLine2, [d.consignee.city, d.consignee.state, d.consignee.zip].filter(Boolean).join(', '), d.consignee.contactName ? 'Attn: ' + d.consignee.contactName : '', d.consignee.contactPhone].filter(Boolean);
+
+  shipperLines.forEach(function(line, i) { doc.text(line, M, partyY + 14 + i * 12); });
+  consigneeLines.forEach(function(line, i) { doc.text(line, W/2 + 10, partyY + 14 + i * 12); });
+
+  var partyBottom = partyY + 14 + Math.max(shipperLines.length, consigneeLines.length) * 12 + 6;
+  doc.line(M, partyBottom, W - M, partyBottom);
+
+  // Carrier section
+  var carrierY = partyBottom + 10;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(9);
+  doc.text('CARRIER', M, carrierY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(10);
+  var carrierLine = [
+    d.carrier.name ? 'Name: ' + d.carrier.name : '',
+    d.carrier.scac ? 'SCAC: ' + d.carrier.scac : '',
+    d.carrier.truckNumber ? 'Truck: ' + d.carrier.truckNumber : '',
+    d.carrier.trailerNumber ? 'Trailer: ' + d.carrier.trailerNumber : '',
+    d.carrier.driver ? 'Driver: ' + d.carrier.driver : '',
+    d.carrier.proNumber ? 'PRO: ' + d.carrier.proNumber : ''
+  ].filter(Boolean).join('   ');
+  doc.text(carrierLine, M, carrierY + 14);
+
+  var carrierBottom = carrierY + 24;
+  doc.line(M, carrierBottom, W - M, carrierBottom);
+
+  // Hazmat banner
+  var tableY = carrierBottom + 10;
+  if (d.isHazmat) {
+    doc.setFillColor(255, 200, 200);
+    doc.rect(M, tableY, W - 2*M, 20, 'F');
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.setTextColor(180, 0, 0);
+    doc.text('\u26a0 HAZARDOUS MATERIAL \u2014 Placards Required', W/2, tableY + 14, { align: 'center' });
+    doc.setTextColor(0, 0, 0);
+    tableY += 30;
+  } else {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(9);
+    doc.text('NON-HAZARDOUS', M, tableY + 10);
+    tableY += 20;
+  }
+
+  // Line items table
+  doc.autoTable({
+    startY: tableY,
+    head: [['Pkgs', 'Description', 'Heat #', 'Weight (lb)', 'Length (ft)', 'Bdl', 'Pieces']],
+    body: d.lineItems.map(function(li) {
+      return [li.pkgs, li.description, li.heat, li.weightLb.toLocaleString(), li.lengthFt, li.bundleCount, li.pieces];
+    }),
+    foot: [[d.totals.pkgs + ' pkgs', 'TOTALS', '', d.totals.weightLb.toLocaleString() + ' lb', d.totals.maxLengthFt + ' ft max', d.totals.bundleCount, d.totals.pieces]],
+    theme: 'grid',
+    styles: { fontSize: 9, cellPadding: 4 },
+    headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold' },
+    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' }
+  });
+
+  var afterTableY = doc.lastAutoTable.finalY + 16;
+
+  // Special instructions
+  if (d.specialInstructions) {
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9);
+    doc.text('SPECIAL INSTRUCTIONS', M, afterTableY);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    var wrapped = doc.splitTextToSize(d.specialInstructions, W - 2*M);
+    doc.text(wrapped, M, afterTableY + 12);
+    afterTableY += 14 + wrapped.length * 10;
+  }
+
+  // MTR statement
+  if (d.shipper.mtrStatement) {
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(8);
+    var mtrWrapped = doc.splitTextToSize(d.shipper.mtrStatement, W - 2*M);
+    doc.text(mtrWrapped, M, afterTableY + 4);
+    afterTableY += 4 + mtrWrapped.length * 9;
+  }
+
+  // Received in good order statement
+  afterTableY += 10;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  var ackText = 'Received the above property in apparent good order, except as noted. Subject to terms and conditions of the uniform straight bill of lading.';
+  var ackWrapped = doc.splitTextToSize(ackText, W - 2*M);
+  doc.text(ackWrapped, M, afterTableY);
+  afterTableY += ackWrapped.length * 10 + 10;
+
+  // Signature lines — two columns
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('Shipper Signature', M, afterTableY);
+  doc.text('Consignee Signature', W/2 + 10, afterTableY);
+  doc.setFont('helvetica', 'normal');
+  doc.line(M, afterTableY + 24, W/2 - 20, afterTableY + 24);
+  doc.line(W/2 + 10, afterTableY + 24, W - M, afterTableY + 24);
+  doc.text('Date: ________________', M, afterTableY + 36);
+  doc.text('Date: ________________', W/2 + 10, afterTableY + 36);
+
+  // Footer
+  var footerY = doc.internal.pageSize.getHeight() - 30;
+  doc.setFontSize(8);
+  doc.setTextColor(100, 100, 100);
+  doc.text('Generated ' + new Date(d.generatedAt).toLocaleString() + ' by ' + d.generatedBy, M, footerY);
+  doc.text('Load: ' + d.loadNumber, W - M, footerY, { align: 'right' });
+
+  // Archive snapshot to Firebase, then download
+  var pushRef = ref('bols').push();
+  var snapshot = Object.assign({}, d, { id: pushRef.key });
+  pushRef.set(snapshot).then(function() {
+    doc.save(d.bolNumber + '.pdf');
+    closeBOLModal();
+    showScrapToast('\u2713 BOL generated and archived');
+  }).catch(function(e) {
+    alert('BOL archive failed: ' + e.message + '. Download will proceed without archive.');
+    doc.save(d.bolNumber + '.pdf');
+  });
 }
 
 // ─── SLOT FLAGS SUBSCRIPTION + HELPERS ───────────────────────────────────────
@@ -11308,6 +11480,7 @@ function _initAfterTenantKey(key) {
   subscribeShipper();
   subscribeCustomers();
   subscribeBOLs();
+  subscribeShippedBundles();
   window.addEventListener('online', function() { updateSaveIndicator('connected ✓', '#336633'); });
   window.addEventListener('offline', function() { updateSaveIndicator('offline — pick actions queued', '#f5a623'); });
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
