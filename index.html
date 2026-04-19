@@ -210,6 +210,8 @@
   .sec-header-right { display: flex; align-items: center; gap: 8px; }
   .sec-badge { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--accent); background: var(--steel-light); padding: 2px 8px; border-radius: 10px; border: 1px solid var(--border); }
   .sec-chevron { font-size: 12px; color: var(--text-dim); transition: transform 0.2s; display: inline-block; }
+  .flt-btn { background: var(--steel-light); color: var(--text-dim); border: 1px solid var(--border); padding: 6px 12px; border-radius: 4px; font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer; letter-spacing: 1px; }
+  .flt-btn-active { background: var(--accent); color: #001540; border-color: var(--accent); }
 
   .section-body { overflow: hidden; transition: max-height 0.3s ease, opacity 0.25s ease; max-height: 9000px; opacity: 1; }
   .section-body.collapsed { max-height: 0; opacity: 0; pointer-events: none; }
@@ -1604,6 +1606,34 @@
         <button class="btn btn-primary" id="note-submit-btn" onclick="submitShiftNote()">ADD NOTE</button>
         <div id="note-status" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:14px"></div>
         <div id="shift-notes-list" style="margin-top:20px"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-card" id="sec-flags">
+    <button class="section-header" onclick="openSection('flags')">
+      <div class="sec-header-left">
+        <span class="sec-icon">🚩</span>
+        <span class="sec-title">FLAGGED SLOTS</span>
+      </div>
+      <div class="sec-header-right">
+        <span id="flags-badge" class="sec-badge"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-flags">
+      <div style="padding:16px">
+        <div id="flags-mtr-alert" style="display:none;background:#2a0a0a;border:1px solid var(--hot);border-radius:6px;padding:10px;margin-bottom:12px;color:var(--hot);font-family:'IBM Plex Mono',monospace;font-size:12px"></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+          <button onclick="flagsFilterSet('all')" id="flt-all" class="flt-btn flt-btn-active">All</button>
+          <button onclick="flagsFilterSet('scrap')" id="flt-scrap" class="flt-btn">Scrap</button>
+          <button onclick="flagsFilterSet('hold')" id="flt-hold" class="flt-btn">Hold</button>
+          <button onclick="flagsFilterSet('redTag')" id="flt-redTag" class="flt-btn">Red Tag</button>
+          <button onclick="flagsFilterSet('reserved')" id="flt-reserved" class="flt-btn">Reserved</button>
+        </div>
+        <input type="text" id="flags-search" placeholder="Search by reason or slot…" oninput="renderFlagsDashboard()" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;margin-bottom:12px">
+        <div id="flags-content"></div>
+        <button onclick="exportFlagsCSV()" style="margin-top:12px;padding:10px 16px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">EXPORT CSV</button>
       </div>
     </div>
   </div>
@@ -3166,6 +3196,7 @@ var scrapSlots = {}; // slotId -> true
 var holdSlots  = {}; // slotId -> true
 var redTagSlots = {}; // slotId -> true
 var reservedSlots = {}; // slotId -> true — reserved for upcoming run, not yet physically placed
+var _flagFilter = 'all';
 var shiftNotes = {};
 var shiftNotesRef = null;
 var slotFlagsData = {};
@@ -3785,6 +3816,7 @@ function openSection(name) {
     }
     if (name === 'map') renderAll();
     if (name === 'aging') renderAgingReport();
+    if (name === 'flags') renderFlagsDashboard();
   }
   // Scroll to section
   var card = document.getElementById('sec-' + name);
@@ -9506,6 +9538,144 @@ function markScrap(slotId)    { openFlagModal(slotId, 'scrap'); }
 function markHold(slotId)     { openFlagModal(slotId, 'hold'); }
 function markRedTag(slotId)   { openFlagModal(slotId, 'redTag'); }
 function markReserved(slotId) { openFlagModal(slotId, 'reserved'); }
+
+// ─── FLAGGED SLOTS DASHBOARD ──────────────────────────────────────────────────
+function flagsFilterSet(type) {
+  _flagFilter = type;
+  ['all', 'scrap', 'hold', 'redTag', 'reserved'].forEach(function(t) {
+    var btn = document.getElementById('flt-' + t);
+    if (btn) btn.className = 'flt-btn' + (t === type ? ' flt-btn-active' : '');
+  });
+  renderFlagsDashboard();
+}
+
+function getAllFlaggedSlots() {
+  var out = [];
+  function collect(obj, type) {
+    Object.keys(obj).forEach(function(slotId) {
+      if (!obj[slotId]) return;
+      out.push({
+        slotId: slotId,
+        type: type,
+        meta: slotFlagsData[slotId] || null,
+        item: store[slotId] || null
+      });
+    });
+  }
+  collect(scrapSlots, 'scrap');
+  collect(holdSlots, 'hold');
+  collect(redTagSlots, 'redTag');
+  collect(reservedSlots, 'reserved');
+  return out;
+}
+
+function renderFlagsDashboard() {
+  var container = document.getElementById('flags-content');
+  if (!container) return;
+  var all = getAllFlaggedSlots();
+  var search = (document.getElementById('flags-search') ? document.getElementById('flags-search').value : '') || '';
+  search = search.toLowerCase().trim();
+
+  var counts = { scrap: 0, hold: 0, redTag: 0, reserved: 0 };
+  all.forEach(function(f) { counts[f.type] = (counts[f.type] || 0) + 1; });
+
+  var tileHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">';
+  [
+    { type: 'scrap', label: 'Scrap', color: 'var(--text-dim)', icon: '⬜' },
+    { type: 'hold', label: 'Hold', color: '#4ab8ff', icon: '🔵' },
+    { type: 'redTag', label: 'Red Tag', color: 'var(--hot)', icon: '🔴' },
+    { type: 'reserved', label: 'Reserved', color: '#bb88ff', icon: '🟣' }
+  ].forEach(function(t) {
+    tileHtml += '<div style="flex:1;min-width:90px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + t.color + ';border-radius:6px;padding:10px 12px">' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px">' + t.icon + ' ' + t.label + '</div>' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:' + t.color + ';line-height:1.1">' + (counts[t.type] || 0) + '</div>' +
+    '</div>';
+  });
+  tileHtml += '</div>';
+
+  var filtered = all.filter(function(f) {
+    if (_flagFilter !== 'all' && f.type !== _flagFilter) return false;
+    if (search) {
+      var hay = (f.slotId + ' ' + (f.meta ? (f.meta.reason || '') + ' ' + (f.meta.notes || '') : '')).toLowerCase();
+      if (hay.indexOf(search) === -1) return false;
+    }
+    return true;
+  });
+
+  filtered.sort(function(a, b) {
+    var ta = (a.meta && a.meta.setAt) || '';
+    var tb = (b.meta && b.meta.setAt) || '';
+    return tb.localeCompare(ta);
+  });
+
+  var listHtml = filtered.length === 0
+    ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px">No flagged slots match the filter.</div>'
+    : filtered.map(function(f) {
+        var m = f.meta || {};
+        var typeLabel = { scrap: 'SCRAP', hold: 'HOLD', redTag: 'RED TAG', reserved: 'RESERVED' }[f.type];
+        var typeColor = { scrap: 'var(--text-dim)', hold: '#4ab8ff', redTag: 'var(--hot)', reserved: '#bb88ff' }[f.type];
+        var itemDesc = f.item ? (f.item.size + ' ' + formatLength(f.item.length || '') + ' · ' + f.item.bundles + ' ' + LBL('bdlAbbr')) : '(empty slot)';
+        var photoHtml = (m.photoUrls || []).slice(0, 3).map(function(p) { return '<img src="' + p.url + '" style="width:40px;height:40px;object-fit:cover;border-radius:3px;cursor:pointer" onclick="window.open(\'' + p.url + '\',\'_blank\')">'; }).join('');
+        return '<div style="padding:10px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + typeColor + ';border-radius:6px;margin-bottom:6px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;flex-wrap:wrap">' +
+            '<div style="flex:1;min-width:180px;cursor:pointer" onclick="goToLoc(\'' + f.slotId + '\')">' +
+              '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:' + typeColor + ';letter-spacing:1px">' + typeLabel + ' · ' + escHtml(f.slotId) + '</div>' +
+              '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);margin-top:2px">' + escHtml(itemDesc) + '</div>' +
+              (m.reason ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);margin-top:4px"><strong>Reason:</strong> ' + escHtml(m.reason) + '</div>' : '') +
+              (m.notes ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">' + escHtml(m.notes) + '</div>' : '') +
+              (m.setBy ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim);margin-top:4px">Set by ' + escHtml(m.setBy) + ' · ' + (m.setAt ? new Date(m.setAt).toLocaleString() : '?') + '</div>' : '') +
+            '</div>' +
+            '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:4px">' +
+              (photoHtml ? '<div style="display:flex;gap:2px">' + photoHtml + '</div>' : '') +
+              '<button onclick="handleClearFlag(\'' + escHtml(f.slotId) + '\')" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:3px 8px;border-radius:3px;font-family:\'IBM Plex Mono\',monospace;font-size:9px;cursor:pointer;letter-spacing:1px">CLEAR</button>' +
+            '</div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+
+  container.innerHTML = tileHtml + listHtml;
+
+  var sevenDaysAgo = Date.now() - 7 * 86400000;
+  var stale = all.filter(function(f) {
+    return f.type === 'hold' && f.meta && f.meta.reason === 'MTR pending' && new Date(f.meta.setAt).getTime() < sevenDaysAgo;
+  });
+  var mtrEl = document.getElementById('flags-mtr-alert');
+  if (mtrEl) {
+    if (stale.length > 0) {
+      mtrEl.textContent = '⚠ ' + stale.length + ' slot' + (stale.length === 1 ? '' : 's') + ' on MTR-pending hold for 7+ days. Follow up with mill.';
+      mtrEl.style.display = 'block';
+    } else {
+      mtrEl.style.display = 'none';
+    }
+  }
+
+  var total = all.length;
+  var badge = document.getElementById('flags-badge');
+  if (badge) badge.textContent = total > 0 ? total : '';
+}
+
+function exportFlagsCSV() {
+  var all = getAllFlaggedSlots();
+  var rows = [['Slot', 'Type', 'Reason', 'Notes', 'Set By', 'Set At', 'Photo Count']];
+  all.forEach(function(f) {
+    var m = f.meta || {};
+    rows.push([
+      f.slotId,
+      f.type,
+      m.reason || '',
+      (m.notes || '').replace(/[\r\n,]/g, ' '),
+      m.setBy || '',
+      m.setAt || '',
+      (m.photoUrls || []).length
+    ]);
+  });
+  var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'flagged-slots-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
+}
 
 // ─── SHIFT BANNER ────────────────────────────────────────────────────────────
 function dateKey() { return new Date().toISOString().slice(0, 10); }
