@@ -2457,6 +2457,13 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="bol-overlay" onclick="if(event.target===this)closeBOLModal()">
+  <div class="modal" style="max-width:720px;width:96vw;max-height:92vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div id="bol-modal-content"></div>
+  </div>
+</div>
+
 <!-- INDUSTRY MODE SELECTOR -->
 <div id="mode-selector-overlay" onclick="handleModeSelectorClick(event)">
   <div id="mode-selector-panel">
@@ -2471,6 +2478,8 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.0/jspdf.plugin.autotable.min.js"></script>
 
 <script>
 // ─── INDUSTRY MODE FRAMEWORK ─────────────────────────────────────
@@ -3314,6 +3323,8 @@ var shipperInfo = {};
 var customers = {};
 var shipperRef = null;
 var customersRef = null;
+var bols = {};
+var bolsRef = null;
 
 function buildStore() {
   for (var s = 1; s <= STANCHION_COUNT; s++) {
@@ -4783,6 +4794,7 @@ function onSlotClick(id) {
 function escHtml(s) {
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+var escapeHtml = escHtml;
 function buildModalRows(item, isSpool, days) {
   var rows = '';
   if (item.side) rows += mrow('Side', item.side + '-Side');
@@ -10338,6 +10350,142 @@ function subscribeCustomers() {
   });
 }
 
+function subscribeBOLs() {
+  if (bolsRef) bolsRef.off();
+  bolsRef = ref('bols');
+  bolsRef.on('value', function(snap) { bols = snap.val() || {}; });
+}
+
+// ─── BOL DATA + MODAL ────────────────────────────────────────────────────────
+function findInShippedBundles(uid) {
+  // Stub — shipped bundle data will be fetched from shippedBundles archive in a later session
+  return null;
+}
+
+function buildBOLData(loadId, options) {
+  options = options || {};
+  var load = loads[loadId];
+  if (!load) throw new Error('Load not found');
+
+  var lineItems = (load.bundleUids || []).map(function(uid) {
+    var b = inventory.find(function(i) { return i.uid === uid; }) || findInShippedBundles(uid);
+    if (!b) return null;
+    var desc = [b.grade ? 'Gr ' + b.grade : '', b.spec, b.size, b.length ? formatLength(b.length) : '', b.type === 'spool' ? 'coil' : 'straight'].filter(Boolean).join(' ');
+    return {
+      pkgs: 1,
+      description: desc,
+      heat: b.heat || '',
+      weightLb: Math.round((b.weightTons || 0) * 2000),
+      lengthFt: parseFloat(b.length) || 0,
+      bundleCount: b.bundles || 0,
+      pieces: (b.bundles || 0) * (b.pieces || 0)
+    };
+  }).filter(Boolean);
+
+  var totals = {
+    pkgs: lineItems.length,
+    weightLb: lineItems.reduce(function(s, x) { return s + x.weightLb; }, 0),
+    bundleCount: lineItems.reduce(function(s, x) { return s + x.bundleCount; }, 0),
+    pieces: lineItems.reduce(function(s, x) { return s + x.pieces; }, 0),
+    maxLengthFt: lineItems.reduce(function(m, x) { return Math.max(m, x.lengthFt); }, 0)
+  };
+
+  var custRecord = Object.values(customers).find(function(c) { return c.name === load.customer; }) || {};
+
+  return {
+    bolNumber: 'BOL-' + load.loadNumber,
+    date: load.shippedAt ? new Date(load.shippedAt).toISOString().slice(0,10) : new Date().toISOString().slice(0,10),
+    isHazmat: !!options.isHazmat,
+    shipper: shipperInfo || {},
+    consignee: {
+      name: load.customer || '',
+      addressLine1: custRecord.addressLine1 || load.destination || '',
+      addressLine2: custRecord.addressLine2 || '',
+      city: custRecord.city || '',
+      state: custRecord.state || '',
+      zip: custRecord.zip || '',
+      contactName: custRecord.contactName || '',
+      contactPhone: custRecord.contactPhone || ''
+    },
+    carrier: {
+      name: load.carrier || '',
+      scac: load.scac || '',
+      truckNumber: load.truckNumber || '',
+      trailerNumber: load.trailerNumber || '',
+      driver: load.driver || '',
+      proNumber: options.proNumber || ''
+    },
+    lineItems: lineItems,
+    totals: totals,
+    specialInstructions: load.notes || '',
+    loadId: loadId,
+    loadNumber: load.loadNumber,
+    generatedAt: new Date().toISOString(),
+    generatedBy: getOperatorName()
+  };
+}
+
+var _bolDraft = null;
+
+function openBOLModal(loadId) {
+  try {
+    _bolDraft = buildBOLData(loadId, {});
+  } catch(e) {
+    alert(e.message); return;
+  }
+  renderBOLModal();
+  document.getElementById('bol-overlay').classList.add('active');
+}
+
+function closeBOLModal() {
+  document.getElementById('bol-overlay').classList.remove('active');
+  _bolDraft = null;
+}
+
+function renderBOLModal() {
+  if (!_bolDraft) return;
+  var d = _bolDraft;
+  var html = '';
+  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--text);letter-spacing:2px;margin-bottom:4px">BILL OF LADING PREVIEW</div>';
+  html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-bottom:12px">' + escapeHtml(d.bolNumber) + ' · ' + escapeHtml(d.date) + '</div>';
+
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
+  html += '<div style="background:var(--steel-light);padding:10px;border-radius:6px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--text-dim);letter-spacing:1px">FROM (SHIPPER)</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);white-space:pre-line">' + escapeHtml([d.shipper.name, d.shipper.addressLine1, d.shipper.addressLine2, [d.shipper.city, d.shipper.state, d.shipper.zip].filter(Boolean).join(', '), d.shipper.phone].filter(Boolean).join('\n')) + '</div></div>';
+  html += '<div style="background:var(--steel-light);padding:10px;border-radius:6px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--text-dim);letter-spacing:1px">TO (CONSIGNEE)</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);white-space:pre-line">' + escapeHtml([d.consignee.name, d.consignee.addressLine1, d.consignee.addressLine2, [d.consignee.city, d.consignee.state, d.consignee.zip].filter(Boolean).join(', '), d.consignee.contactName ? 'Attn: ' + d.consignee.contactName : '', d.consignee.contactPhone].filter(Boolean).join('\n')) + '</div></div>';
+  html += '</div>';
+
+  html += '<div class="form-group"><label>PRO # (optional, provided by carrier)</label><input type="text" id="bol-pro" value="' + escapeHtml(d.carrier.proNumber || '') + '" placeholder="PRO number"></div>';
+  html += '<div class="form-group"><label><input type="checkbox" id="bol-hazmat" ' + (d.isHazmat ? 'checked' : '') + ' style="width:16px;height:16px;margin-right:6px">This shipment contains HAZARDOUS MATERIAL (triggers hazmat placarding on BOL)</label></div>';
+
+  html += '<div style="margin:12px 0"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:var(--text);letter-spacing:2px;margin-bottom:6px">LINE ITEMS (' + d.lineItems.length + ')</div>';
+  html += '<div style="max-height:200px;overflow-y:auto;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:8px">';
+  d.lineItems.forEach(function(li) {
+    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text);padding:2px 0;border-bottom:1px solid var(--border)">' + escapeHtml(li.description) + ' · H ' + escapeHtml(li.heat || '—') + ' · ' + li.weightLb.toLocaleString() + ' lb · ' + li.bundleCount + ' bdl</div>';
+  });
+  html += '</div></div>';
+
+  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">';
+  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">PKGS</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + d.totals.pkgs + '</div></div>';
+  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">BUNDLES</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + d.totals.bundleCount + '</div></div>';
+  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">WEIGHT</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:var(--accent)">' + d.totals.weightLb.toLocaleString() + ' lb</div></div>';
+  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">MAX LEN</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + d.totals.maxLengthFt + 'ft</div></div>';
+  html += '</div>';
+
+  html += '<div class="form-group"><label>Special Instructions</label><textarea id="bol-notes" rows="2" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;border-radius:6px;outline:none;resize:vertical">' + escapeHtml(d.specialInstructions || '') + '</textarea></div>';
+
+  html += '<div style="display:flex;gap:10px;margin-top:14px">';
+  html += '<button class="btn btn-primary" style="margin-top:0" onclick="generateBOLPDF()">📄 GENERATE PDF</button>';
+  html += '<button class="btn-close-modal" onclick="closeBOLModal()">Cancel</button>';
+  html += '</div>';
+
+  document.getElementById('bol-modal-content').innerHTML = html;
+}
+
+function generateBOLPDF() {
+  // Stub — PDF generation will be implemented in the next session
+  alert('PDF generation coming in next session.');
+}
+
 // ─── SLOT FLAGS SUBSCRIPTION + HELPERS ───────────────────────────────────────
 function subscribeSlotFlags() {
   if (slotFlagsRef) slotFlagsRef.off();
@@ -11159,6 +11307,7 @@ function _initAfterTenantKey(key) {
   subscribeLoads();
   subscribeShipper();
   subscribeCustomers();
+  subscribeBOLs();
   window.addEventListener('online', function() { updateSaveIndicator('connected ✓', '#336633'); });
   window.addEventListener('offline', function() { updateSaveIndicator('offline — pick actions queued', '#f5a623'); });
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
