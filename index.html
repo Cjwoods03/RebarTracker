@@ -4055,7 +4055,8 @@ function addToArea22() {
     ship: document.getElementById('a22-ship').value,
     order: document.getElementById('a22-order').value.trim(),
     customer: document.getElementById('a22-customer').value.trim(),
-    loc: 'AREA-22', logged: new Date().toLocaleTimeString()
+    loc: 'AREA-22', logged: new Date().toLocaleTimeString(),
+    receivedDate: new Date().toISOString()
   };
   area22Stacks.push(stack);
   inventory.push(stack);
@@ -4238,7 +4239,8 @@ function addToArea1() {
     ship: document.getElementById('a1-ship').value,
     order: document.getElementById('a1-order').value.trim(),
     customer: document.getElementById('a1-customer').value.trim(),
-    loc: 'AREA-1', logged: new Date().toLocaleTimeString()
+    loc: 'AREA-1', logged: new Date().toLocaleTimeString(),
+    receivedDate: new Date().toISOString()
   };
   area1Stacks.push(stack);
   inventory.push(stack);
@@ -4869,7 +4871,8 @@ function confirmAddSecondary() {
     weightPerBundleTons: secWtPerBdl,
     weightTons: secWtPerBdl * bundles,
     heat: '', ship: '', order: '', customer: '',
-    loc: modalLoc, logged: new Date().toLocaleTimeString()
+    loc: modalLoc, logged: new Date().toLocaleTimeString(),
+    receivedDate: new Date().toISOString()
   };
 
   if (!storeExtra[modalLoc]) storeExtra[modalLoc] = [];
@@ -6046,7 +6049,8 @@ function runCSVImport() {
       spoolWeightLbs: 0,
       ship: grp.ship, order: grp.order, customer: grp.customer,
       lpns: lpnStr,
-      loc: loc, logged: 'imported'
+      loc: loc, logged: 'imported',
+      receivedDate: grp.ship ? new Date(grp.ship).toISOString() : new Date().toISOString()
     };
 
     // If slot already has product, check if same or different
@@ -6062,12 +6066,14 @@ function runCSVImport() {
         existing.weightTons = (existing.weightTons||0) + grp.wtTons;
         if (!existing.grade && item.grade) existing.grade = item.grade;
         if (!existing.spec  && item.spec)  existing.spec  = item.spec;
+        if (!existing.receivedDate && item.receivedDate) existing.receivedDate = item.receivedDate;
         if (lpnStr) existing.lpns = ((existing.lpns||'') + (existing.lpns?', ':'') + lpnStr).trim();
         // Sync inventory record
         var ei = inventory.find(function(i){ return i.uid === existing.uid; });
         if (ei) { ei.bundles = existing.bundles; ei.weightTons = existing.weightTons; ei.lpns = existing.lpns;
                   if (!ei.grade && item.grade) ei.grade = item.grade;
-                  if (!ei.spec  && item.spec)  ei.spec  = item.spec; }
+                  if (!ei.spec  && item.spec)  ei.spec  = item.spec;
+                  if (!ei.receivedDate && item.receivedDate) ei.receivedDate = item.receivedDate; }
       } else {
         // Different product — add as secondary stack
         if (!storeExtra[loc]) storeExtra[loc] = [];
@@ -6316,7 +6322,8 @@ function runFullYardImport() {
           grade: grade || '', spec: spec || '',
           bundles: 1, weightTons: wtPerLpn, weightPerBundleTons: wtPerLpn,
           spoolWeightLbs: 0,
-          lpns: lpn || '', loc: 'AREA-22', logged: 'fyi'
+          lpns: lpn || '', loc: 'AREA-22', logged: 'fyi',
+          receivedDate: new Date().toISOString()
         };
         area22Stacks.push(a22stack);
         inventory.push(a22stack);
@@ -6367,7 +6374,8 @@ function runFullYardImport() {
       weightPerBundleTons: grp.bundles > 0 ? grp.wtTons / grp.bundles : 0,
       weightTons: grp.wtTons, spoolWeightLbs: 0,
       heat: '', ship: '', order: '', customer: '',
-      lpns: grp.lpns.join(', '), loc: loc, logged: 'fyi'
+      lpns: grp.lpns.join(', '), loc: loc, logged: 'fyi',
+      receivedDate: new Date().toISOString()
     };
     if (store[loc]) {
       var ex = store[loc];
@@ -6376,8 +6384,10 @@ function runFullYardImport() {
         ex.bundles += item.bundles;
         ex.weightTons += item.weightTons;
         ex.weightPerBundleTons = ex.bundles > 0 ? ex.weightTons / ex.bundles : 0;
+        if (!ex.receivedDate && item.receivedDate) ex.receivedDate = item.receivedDate;
         var merged = inventory.find(function(i) { return i.uid === ex.uid; });
-        if (merged) { merged.bundles = ex.bundles; merged.weightTons = ex.weightTons; merged.weightPerBundleTons = ex.weightPerBundleTons; }
+        if (merged) { merged.bundles = ex.bundles; merged.weightTons = ex.weightTons; merged.weightPerBundleTons = ex.weightPerBundleTons;
+                      if (!merged.receivedDate && item.receivedDate) merged.receivedDate = item.receivedDate; }
       } else {
         // Different product — push as secondary
         if (!storeExtra[loc]) storeExtra[loc] = [];
@@ -7326,7 +7336,8 @@ function ofFinalize() {
       grade: item.grade, spec: item.spec, bundles: p.bundles,
       weightPerBundleTons: bdlTons, weightTons: bdlTons * p.bundles,
       spoolWeightLbs: 0, ship: item.ship, order: item.order,
-      customer: item.customer, loc: p.loc, logged: new Date().toLocaleTimeString()
+      customer: item.customer, loc: p.loc, logged: new Date().toLocaleTimeString(),
+      receivedDate: new Date().toISOString()
     };
     var existing = store[p.loc];
     var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
@@ -7338,10 +7349,12 @@ function ofFinalize() {
       existing.weightTons = (existing.weightTons || 0) + newItem.weightTons;
       if (!existing.grade && item.grade) existing.grade = item.grade;
       if (!existing.spec  && item.spec)  existing.spec  = item.spec;
+      if (!existing.receivedDate && newItem.receivedDate) existing.receivedDate = newItem.receivedDate;
       var inv = inventory.find(function(i) { return i.uid === existing.uid; });
       if (inv) { inv.bundles = existing.bundles; inv.weightTons = existing.weightTons;
                  if (!inv.grade && item.grade) inv.grade = item.grade;
-                 if (!inv.spec  && item.spec)  inv.spec  = item.spec; }
+                 if (!inv.spec  && item.spec)  inv.spec  = item.spec;
+                 if (!inv.receivedDate && newItem.receivedDate) inv.receivedDate = newItem.receivedDate; }
       else inventory.push(newItem);
     } else {
       store[p.loc] = newItem;
@@ -7529,6 +7542,7 @@ function ofConfirmSplit() {
       weightPerBundleTons: bdlTons, weightTons: bdlTons * count,
       spoolWeightLbs: 0, ship: item.ship || '', order: item.order || '',
       customer: item.customer || '', logged: new Date().toLocaleTimeString(),
+      receivedDate: new Date().toISOString(),
       splitPairedWith: pairedWith, splitTotal: bdl
     };
 
@@ -8115,7 +8129,8 @@ function logRun() {
           weightTons: pWtTons,
           spoolWeightLbs: spoolLbsV,
           customer: document.getElementById('inp-customer').value.trim(),
-          loc: p.loc, logged: new Date().toLocaleTimeString()
+          loc: p.loc, logged: new Date().toLocaleTimeString(),
+          receivedDate: new Date().toISOString()
         };
         store[p.loc] = pItem;
         inventory.push(pItem);
@@ -8271,7 +8286,8 @@ function logRun() {
     weightTons: weightTons,
     spoolWeightLbs: spoolLbsStored,
     customer: document.getElementById('inp-customer').value.trim(),
-    loc: loc, logged: new Date().toLocaleTimeString()
+    loc: loc, logged: new Date().toLocaleTimeString(),
+    receivedDate: new Date().toISOString()
   };
 
   var isSecondary = document.getElementById('inp-secondary').checked;
@@ -8307,10 +8323,12 @@ function logRun() {
       // Fill in grade/spec if existing entry had them blank (e.g. from FYI import)
       if (!existing.grade && item.grade) existing.grade = item.grade;
       if (!existing.spec  && item.spec)  existing.spec  = item.spec;
+      if (!existing.receivedDate && item.receivedDate) existing.receivedDate = item.receivedDate;
       var invEntry = inventory.find(function(i){ return i.uid && existing.uid && i.uid === existing.uid; });
       if (invEntry) { invEntry.bundles = existing.bundles; invEntry.weightTons = existing.weightTons;
                       if (!invEntry.grade && item.grade) invEntry.grade = item.grade;
-                      if (!invEntry.spec  && item.spec)  invEntry.spec  = item.spec; }
+                      if (!invEntry.spec  && item.spec)  invEntry.spec  = item.spec;
+                      if (!invEntry.receivedDate && item.receivedDate) invEntry.receivedDate = item.receivedDate; }
     } else {
       alert('⛔ ' + loc + ' already holds a different product.\n\nCheck "Secondary stack" to log on top of the existing item, or choose a different slot.');
       return;
