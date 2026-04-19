@@ -3866,6 +3866,209 @@ function formatAgeLong(days) {
   return days + ' days old';
 }
 
+// ─── KPI CALCULATIONS ───────────────────────────────────────────────────────
+
+function kpiTotalBundles() {
+  return inventory.reduce(function(s, i) { return s + (i.bundles || 0); }, 0);
+}
+
+function kpiTotalWeightTons() {
+  return inventory.reduce(function(s, i) { return s + (i.weightTons || 0); }, 0);
+}
+
+function kpiTotalFootage() {
+  var total = 0;
+  orderedStanchions().forEach(function(s) {
+    if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+    total += stanchionFtUsed(s);
+  });
+  return total;
+}
+
+function kpiYardUtilization() {
+  var pcts = [];
+  orderedStanchions().forEach(function(s) {
+    if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+    var max = maxFtForStanchion(s);
+    if (max > 0) pcts.push(stanchionFtUsed(s) / max);
+  });
+  if (pcts.length === 0) return 0;
+  var avg = pcts.reduce(function(a, b) { return a + b; }, 0) / pcts.length;
+  return Math.round(avg * 100);
+}
+
+function kpiFlagCount() {
+  var slots = {};
+  Object.keys(scrapSlots).forEach(function(s) { if (scrapSlots[s]) slots[s] = true; });
+  Object.keys(holdSlots).forEach(function(s) { if (holdSlots[s]) slots[s] = true; });
+  Object.keys(redTagSlots).forEach(function(s) { if (redTagSlots[s]) slots[s] = true; });
+  Object.keys(reservedSlots).forEach(function(s) { if (reservedSlots[s]) slots[s] = true; });
+  return Object.keys(slots).length;
+}
+
+function kpiOldestAgeDays() {
+  var max = 0;
+  inventory.forEach(function(i) {
+    var d = getItemAgeDays(i);
+    if (d !== null && d > max) max = d;
+  });
+  return max;
+}
+
+function kpiAvgAgeDays() {
+  var ages = [];
+  inventory.forEach(function(i) {
+    var d = getItemAgeDays(i);
+    if (d !== null) ages.push(d);
+  });
+  if (ages.length === 0) return 0;
+  return Math.round(ages.reduce(function(a, b) { return a + b; }, 0) / ages.length);
+}
+
+function kpiReceivedInWindow(days) {
+  var cutoff = Date.now() - days * 86400000;
+  var count = 0;
+  inventory.forEach(function(i) {
+    if (i.receivedDate && !i.receivedDateBackfilled) {
+      if (new Date(i.receivedDate).getTime() >= cutoff) count += (i.bundles || 0);
+    }
+  });
+  Object.values(shippedBundlesCache || {}).forEach(function(i) {
+    if (i.receivedDate && !i.receivedDateBackfilled) {
+      if (new Date(i.receivedDate).getTime() >= cutoff) count += (i.bundles || 0);
+    }
+  });
+  return count;
+}
+
+function kpiShippedInWindow(days) {
+  var cutoff = Date.now() - days * 86400000;
+  var count = 0;
+  Object.values(shippedBundlesCache || {}).forEach(function(i) {
+    if (i.shippedAt) {
+      if (new Date(i.shippedAt).getTime() >= cutoff) count += (i.bundles || 0);
+    }
+  });
+  return count;
+}
+
+function kpiShippedWeightTonsInWindow(days) {
+  var cutoff = Date.now() - days * 86400000;
+  var tons = 0;
+  Object.values(shippedBundlesCache || {}).forEach(function(i) {
+    if (i.shippedAt && new Date(i.shippedAt).getTime() >= cutoff) tons += (i.weightTons || 0);
+  });
+  return tons;
+}
+
+function kpiLoadsShippedInWindow(days) {
+  var cutoff = Date.now() - days * 86400000;
+  return Object.values(loads).filter(function(l) {
+    return l.status === 'shipped' && l.shippedAt && new Date(l.shippedAt).getTime() >= cutoff;
+  }).length;
+}
+
+function kpiMTRPendingActive() {
+  return Object.values(slotFlagsData || {}).filter(function(m) {
+    return m && m.type === 'hold' && m.reason === 'MTR pending';
+  }).length;
+}
+
+function kpiStaleHolds() {
+  var cutoff = Date.now() - 7 * 86400000;
+  return Object.values(slotFlagsData || {}).filter(function(m) {
+    return m && m.type === 'hold' && new Date(m.setAt).getTime() < cutoff;
+  }).length;
+}
+
+function kpiRedTagCount() {
+  return Object.keys(redTagSlots).filter(function(s) { return redTagSlots[s]; }).length;
+}
+
+function kpiAvgTurnaroundDays() {
+  var diffs = [];
+  Object.values(shippedBundlesCache || {}).forEach(function(i) {
+    if (i.receivedDate && i.shippedAt && !i.receivedDateBackfilled) {
+      var d = (new Date(i.shippedAt).getTime() - new Date(i.receivedDate).getTime()) / 86400000;
+      if (d >= 0 && d < 365) diffs.push(d);
+    }
+  });
+  if (diffs.length === 0) return 0;
+  return Math.round(diffs.reduce(function(a, b) { return a + b; }, 0) / diffs.length);
+}
+
+function kpiActionsToday() {
+  var today = new Date().toISOString().slice(0, 10);
+  return Object.values(auditLog || {}).filter(function(e) {
+    return (e.at || '').slice(0, 10) === today;
+  }).length;
+}
+
+function kpiMostActiveOperator(days) {
+  var cutoff = Date.now() - days * 86400000;
+  var counts = {};
+  Object.values(auditLog || {}).forEach(function(e) {
+    if (e.at && new Date(e.at).getTime() >= cutoff) {
+      var op = e.by || 'Unknown';
+      counts[op] = (counts[op] || 0) + 1;
+    }
+  });
+  var top = null, topCount = 0;
+  Object.keys(counts).forEach(function(op) {
+    if (counts[op] > topCount) { topCount = counts[op]; top = op; }
+  });
+  return { name: top || '—', count: topCount };
+}
+
+function kpiLoadsInProgress() {
+  return Object.values(loads).filter(function(l) {
+    return l.status === 'building' || l.status === 'staged';
+  }).length;
+}
+
+function kpiReceiveShipByDay(days) {
+  var result = {};
+  for (var d = days - 1; d >= 0; d--) {
+    var dt = new Date(Date.now() - d * 86400000);
+    var key = dt.toISOString().slice(0, 10);
+    result[key] = { received: 0, shipped: 0 };
+  }
+  function tallyReceived(i) {
+    if (!i.receivedDate || i.receivedDateBackfilled) return;
+    var key = new Date(i.receivedDate).toISOString().slice(0, 10);
+    if (result[key]) result[key].received += (i.bundles || 0);
+  }
+  inventory.forEach(tallyReceived);
+  Object.values(shippedBundlesCache || {}).forEach(tallyReceived);
+  Object.values(shippedBundlesCache || {}).forEach(function(i) {
+    if (!i.shippedAt) return;
+    var key = new Date(i.shippedAt).toISOString().slice(0, 10);
+    if (result[key]) result[key].shipped += (i.bundles || 0);
+  });
+  return result;
+}
+
+function kpiAgingBucketDistribution() {
+  var buckets = { fresh: 0, yellow: 0, orange: 0, red: 0, unknown: 0 };
+  inventory.forEach(function(i) {
+    var d = getItemAgeDays(i);
+    var cls = getAgeClass(d).replace('age-', '');
+    if (buckets[cls] !== undefined) buckets[cls]++;
+  });
+  return buckets;
+}
+
+function kpiFlagTypeDistribution() {
+  return {
+    scrap: Object.keys(scrapSlots).filter(function(s) { return scrapSlots[s]; }).length,
+    hold: Object.keys(holdSlots).filter(function(s) { return holdSlots[s]; }).length,
+    redTag: Object.keys(redTagSlots).filter(function(s) { return redTagSlots[s]; }).length,
+    reserved: Object.keys(reservedSlots).filter(function(s) { return reservedSlots[s]; }).length
+  };
+}
+
+// ─── END KPI CALCULATIONS ────────────────────────────────────────────────────
+
 function findOldestInSlot(slotId) {
   var items = slotAllItems(slotId);
   if (items.length < 2) return null;
