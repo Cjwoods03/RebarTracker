@@ -871,6 +871,26 @@
       <div id="shift-boundary-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:16px;text-align:center;margin-top:6px"></div>
     </div>
 
+    <!-- Shipping Setup -->
+    <div style="padding:14px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px;margin-top:12px">
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🚚 Shipping Setup</div>
+
+      <!-- Shipper Info -->
+      <div style="margin-bottom:14px">
+        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Shipper Info</div>
+        <div id="shipper-form-body"></div>
+      </div>
+
+      <!-- Customers -->
+      <div style="border-top:1px solid var(--border);padding-top:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase">Customers</div>
+          <button onclick="openCustomerModal(null)" style="background:var(--accent);color:#001540;border:none;padding:5px 12px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;font-weight:bold;letter-spacing:1px">+ ADD</button>
+        </div>
+        <div id="customer-list-body"></div>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2400,6 +2420,14 @@
   </div>
 </div>
 
+<!-- CUSTOMER EDIT MODAL -->
+<div class="modal-overlay" id="customer-modal-overlay" onclick="if(event.target===this)closeCustomerModal()">
+  <div class="modal" style="max-width:480px;width:95vw">
+    <div class="modal-handle"></div>
+    <div id="customer-modal-content"></div>
+  </div>
+</div>
+
 <!-- PICK LIST MODAL -->
 <div class="modal-overlay" id="pick-overlay" onclick="if(event.target===this)closePickList()">
   <div class="modal" style="max-width:720px;width:96vw;max-height:92vh;overflow:hidden;display:flex;flex-direction:column">
@@ -3282,6 +3310,10 @@ var slotFlagsData = {};
 var slotFlagsRef = null;
 var loads = {};
 var loadsRef = null;
+var shipperInfo = {};
+var customers = {};
+var shipperRef = null;
+var customersRef = null;
 
 function buildStore() {
   for (var s = 1; s <= STANCHION_COUNT; s++) {
@@ -9370,6 +9402,8 @@ function openSettings() {
     var el = document.getElementById('shift-boundary-' + i);
     if (el) el.value = h;
   });
+  renderShipperForm();
+  renderCustomerList();
 }
 function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('open');
@@ -10125,7 +10159,19 @@ function renderLoadDetail(load) {
     '</div>';
   }
 
-  html += '<div class="form-row">' + field('customer', 'Customer', 'ACME Construction') + field('destination', 'Destination', 'Address or job site') + '</div>';
+  var customerField;
+  if (editable) {
+    var cval = escapeHtml(load.customer || '');
+    customerField = '<div class="form-group"><label>Customer</label>' +
+      '<div style="display:flex;gap:6px;align-items:center">' +
+        '<input type="text" value="' + cval + '" placeholder="ACME Construction" onchange="updateLoad(\'' + load.id + '\', {customer: this.value})" style="flex:1">' +
+        '<button id="customer-pick-btn-' + load.id + '" onclick="openCustomerPicker(\'' + load.id + '\')" style="white-space:nowrap;background:var(--steel-light);color:var(--accent);border:1px solid var(--accent);padding:7px 10px;border-radius:5px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">&#8659; Pick</button>' +
+      '</div>' +
+    '</div>';
+  } else {
+    customerField = field('customer', 'Customer', 'ACME Construction');
+  }
+  html += '<div class="form-row">' + customerField + field('destination', 'Destination', 'Address or job site') + '</div>';
   html += '<div class="form-row">' + field('carrier', 'Carrier', 'XYZ Trucking') + field('scac', 'SCAC', 'XYZT') + '</div>';
   html += '<div class="form-row">' + field('truckNumber', 'Truck #', '4521') + field('trailerNumber', 'Trailer #', 'TR-8899') + '</div>';
   html += field('driver', 'Driver', 'John Smith');
@@ -10270,6 +10316,25 @@ function subscribeShiftNotes() {
     shiftNotes = snap.val() || {};
     if (typeof renderShiftNotes === 'function') renderShiftNotes();
     if (typeof maybeShowShiftBanner === 'function') maybeShowShiftBanner();
+  });
+}
+
+// ─── SHIPPER / CUSTOMER SUBSCRIPTIONS ────────────────────────────────────────
+function subscribeShipper() {
+  if (shipperRef) shipperRef.off();
+  shipperRef = ref('shipper');
+  shipperRef.on('value', function(snap) {
+    shipperInfo = snap.val() || {};
+    renderShipperForm();
+  });
+}
+
+function subscribeCustomers() {
+  if (customersRef) customersRef.off();
+  customersRef = ref('customers');
+  customersRef.on('value', function(snap) {
+    customers = snap.val() || {};
+    renderCustomerList();
   });
 }
 
@@ -11092,6 +11157,8 @@ function _initAfterTenantKey(key) {
   subscribeShiftNotes();
   subscribeSlotFlags();
   subscribeLoads();
+  subscribeShipper();
+  subscribeCustomers();
   window.addEventListener('online', function() { updateSaveIndicator('connected ✓', '#336633'); });
   window.addEventListener('offline', function() { updateSaveIndicator('offline — pick actions queued', '#f5a623'); });
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
@@ -11104,6 +11171,172 @@ function _initAfterTenantKey(key) {
     updateImportProfileUI();
     _showPinOrApp(key); // identity flows through — never re-read from globals
   });
+}
+
+// ─── SHIPPER INFO ─────────────────────────────────────────────────────────────
+var SHIPPER_FIELDS = [
+  { key: 'name',         label: 'Company Name'    },
+  { key: 'addressLine1', label: 'Address Line 1'  },
+  { key: 'addressLine2', label: 'Address Line 2'  },
+  { key: 'city',         label: 'City'            },
+  { key: 'state',        label: 'State'           },
+  { key: 'zip',          label: 'ZIP'             },
+  { key: 'phone',        label: 'Phone'           },
+  { key: 'mtrStatement', label: 'MTR Statement'   }
+];
+
+function renderShipperForm() {
+  var el = document.getElementById('shipper-form-body');
+  if (!el) return;
+  el.innerHTML = SHIPPER_FIELDS.map(function(f) {
+    var val = escapeHtml(shipperInfo[f.key] || '');
+    return '<div style="margin-bottom:6px">' +
+      '<label style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:2px">' + f.label.toUpperCase() + '</label>' +
+      '<input type="text" value="' + val + '" placeholder="' + f.label + '"' +
+        ' style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:5px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;outline:none"' +
+        ' data-shipper-key="' + f.key + '"' +
+        ' onblur="saveShipperField(this)">' +
+    '</div>';
+  }).join('');
+}
+
+function saveShipperField(input) {
+  var key = input.getAttribute('data-shipper-key');
+  if (!key) return;
+  var patch = {};
+  patch[key] = input.value.trim();
+  ref('shipper').update(patch);
+}
+
+// ─── CUSTOMER DIRECTORY ───────────────────────────────────────────────────────
+function renderCustomerList() {
+  var el = document.getElementById('customer-list-body');
+  if (!el) return;
+  var ids = Object.keys(customers);
+  if (ids.length === 0) {
+    el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px">No customers yet.</div>';
+    return;
+  }
+  el.innerHTML = ids.map(function(id) {
+    var c = customers[id];
+    var addr = [c.city, c.state].filter(Boolean).join(', ');
+    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--steel);border:1px solid var(--border);border-radius:6px;margin-bottom:5px">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + escapeHtml(c.name || '(no name)') + '</div>' +
+        (addr ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + escapeHtml(addr) + '</div>' : '') +
+      '</div>' +
+      '<div style="display:flex;gap:6px;flex-shrink:0">' +
+        '<button onclick="openCustomerModal(\'' + id + '\')" style="background:none;color:var(--accent);border:1px solid var(--accent);padding:3px 8px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">Edit</button>' +
+        '<button onclick="deleteCustomer(\'' + id + '\')" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:3px 8px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">Del</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function openCustomerModal(customerId) {
+  var c = customerId ? (customers[customerId] || {}) : {};
+  var isNew = !customerId;
+  var el = document.getElementById('customer-modal-content');
+  if (!el) return;
+
+  var fields = [
+    { key: 'name',         label: 'Company Name'   },
+    { key: 'addressLine1', label: 'Address Line 1' },
+    { key: 'addressLine2', label: 'Address Line 2' },
+    { key: 'city',         label: 'City'           },
+    { key: 'state',        label: 'State'          },
+    { key: 'zip',          label: 'ZIP'            },
+    { key: 'contactName',  label: 'Contact Name'   },
+    { key: 'contactPhone', label: 'Contact Phone'  },
+    { key: 'notes',        label: 'Notes'          }
+  ];
+
+  el.innerHTML =
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:14px">' + (isNew ? 'ADD CUSTOMER' : 'EDIT CUSTOMER') + '</div>' +
+    fields.map(function(f) {
+      var val = escapeHtml(c[f.key] || '');
+      return '<div class="form-group">' +
+        '<label>' + f.label + '</label>' +
+        '<input type="text" id="cust-field-' + f.key + '" value="' + val + '" placeholder="' + f.label + '">' +
+      '</div>';
+    }).join('') +
+    '<div style="display:flex;gap:8px;margin-top:14px">' +
+      '<button onclick="saveCustomer(\'' + (customerId || '') + '\')" style="flex:1;background:var(--accent);color:#001540;border:none;padding:10px;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;cursor:pointer">SAVE</button>' +
+      '<button onclick="closeCustomerModal()" style="background:none;color:var(--text-dim);border:1px solid var(--border);padding:10px 16px;border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;cursor:pointer">Cancel</button>' +
+    '</div>';
+
+  document.getElementById('customer-modal-overlay').classList.add('active');
+}
+
+function saveCustomer(customerId) {
+  var fields = ['name','addressLine1','addressLine2','city','state','zip','contactName','contactPhone','notes'];
+  var data = {};
+  fields.forEach(function(k) {
+    var el = document.getElementById('cust-field-' + k);
+    data[k] = el ? el.value.trim() : '';
+  });
+  if (!data.name) { alert('Customer name is required.'); return; }
+
+  var targetRef = customerId
+    ? ref('customers/' + customerId)
+    : ref('customers').push();
+
+  data.id = customerId || targetRef.key;
+  targetRef.set(data).then(function() { closeCustomerModal(); });
+}
+
+function deleteCustomer(customerId) {
+  if (!confirm('Delete this customer? This cannot be undone.')) return;
+  ref('customers/' + customerId).remove();
+}
+
+function closeCustomerModal() {
+  document.getElementById('customer-modal-overlay').classList.remove('active');
+}
+
+// ─── CUSTOMER PICKER (load detail) ────────────────────────────────────────────
+function openCustomerPicker(loadId) {
+  var existing = document.getElementById('customer-picker-dropdown');
+  if (existing) { existing.remove(); return; }
+
+  var ids = Object.keys(customers);
+  if (ids.length === 0) { alert('No customers in directory. Add customers in Settings → Shipping Setup.'); return; }
+
+  var dropdown = document.createElement('div');
+  dropdown.id = 'customer-picker-dropdown';
+  dropdown.style.cssText = 'position:absolute;z-index:9000;background:var(--steel-mid);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.6);min-width:260px;max-height:260px;overflow-y:auto;padding:4px 0';
+
+  ids.forEach(function(id) {
+    var c = customers[id];
+    var row = document.createElement('div');
+    row.style.cssText = 'padding:9px 12px;cursor:pointer;font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)';
+    var addr = [c.addressLine1, c.city, c.state].filter(Boolean).join(', ');
+    row.innerHTML = '<div style="font-weight:bold">' + escapeHtml(c.name || '(no name)') + '</div>' +
+      (addr ? '<div style="font-size:10px;color:var(--text-dim)">' + escapeHtml(addr) + '</div>' : '');
+    row.onmouseover = function() { row.style.background = 'var(--steel-light)'; };
+    row.onmouseout = function() { row.style.background = ''; };
+    row.onclick = function() {
+      var dest = [c.addressLine1, c.city, c.state, c.zip].filter(Boolean).join(', ');
+      updateLoad(loadId, { customer: c.name || '', destination: dest }).then(function() {
+        dropdown.remove();
+      });
+    };
+    dropdown.appendChild(row);
+  });
+
+  var btn = document.getElementById('customer-pick-btn-' + loadId);
+  if (btn) {
+    btn.parentNode.style.position = 'relative';
+    btn.parentNode.appendChild(dropdown);
+  }
+
+  function clickAway(e) {
+    if (!dropdown.contains(e.target) && e.target.id !== ('customer-pick-btn-' + loadId)) {
+      dropdown.remove();
+      document.removeEventListener('click', clickAway, true);
+    }
+  }
+  setTimeout(function() { document.addEventListener('click', clickAway, true); }, 0);
 }
 
 // Change PIN — validates current PIN, enforces 4-digit new PIN, saves to Firebase.
