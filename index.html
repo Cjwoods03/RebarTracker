@@ -2240,6 +2240,7 @@
 <!-- Firebase SDK — must load before main script -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-storage-compat.js"></script>
 
 <script>
 // ─── INDUSTRY MODE FRAMEWORK ─────────────────────────────────────
@@ -9166,6 +9167,7 @@ function initFirebase() {
       databaseURL: "https://rebar-tracker-default-rtdb.firebaseio.com"
     });
     db = firebase.database();
+    window.fbStorage = firebase.storage();
     updateSaveIndicator('connecting…', '#f5a623');
     return true;
   } catch(e) {
@@ -9173,6 +9175,24 @@ function initFirebase() {
     updateSaveIndicator('offline', '#cc0000');
     return false;
   }
+}
+
+function uploadPhoto(file, folder) {
+  return new Promise(function(resolve, reject) {
+    if (!window.fbStorage) { reject(new Error('Storage not initialized')); return; }
+    var path = 'tenants/' + tenantKey + '/' + folder + '/' + Date.now() + '_' + (file.name || 'photo.jpg').replace(/[^a-zA-Z0-9._-]/g, '_');
+    var stRef = window.fbStorage.ref(path);
+    stRef.put(file).then(function(snap) {
+      snap.ref.getDownloadURL().then(function(url) { resolve({ url: url, path: path }); }).catch(reject);
+    }).catch(reject);
+  });
+}
+
+function deletePhoto(path) {
+  if (!window.fbStorage || !path) return Promise.resolve();
+  return window.fbStorage.ref(path).delete().catch(function(e) {
+    console.warn('Photo delete failed:', e);
+  });
 }
 
 function updateSaveIndicator(msg, color) {
