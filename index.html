@@ -3325,6 +3325,8 @@ var shipperRef = null;
 var customersRef = null;
 var bols = {};
 var bolsRef = null;
+var auditLog = {};
+var auditRef = null;
 
 function buildStore() {
   for (var s = 1; s <= STANCHION_COUNT; s++) {
@@ -5127,6 +5129,7 @@ function confirmEdit() {
     ? store[modalLoc]
     : (storeExtra[modalLoc] || [])[editTarget.idx];
   if (!item) return;
+  var beforeSnapshot = JSON.parse(JSON.stringify(item));
 
   var newSize    = document.getElementById('edit-size').value;
   var newGrade   = document.getElementById('edit-grade').value;
@@ -5190,6 +5193,11 @@ function confirmEdit() {
 
   closeEditModal();
   saveData();
+  writeAudit(
+    'bundle.edit', 'bundle', item.uid,
+    'Edited ' + item.size + ' at ' + modalLoc,
+    { loc: modalLoc, before: beforeSnapshot, after: item }
+  );
   renderAll();
   renderInventory();
 
@@ -5441,6 +5449,8 @@ function confirmSecondaryTransfer() {
   }
 
   var fromSlot = secTransferSlot;
+  var _secDesc = ei.size + ' ' + formatLength(ei.length || '');
+  var _secUid = ei.uid;
   secTransferSlot = null;
   secTransferIdx = null;
   document.getElementById('transfer-modal-overlay').dataset.mode = '';
@@ -5450,6 +5460,11 @@ function confirmSecondaryTransfer() {
   renderInventory();
   renderSecondaryList(fromSlot);
   showScrapToast('Secondary item moved to ' + dest); saveData();
+  writeAudit(
+    'bundle.transfer', 'bundle', _secUid,
+    'Transferred from ' + fromSlot + ' to ' + dest,
+    { from: fromSlot, to: dest, productDesc: _secDesc }
+  );
   setTimeout(function() {
     var e = document.getElementById('slot-'+dest);
     if (e) e.scrollIntoView({ behavior:'smooth', block:'center' });
@@ -5927,9 +5942,15 @@ function confirmTransfer() {
   }
 
   var fromId = modalLoc;
+  var _transferDesc = srcItem.size + ' ' + formatLength(srcItem.length || '');
   closeTransferModal();
   closeModal();
   showScrapToast('✓ Transferred from ' + fromId + ' → ' + dest.replace('RACK-','Row ')); saveData();
+  writeAudit(
+    'bundle.transfer', 'bundle', srcItem.uid,
+    'Transferred from ' + fromId + ' to ' + dest,
+    { from: fromId, to: dest, productDesc: _transferDesc }
+  );
   renderAll();
   renderInventory();
 
@@ -5946,10 +5967,13 @@ function confirmTransfer() {
 
 function clearSlot() {
   if (!modalLoc) return;
+  var _clearSlotId = modalLoc;
+  var _clearPrevItem = null;
   if (modalLoc.startsWith('A1:')) {
     var sid1 = modalLoc.replace('A1:','');
     var idx1 = area1Stacks.findIndex(function(s){return s.id===sid1;});
     var removedA1 = idx1 > -1 ? area1Stacks[idx1] : null;
+    _clearPrevItem = removedA1 ? JSON.parse(JSON.stringify(removedA1)) : null;
     if (idx1>-1) area1Stacks.splice(idx1,1);
     if (area1Stacks.length === 0) area1NextId = 1;
     var ii1 = inventory.findIndex(function(i){
@@ -5960,6 +5984,7 @@ function clearSlot() {
     var sid = modalLoc.replace('A22:','');
     var idx = area22Stacks.findIndex(function(s){return s.id===sid;});
     var removedA22 = idx > -1 ? area22Stacks[idx] : null;
+    _clearPrevItem = removedA22 ? JSON.parse(JSON.stringify(removedA22)) : null;
     if (idx>-1) area22Stacks.splice(idx,1);
     if (area22Stacks.length === 0) area22NextId = 1;
     var ii = inventory.findIndex(function(i){
@@ -5967,6 +5992,7 @@ function clearSlot() {
     });
     if (ii>-1) inventory.splice(ii,1);
   } else {
+    _clearPrevItem = store[modalLoc] ? JSON.parse(JSON.stringify(store[modalLoc])) : null;
     clearSecondaryItems(modalLoc);
     delete reservedSlots[modalLoc];
     delete scrapSlots[modalLoc];
@@ -5979,6 +6005,11 @@ function clearSlot() {
     }
   }
   closeModal(); renderAll(); renderInventory(); saveData();
+  writeAudit(
+    'bundle.clear', 'slot', _clearSlotId,
+    'Cleared ' + _clearSlotId + (_clearPrevItem ? ' (' + _clearPrevItem.size + ' ' + formatLength(_clearPrevItem.length || '') + ')' : ''),
+    { prev: _clearPrevItem }
+  );
 }
 
 function toggleLocatorEditor(btn) {
@@ -6518,6 +6549,11 @@ function runCSVImport() {
   statusEl.style.display = 'block';
 
   saveData();
+  writeAudit(
+    'csv.import', 'yard', '',
+    'Imported ' + imported + ' location' + (imported !== 1 ? 's' : '') + ' (' + totalBundles + ' bundles/coils)',
+    { imported: imported, skipped: skipped, totalBundles: totalBundles }
+  );
   renderAll();
   renderInventory();
   updateBadges();
@@ -8582,6 +8618,11 @@ function logRun() {
     suggestedLoc = null;
     renderAll(); renderInventory();
     saveData();
+    writeAudit(
+      'bundle.add', 'bundle', '',
+      'Added ' + totalCoils + ' coils to ' + placements.map(function(p){return p.loc.replace('RACK-','Row ');}).join(', '),
+      { size: size, bundles: totalCoils, loc: placements.map(function(p){return p.loc;}).join(', '), type: 'spool', customer: document.getElementById('inp-customer').value.trim() }
+    );
     openSection('map');
     setTimeout(function(){
       var e = document.getElementById('slot-' + placements[0].loc);
@@ -8718,6 +8759,7 @@ function logRun() {
 
   var isSecondary = document.getElementById('inp-secondary').checked;
   var isReserve   = document.getElementById('inp-reserve').checked;
+  var _logAuditMerge = false, _logAuditMergeUid = null;
 
   if (isSecondary && store[loc]) {
     // Add as secondary stack on top of existing product
@@ -8757,6 +8799,8 @@ function logRun() {
                       if (!invEntry.spec  && item.spec)  invEntry.spec  = item.spec;
                       if (!invEntry.heat  && item.heat)  invEntry.heat  = item.heat;
                       if (!invEntry.receivedDate && item.receivedDate) invEntry.receivedDate = item.receivedDate; }
+      _logAuditMerge = true;
+      _logAuditMergeUid = existing.uid;
     } else {
       alert('⛔ ' + loc + ' already holds a different product.\n\nCheck "Secondary stack" to log on top of the existing item, or choose a different slot.');
       return;
@@ -8797,6 +8841,13 @@ function logRun() {
 
   renderAll(); renderInventory();
   saveData();
+  writeAudit(
+    _logAuditMerge ? 'bundle.merge' : 'bundle.add',
+    'bundle',
+    _logAuditMerge ? _logAuditMergeUid : item.uid,
+    (_logAuditMerge ? 'Merged ' : 'Added ') + item.size + ' ' + formatLength(item.length || '') + ' \u00d7 ' + item.bundles + ' ' + LBL('bundles') + ' to ' + loc,
+    { size: item.size, length: item.length, bundles: item.bundles, loc: loc, type: item.type, heat: item.heat, customer: item.customer }
+  );
   openSection('map');
   setTimeout(function(){var e=document.getElementById('slot-'+loc);if(e)e.scrollIntoView({behavior:'smooth',block:'center'});},150);
 }
@@ -9493,11 +9544,33 @@ function clearOperatorName() {
   sessionStorage.removeItem('rt_operator');
 }
 
+// ─── AUDIT LOG ───────────────────────────────────────────────────────────────
+function writeAudit(action, entityType, entityId, summary, detail) {
+  try {
+    var pushRef = ref('audit').push();
+    var entry = {
+      id: pushRef.key,
+      at: new Date().toISOString(),
+      by: (function() { try { return getOperatorName(); } catch(e) { return 'Unknown'; } })(),
+      action: action,
+      entityType: entityType,
+      entityId: entityId || '',
+      summary: summary,
+      detail: detail || {}
+    };
+    pushRef.set(entry);
+  } catch(e) {
+    console.warn('Audit write failed (non-fatal):', e.message);
+  }
+}
+
 // ─── SHIFT NOTES CRUD ────────────────────────────────────────────────────────
 function addShiftNote(note) {
   var pushRef = ref('shiftNotes').push();
   note.id = pushRef.key;
-  return pushRef.set(note);
+  return pushRef.set(note).then(function() {
+    writeAudit('shift.note.add', 'shiftNote', note.id, 'Added shift note: ' + (note.body || '').slice(0, 80), { category: note.category });
+  });
 }
 
 function resolveShiftNote(noteId, operatorName) {
@@ -9505,6 +9578,8 @@ function resolveShiftNote(noteId, operatorName) {
     status: 'resolved',
     resolvedAt: new Date().toISOString(),
     resolvedBy: operatorName
+  }).then(function() {
+    writeAudit('shift.note.resolve', 'shiftNote', noteId, 'Resolved shift note', { resolvedBy: operatorName });
   });
 }
 
@@ -9524,6 +9599,8 @@ function deleteShiftNote(noteId) {
   }
   return Promise.all(photoDeletes).then(function() {
     return ref('shiftNotes/' + noteId).remove();
+  }).then(function() {
+    writeAudit('shift.note.delete', 'shiftNote', noteId, 'Deleted shift note', {});
   });
 }
 
@@ -9575,7 +9652,10 @@ function createLoad(initial) {
   }, initial || {});
   var pushRef = ref('loads').push();
   newLoad.id = pushRef.key;
-  return pushRef.set(newLoad).then(function() { return newLoad; });
+  return pushRef.set(newLoad).then(function() {
+    writeAudit('load.create', 'load', newLoad.id, 'Created load ' + newLoad.loadNumber, { loadNumber: newLoad.loadNumber, customer: newLoad.customer });
+    return newLoad;
+  });
 }
 
 function updateLoad(loadId, patch) {
@@ -9603,12 +9683,15 @@ function deleteLoad(loadId) {
   var load = loads[loadId];
   if (!load) return Promise.resolve();
   if (load.status === 'shipped') return Promise.reject(new Error('Cannot delete shipped loads'));
+  var _delLoadNumber = load.loadNumber;
   var uidsToFree = (load.bundleUids || []).slice();
   var unassigns = uidsToFree.map(function(uid) {
     return typeof unassignBundleFromLoad === 'function' ? unassignBundleFromLoad(uid) : Promise.resolve();
   });
   return Promise.all(unassigns).then(function() {
     return ref('loads/' + loadId).remove();
+  }).then(function() {
+    writeAudit('load.delete', 'load', loadId, 'Deleted load ' + _delLoadNumber, { loadNumber: _delLoadNumber });
   });
 }
 
@@ -9643,6 +9726,9 @@ function addBundleToLoad(uid, loadId) {
 
   return ref('loads/' + loadId + '/bundleUids').set(updatedUids).then(function() {
     return recomputeLoadTotals(loadId);
+  }).then(function() {
+    var _abl = loads[loadId];
+    writeAudit('load.bundle.add', 'load', loadId, 'Added bundle to ' + (_abl ? _abl.loadNumber : loadId), { uid: uid, loadId: loadId });
   });
 }
 
@@ -9662,6 +9748,9 @@ function unassignBundleFromLoad(uid) {
   saveData();
   return ref('loads/' + loadId + '/bundleUids').set(updatedUids).then(function() {
     return recomputeLoadTotals(loadId);
+  }).then(function() {
+    var _ubl = loads[loadId];
+    writeAudit('load.bundle.remove', 'load', loadId, 'Removed bundle from ' + (_ubl ? _ubl.loadNumber : loadId), { uid: uid, loadId: loadId });
   });
 }
 
@@ -9697,7 +9786,9 @@ function advanceLoadStatus(loadId) {
     if (over) return Promise.reject(new Error('Over limit — resolve before advancing.'));
   }
   if (next === 'shipped') return shipLoad(loadId);
-  return updateLoad(loadId, { status: next });
+  return updateLoad(loadId, { status: next }).then(function() {
+    writeAudit('load.status.' + next, 'load', loadId, load.loadNumber + ' status → ' + next, { loadNumber: load.loadNumber, status: next });
+  });
 }
 
 function regressLoadStatus(loadId) {
@@ -9760,7 +9851,9 @@ function shipLoad(loadId) {
   }).then(function() {
     saveData();
     renderAll();
-    showScrapToast('✓ ' + load.loadNumber + ' shipped — ' + (load.bundleUids || []).length + ' ' + LBL('bundles') + ' archived');
+    var _shipBundleCount = (load.bundleUids || []).length;
+    writeAudit('load.ship', 'load', loadId, 'Shipped ' + load.loadNumber + ' — ' + _shipBundleCount + ' ' + LBL('bundles') + ' to ' + (load.customer || 'customer'), { loadNumber: load.loadNumber, bundleCount: _shipBundleCount, bundleUids: load.bundleUids || [], customer: load.customer, destination: load.destination });
+    showScrapToast('✓ ' + load.loadNumber + ' shipped — ' + _shipBundleCount + ' ' + LBL('bundles') + ' archived');
   });
 }
 
@@ -10387,6 +10480,16 @@ function subscribeBOLs() {
   });
 }
 
+// ─── AUDIT SUBSCRIPTION ──────────────────────────────────────────────────────
+function subscribeAudit() {
+  if (auditRef) auditRef.off();
+  auditRef = ref('audit');
+  auditRef.orderByChild('at').limitToLast(500).on('value', function(snap) {
+    auditLog = snap.val() || {};
+    if (typeof renderAuditHistory === 'function') renderAuditHistory();
+  });
+}
+
 // ─── SHIPPED BUNDLES CACHE ───────────────────────────────────────────────────
 var shippedBundlesCache = {};
 var shippedBundlesRef = null;
@@ -10684,6 +10787,7 @@ function generateBOLPDF_internal(d, opts) {
     var pushRef = ref('bols').push();
     var snapshot = Object.assign({}, d, { id: pushRef.key });
     pushRef.set(snapshot).then(function() {
+      writeAudit('bol.generate', 'bol', snapshot.id, 'Generated BOL ' + d.bolNumber + ' for ' + d.loadNumber, { bolNumber: d.bolNumber, loadId: d.loadId, loadNumber: d.loadNumber, bundleCount: (d.lineItems || []).length, totalWeight: d.totals ? d.totals.weightLb : 0 });
       doc.save(d.bolNumber + '.pdf');
       closeBOLModal();
       showScrapToast('\u2713 BOL generated and archived');
@@ -10692,6 +10796,7 @@ function generateBOLPDF_internal(d, opts) {
       doc.save(d.bolNumber + '.pdf');
     });
   } else {
+    writeAudit('bol.reprint', 'bol', d.id || '', 'Reprinted BOL ' + d.bolNumber, { bolNumber: d.bolNumber });
     doc.save(d.bolNumber + ' (reprint).pdf');
     showScrapToast('\u2713 BOL reprinted from archive');
   }
@@ -10734,6 +10839,7 @@ function setSlotFlag(slotId, type, details) {
     };
     return ref('slotFlags/' + fbEncode(slotId)).set(record);
   }).then(function() {
+    writeAudit('flag.set', 'slot', slotId, 'Flagged ' + slotId + ' as ' + type + ' — ' + (details.reason || ''), { slotId: slotId, type: type, reason: details.reason || '', photoCount: results.length });
     saveData();
     renderAll();
   });
@@ -10754,6 +10860,7 @@ function clearSlotFlag(slotId) {
   return Promise.all(photoDeletes).then(function() {
     return ref('slotFlags/' + fbEncode(slotId)).remove();
   }).then(function() {
+    writeAudit('flag.clear', 'slot', slotId, 'Cleared flag on ' + slotId, { wasType: (meta && meta.type) || 'unknown' });
     saveData();
     renderAll();
   });
@@ -11520,6 +11627,7 @@ function _initAfterTenantKey(key) {
   subscribeCustomers();
   subscribeBOLs();
   subscribeShippedBundles();
+  subscribeAudit();
   window.addEventListener('online', function() { updateSaveIndicator('connected ✓', '#336633'); });
   window.addEventListener('offline', function() { updateSaveIndicator('offline — pick actions queued', '#f5a623'); });
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
