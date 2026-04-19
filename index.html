@@ -1700,6 +1700,39 @@
     </div>
   </div>
 
+  <div class="section-card" id="sec-audit">
+    <button class="section-header" onclick="openSection('audit')">
+      <div class="sec-header-left">
+        <span class="sec-icon">📜</span>
+        <span class="sec-title">ACTIVITY HISTORY</span>
+      </div>
+      <div class="sec-header-right">
+        <span id="audit-badge" class="sec-badge"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-audit">
+      <div style="padding:16px">
+        <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+          <button class="flt-btn flt-btn-active" id="aflt-all" onclick="auditFilterSet('all')">All</button>
+          <button class="flt-btn" id="aflt-bundle" onclick="auditFilterSet('bundle')">Bundles</button>
+          <button class="flt-btn" id="aflt-load" onclick="auditFilterSet('load')">Loads</button>
+          <button class="flt-btn" id="aflt-flag" onclick="auditFilterSet('flag')">Flags</button>
+          <button class="flt-btn" id="aflt-shiftNote" onclick="auditFilterSet('shiftNote')">Notes</button>
+          <button class="flt-btn" id="aflt-bol" onclick="auditFilterSet('bol')">BOLs</button>
+        </div>
+        <input type="text" id="audit-search" placeholder="Search summary, operator, entity ID…" oninput="renderAuditHistory()" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box">
+        <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+          <input type="date" id="audit-date-from" onchange="renderAuditHistory()" style="background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px">
+          <input type="date" id="audit-date-to" onchange="renderAuditHistory()" style="background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px">
+          <button onclick="document.getElementById('audit-date-from').value='';document.getElementById('audit-date-to').value='';renderAuditHistory()" style="background:none;color:var(--text-dim);border:1px solid var(--border);padding:6px 12px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer">Clear dates</button>
+        </div>
+        <div id="audit-list"></div>
+        <button onclick="exportAuditCSV()" style="margin-top:12px;padding:10px 16px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">EXPORT CSV</button>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- DETAIL MODAL -->
@@ -3943,6 +3976,7 @@ function openSection(name) {
     if (name === 'map') renderAll();
     if (name === 'aging') renderAgingReport();
     if (name === 'flags') renderFlagsDashboard();
+    if (name === 'audit') renderAuditHistory();
   }
   // Scroll to section
   var card = document.getElementById('sec-' + name);
@@ -9562,6 +9596,110 @@ function writeAudit(action, entityType, entityId, summary, detail) {
   } catch(e) {
     console.warn('Audit write failed (non-fatal):', e.message);
   }
+}
+
+// ─── ACTIVITY HISTORY UI ─────────────────────────────────────────────────────
+var _auditFilter = 'all';
+
+function auditFilterSet(type) {
+  _auditFilter = type;
+  ['all', 'bundle', 'load', 'flag', 'shiftNote', 'bol'].forEach(function(t) {
+    var btn = document.getElementById('aflt-' + t);
+    if (btn) btn.className = 'flt-btn' + (t === type ? ' flt-btn-active' : '');
+  });
+  renderAuditHistory();
+}
+
+function renderAuditHistory() {
+  var list = document.getElementById('audit-list');
+  if (!list) return;
+  var entries = Object.values(auditLog);
+  var search = (document.getElementById('audit-search').value || '').toLowerCase().trim();
+  var fromStr = document.getElementById('audit-date-from').value;
+  var toStr = document.getElementById('audit-date-to').value;
+  var fromTs = fromStr ? new Date(fromStr + 'T00:00:00').getTime() : null;
+  var toTs = toStr ? new Date(toStr + 'T23:59:59').getTime() : null;
+
+  entries = entries.filter(function(e) {
+    if (_auditFilter !== 'all' && e.entityType !== _auditFilter) return false;
+    if (search) {
+      var hay = [e.summary, e.by, e.entityId, e.action].filter(Boolean).join(' ').toLowerCase();
+      if (hay.indexOf(search) === -1) return false;
+    }
+    if (fromTs || toTs) {
+      var ts = new Date(e.at).getTime();
+      if (fromTs && ts < fromTs) return false;
+      if (toTs && ts > toTs) return false;
+    }
+    return true;
+  });
+
+  entries.sort(function(a, b) { return (b.at || '').localeCompare(a.at || ''); });
+
+  if (entries.length === 0) {
+    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px">No activity matches the filter.</div>';
+  } else {
+    var dayGroups = {};
+    entries.forEach(function(e) {
+      var day = (e.at || '').slice(0, 10);
+      if (!dayGroups[day]) dayGroups[day] = [];
+      dayGroups[day].push(e);
+    });
+    var dayKeys = Object.keys(dayGroups).sort(function(a, b) { return b.localeCompare(a); });
+
+    list.innerHTML = dayKeys.map(function(day) {
+      var dayLabel = new Date(day + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' });
+      var rows = dayGroups[day].map(function(e) {
+        var actionColor = getAuditActionColor(e.action);
+        return '<div style="padding:8px 10px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + actionColor + ';border-radius:6px;margin-bottom:4px">' +
+          '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+            '<div style="flex:1;min-width:0"><div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + escapeHtml(e.summary || '(no summary)') + '</div>' +
+            '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim);margin-top:2px">' + escapeHtml(e.by || '?') + ' · ' + new Date(e.at).toLocaleTimeString() + ' · ' + escapeHtml(e.action) + '</div></div>' +
+          '</div>' +
+        '</div>';
+      }).join('');
+      return '<div style="margin-bottom:12px">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:var(--accent);letter-spacing:2px;padding:6px 10px;background:var(--steel);border-radius:4px;margin-bottom:6px">' + dayLabel + '</div>' +
+        rows +
+      '</div>';
+    }).join('');
+  }
+
+  var today = new Date().toISOString().slice(0, 10);
+  var todayCount = Object.values(auditLog).filter(function(e) { return (e.at || '').slice(0, 10) === today; }).length;
+  var badge = document.getElementById('audit-badge');
+  if (badge) badge.textContent = todayCount > 0 ? todayCount : '';
+}
+
+function getAuditActionColor(action) {
+  if (!action) return 'var(--text-dim)';
+  if (action.indexOf('.ship') !== -1 || action.indexOf('bol') !== -1) return 'var(--safe)';
+  if (action.indexOf('flag.set') !== -1) return '#4ab8ff';
+  if (action.indexOf('clear') !== -1 || action.indexOf('delete') !== -1) return 'var(--hot)';
+  if (action.indexOf('edit') !== -1 || action.indexOf('transfer') !== -1) return 'var(--warn)';
+  return 'var(--accent)';
+}
+
+function exportAuditCSV() {
+  var entries = Object.values(auditLog);
+  entries.sort(function(a, b) { return (b.at || '').localeCompare(a.at || ''); });
+  var rows = [['Timestamp', 'Operator', 'Action', 'Entity Type', 'Entity ID', 'Summary']];
+  entries.forEach(function(e) {
+    rows.push([
+      e.at || '',
+      e.by || '',
+      e.action || '',
+      e.entityType || '',
+      e.entityId || '',
+      (e.summary || '').replace(/[\r\n,]/g, ' ')
+    ]);
+  });
+  var csv = rows.map(function(r) { return r.map(function(c) { return '"' + String(c).replace(/"/g, '""') + '"'; }).join(','); }).join('\n');
+  var blob = new Blob([csv], { type: 'text/csv' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'audit-log-' + new Date().toISOString().slice(0, 10) + '.csv';
+  a.click();
 }
 
 // ─── SHIFT NOTES CRUD ────────────────────────────────────────────────────────
