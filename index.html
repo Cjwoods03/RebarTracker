@@ -2384,6 +2384,19 @@
   </div>
 </div>
 
+<!-- PICK LIST MODAL -->
+<div class="modal-overlay" id="pick-overlay" onclick="if(event.target===this)closePickList()">
+  <div class="modal" style="max-width:720px;width:96vw;max-height:92vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div id="pick-header" style="margin-bottom:12px"></div>
+    <div id="pick-content" style="flex:1;overflow-y:auto;padding-right:4px"></div>
+    <div style="display:flex;gap:10px;margin-top:12px">
+      <button class="btn btn-primary" style="margin-top:0" onclick="printPickSheet()">🖨 PRINT</button>
+      <button class="btn-close-modal" onclick="closePickList()">Close</button>
+    </div>
+  </div>
+</div>
+
 <!-- BUNDLE PICKER MODAL -->
 <div class="modal-overlay" id="bundle-picker-overlay" onclick="if(event.target===this)closeBundlePicker()">
   <div class="modal" style="max-width:640px;width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
@@ -9466,6 +9479,7 @@ function subscribeLoads() {
     if (overlay && overlay.classList.contains('active') && overlay.dataset.loadId && loads[overlay.dataset.loadId]) {
       renderLoadDetail(loads[overlay.dataset.loadId]);
     }
+    if (_pickLoadId && document.getElementById('pick-overlay').classList.contains('active')) renderPickList();
   });
 }
 
@@ -9699,6 +9713,7 @@ function renderLoadStateButtons(load) {
 
   if (load.status === 'building' || load.status === 'staged') {
     html += '<button onclick="regressLoadStatus(\'' + load.id + '\').catch(function(e) { alert(e.message); })" style="padding:12px 16px;background:var(--steel-light);color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">◂ BACK</button>';
+    html += '<button onclick="openPickList(\'' + load.id + '\')" style="padding:12px 20px;background:#4ab8ff;color:#001540;border:none;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;font-weight:bold">📋 OPEN PICK LIST</button>';
   }
 
   if (load.status === 'shipped') {
@@ -9706,6 +9721,123 @@ function renderLoadStateButtons(load) {
   }
 
   container.innerHTML = html;
+}
+
+// ─── PICK LIST ────────────────────────────────────────────────────────────────
+var _pickLoadId = null;
+
+function openPickList(loadId) {
+  _pickLoadId = loadId;
+  renderPickList();
+  document.getElementById('pick-overlay').classList.add('active');
+}
+
+function closePickList() {
+  document.getElementById('pick-overlay').classList.remove('active');
+  _pickLoadId = null;
+}
+
+function togglePicked(loadId, uid) {
+  var load = loads[loadId];
+  if (!load) return Promise.resolve();
+  var picked = load.picked ? JSON.parse(JSON.stringify(load.picked)) : {};
+  if (picked[uid]) {
+    delete picked[uid];
+  } else {
+    picked[uid] = { at: new Date().toISOString(), by: getOperatorName() };
+  }
+  return ref('loads/' + loadId + '/picked').set(picked);
+}
+
+function renderPickList() {
+  var load = loads[_pickLoadId];
+  if (!load) return;
+  var uids = load.bundleUids || [];
+  var picked = load.picked || {};
+
+  var bundles = uids.map(function(uid) {
+    return inventory.find(function(i) { return i.uid === uid; });
+  }).filter(Boolean);
+
+  // Group by stanchion
+  var groups = {};
+  bundles.forEach(function(b) {
+    var stan = b.loc || 'OTHER';
+    if (stan.startsWith('RACK-')) stan = stan.split('.')[0];
+    else if (stan === 'CYCLE' || stan === 'AREA1' || stan === 'AREA22' || stan === 'AREA-1' || stan === 'AREA-22') { /* keep as-is */ }
+    else stan = stan.slice(0, -1); // strip side letter (e.g. '5A' → '5')
+    if (!groups[stan]) groups[stan] = [];
+    groups[stan].push(b);
+  });
+
+  var groupKeys = Object.keys(groups).sort(function(a, b) {
+    var na = parseInt(a), nb = parseInt(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    if (!isNaN(na)) return -1;
+    if (!isNaN(nb)) return 1;
+    return a.localeCompare(b);
+  });
+
+  groupKeys.forEach(function(k) {
+    groups[k].sort(function(a, b) { return (a.receivedDate || '').localeCompare(b.receivedDate || ''); });
+  });
+
+  var total = bundles.length;
+  var pickedCount = bundles.filter(function(b) { return picked[b.uid]; }).length;
+  var pctDone = total > 0 ? Math.round((pickedCount / total) * 100) : 0;
+
+  document.getElementById('pick-header').innerHTML =
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--text);letter-spacing:2px">PICK LIST · ' + escapeHtml(load.loadNumber || '') + '</div>' +
+    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">' + escapeHtml(load.customer || '(no customer)') + (load.destination ? ' → ' + escapeHtml(load.destination) : '') + '</div>' +
+    '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">' +
+      '<div style="flex:1;height:8px;background:var(--steel-light);border:1px solid var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + pctDone + '%;background:var(--accent);transition:width 0.3s"></div></div>' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + pickedCount + ' / ' + total + '</div>' +
+    '</div>';
+
+  var html = '';
+  groupKeys.forEach(function(k) {
+    var groupLabel = k;
+    if (!isNaN(parseInt(k))) groupLabel = LBL('stan').toUpperCase() + ' ' + k;
+    else if (k === 'BSU') groupLabel = 'B.S.U';
+    else if (k.startsWith('RACK-')) groupLabel = 'RACK ' + k.replace('RACK-', '');
+    else if (k === 'AREA1' || k === 'AREA-1') groupLabel = 'AREA 1';
+    else if (k === 'AREA22' || k === 'AREA-22') groupLabel = 'AREA 22';
+
+    html += '<div style="margin-bottom:14px">';
+    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--accent);letter-spacing:2px;padding:6px 10px;background:var(--steel);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;margin-bottom:6px">' + escapeHtml(groupLabel) + '</div>';
+
+    groups[k].forEach(function(b) {
+      var isPicked = !!picked[b.uid];
+      var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
+      var meta = [b.heat, b.customer].filter(Boolean).join(' · ');
+      var bg = isPicked ? 'var(--steel)' : 'var(--steel-light)';
+      var strike = isPicked ? 'text-decoration:line-through;opacity:0.5' : '';
+
+      var flag = '';
+      if (holdSlots[b.loc]) flag = '<span style="background:#4ab8ff;color:#001540;padding:2px 6px;border-radius:3px;font-size:10px;font-family:\'IBM Plex Mono\',monospace;margin-left:6px">HOLD</span>';
+      else if (redTagSlots[b.loc]) flag = '<span style="background:var(--hot);color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-family:\'IBM Plex Mono\',monospace;margin-left:6px">RED TAG</span>';
+
+      var ageDays = getItemAgeDays(b);
+      var ageBadge = ageDays !== null ? '<span class="age-badge ' + getAgeClass(ageDays) + '" style="margin-left:6px">' + formatAgeShort(ageDays) + '</span>' : '';
+
+      html += '<div onclick="togglePicked(\'' + escapeHtml(load.id) + '\', \'' + escapeHtml(b.uid) + '\')" style="display:flex;align-items:center;gap:12px;padding:14px;background:' + bg + ';border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;' + strike + '">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:' + (isPicked ? 'var(--safe)' : 'var(--text)') + ';min-width:70px;text-align:center;letter-spacing:1px">' + (isPicked ? '✓' : escapeHtml(b.loc || '?')) + '</div>' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:16px;color:var(--text)">' + escapeHtml(desc) + flag + ageBadge + '</div>' +
+          (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">' + escapeHtml(meta) + '</div>' : '') +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--accent);margin-top:2px">' + (b.bundles || 0) + ' ' + LBL('bundles') + ' · ' + ((b.weightTons || 0) * 2000).toLocaleString() + ' lb</div>' +
+        '</div>' +
+      '</div>';
+    });
+
+    html += '</div>';
+  });
+
+  document.getElementById('pick-content').innerHTML = html;
+}
+
+function printPickSheet() {
+  window.print();
 }
 
 // ─── BUNDLE PICKER ────────────────────────────────────────────────────────────
