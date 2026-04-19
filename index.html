@@ -3066,6 +3066,8 @@ var scrapSlots = {}; // slotId -> true
 var holdSlots  = {}; // slotId -> true
 var redTagSlots = {}; // slotId -> true
 var reservedSlots = {}; // slotId -> true — reserved for upcoming run, not yet physically placed
+var shiftNotes = {};
+var shiftNotesRef = null;
 
 function buildStore() {
   for (var s = 1; s <= STANCHION_COUNT; s++) {
@@ -9195,6 +9197,66 @@ function deletePhoto(path) {
   });
 }
 
+// ─── OPERATOR NAME ───────────────────────────────────────────────────────────
+function getOperatorName() {
+  var name = sessionStorage.getItem('rt_operator');
+  if (!name) {
+    name = (prompt('Your name (for shift notes and audit log):') || '').trim();
+    if (!name) name = 'Unknown';
+    sessionStorage.setItem('rt_operator', name);
+  }
+  return name;
+}
+
+function clearOperatorName() {
+  sessionStorage.removeItem('rt_operator');
+}
+
+// ─── SHIFT NOTES CRUD ────────────────────────────────────────────────────────
+function addShiftNote(note) {
+  var pushRef = ref('shiftNotes').push();
+  note.id = pushRef.key;
+  return pushRef.set(note);
+}
+
+function resolveShiftNote(noteId, operatorName) {
+  return ref('shiftNotes/' + noteId).update({
+    status: 'resolved',
+    resolvedAt: new Date().toISOString(),
+    resolvedBy: operatorName
+  });
+}
+
+function reopenShiftNote(noteId) {
+  return ref('shiftNotes/' + noteId).update({
+    status: 'open',
+    resolvedAt: null,
+    resolvedBy: null
+  });
+}
+
+function deleteShiftNote(noteId) {
+  var note = shiftNotes[noteId];
+  var photoDeletes = [];
+  if (note && note.photoUrls && note.photoUrls.length) {
+    photoDeletes = note.photoUrls.map(function(p) { return deletePhoto(p.path); });
+  }
+  return Promise.all(photoDeletes).then(function() {
+    return ref('shiftNotes/' + noteId).remove();
+  });
+}
+
+// ─── SHIFT NOTES SUBSCRIPTION ────────────────────────────────────────────────
+function subscribeShiftNotes() {
+  if (shiftNotesRef) shiftNotesRef.off();
+  shiftNotesRef = ref('shiftNotes');
+  shiftNotesRef.on('value', function(snap) {
+    shiftNotes = snap.val() || {};
+    if (typeof renderShiftNotes === 'function') renderShiftNotes();
+    if (typeof maybeShowShiftBanner === 'function') maybeShowShiftBanner();
+  });
+}
+
 function updateSaveIndicator(msg, color) {
   var el = document.getElementById('save-indicator');
   if (el) { el.textContent = '💾 ' + msg; el.style.color = color || '#336633'; }
@@ -9588,6 +9650,7 @@ function _initAfterTenantKey(key) {
   if (td) td.textContent = key;
   buildStore();
   initFirebase();
+  subscribeShiftNotes();
   loadData(function(loaded) {
     populateLocationDropdown('straight');
     renderAll();
