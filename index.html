@@ -1742,6 +1742,36 @@
   </div>
 </div>
 
+<!-- FLAG SLOT MODAL -->
+<div class="modal-overlay" id="flag-modal-overlay" onclick="if(event.target===this)closeFlagModal()">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="flag-modal-title">FLAG SLOT</div>
+    <div id="flag-modal-info" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:12px;padding:8px 10px;background:var(--steel-light);border-radius:6px;border:1px solid var(--border)"></div>
+    <div class="form-group">
+      <label>Reason</label>
+      <select id="flag-reason-select" onchange="onFlagReasonChange()"></select>
+    </div>
+    <div class="form-group" id="flag-reason-other-wrap" style="display:none">
+      <label>Custom reason</label>
+      <input type="text" id="flag-reason-other" placeholder="Describe the reason">
+    </div>
+    <div class="form-group">
+      <label>Notes (optional)</label>
+      <textarea id="flag-notes" rows="2" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:12px;font-family:'IBM Plex Mono',monospace;font-size:13px;border-radius:6px;outline:none;resize:vertical"></textarea>
+    </div>
+    <div class="form-group">
+      <label>Photos (optional)</label>
+      <input type="file" id="flag-photos" accept="image/*" capture="environment" multiple style="width:100%;padding:10px;background:var(--steel-light);border:1px solid var(--border);color:var(--text);border-radius:6px">
+    </div>
+    <div id="flag-status" style="margin:8px 0;font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:14px"></div>
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn btn-primary" style="margin-top:0" onclick="submitFlagModal()" id="flag-submit-btn">APPLY FLAG</button>
+      <button class="btn-close-modal" onclick="closeFlagModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- EDIT PRODUCT MODAL -->
 <div class="modal-overlay" id="edit-modal-overlay" onclick="handleEditOverlayClick(event)">
   <div class="modal">
@@ -9096,20 +9126,11 @@ function applySlotStatus(status) {
     return;
   }
 
-  // For scrap/hold/redtag/clear: replace whichever status was active
-  delete scrapSlots[id];
-  delete holdSlots[id];
-  delete redTagSlots[id];
-
-  var msg = '';
-  if (status === 'scrap')  { scrapSlots[id]  = true; msg = 'Slot ' + id + ' → SCRAP'; }
-  if (status === 'hold')   { holdSlots[id]   = true; msg = 'Slot ' + id + ' → HOLD'; }
-  if (status === 'redtag') { redTagSlots[id] = true; msg = 'Slot ' + id + ' → RED TAG'; }
-  if (status === 'clear')  { msg = 'Slot ' + id + ' — status cleared'; }
-
-  closeSlotCtxMenu();
-  showScrapToast(msg); saveData();
-  renderAll();
+  // Route flag actions through the detail modal
+  if (status === 'scrap')  { closeSlotCtxMenu(); openFlagModal(id, 'scrap');  return; }
+  if (status === 'hold')   { closeSlotCtxMenu(); openFlagModal(id, 'hold');   return; }
+  if (status === 'redtag') { closeSlotCtxMenu(); openFlagModal(id, 'redTag'); return; }
+  if (status === 'clear')  { closeSlotCtxMenu(); handleClearFlag(id); return; }
 }
 
 // Keep old toggleScrapSlot for any remaining references
@@ -9410,6 +9431,82 @@ function clearSlotFlag(slotId) {
   });
 }
 
+// ─── FLAG MODAL ──────────────────────────────────────────────────────────────
+
+var FLAG_REASONS = {
+  scrap:    ['Bent', 'Rusted', 'Cut wrong length', 'Customer reject', 'Physical damage', 'Other'],
+  hold:     ['Awaiting inspection', 'MTR pending', 'Customer clarification', 'Quality review', 'Other'],
+  redTag:   ['Failed QC', 'Damage under investigation', 'Material defect', 'MTR mismatch', 'Other'],
+  reserved: ['Upcoming run', 'Customer allocation', 'Staging for load', 'Other']
+};
+
+var _flagModalCtx = { slotId: null, type: null };
+
+function openFlagModal(slotId, type) {
+  _flagModalCtx = { slotId: slotId, type: type };
+  var labels = { scrap: 'SCRAP', hold: 'HOLD', redTag: 'RED TAG', reserved: 'RESERVED' };
+  document.getElementById('flag-modal-title').textContent = 'FLAG AS ' + (labels[type] || type.toUpperCase());
+  document.getElementById('flag-modal-info').innerHTML = '<strong style="color:var(--text)">Slot:</strong> ' + escHtml(slotId);
+  var sel = document.getElementById('flag-reason-select');
+  sel.innerHTML = '<option value="">— Select reason —</option>' +
+    FLAG_REASONS[type].map(function(r) { return '<option value="' + escHtml(r) + '">' + escHtml(r) + '</option>'; }).join('');
+  document.getElementById('flag-reason-other').value = '';
+  document.getElementById('flag-reason-other-wrap').style.display = 'none';
+  document.getElementById('flag-notes').value = '';
+  document.getElementById('flag-photos').value = '';
+  document.getElementById('flag-status').textContent = '';
+  document.getElementById('flag-submit-btn').disabled = false;
+  document.getElementById('flag-modal-overlay').classList.add('active');
+}
+
+function closeFlagModal() {
+  document.getElementById('flag-modal-overlay').classList.remove('active');
+  _flagModalCtx = { slotId: null, type: null };
+}
+
+function onFlagReasonChange() {
+  var val = document.getElementById('flag-reason-select').value;
+  document.getElementById('flag-reason-other-wrap').style.display = (val === 'Other') ? 'block' : 'none';
+}
+
+function submitFlagModal() {
+  var slotId = _flagModalCtx.slotId;
+  var type   = _flagModalCtx.type;
+  if (!slotId || !type) return;
+  var reasonVal = document.getElementById('flag-reason-select').value;
+  if (!reasonVal) { document.getElementById('flag-status').textContent = '⛔ Pick a reason.'; return; }
+  var reason = reasonVal === 'Other' ? (document.getElementById('flag-reason-other').value || '').trim() : reasonVal;
+  if (reasonVal === 'Other' && !reason) { document.getElementById('flag-status').textContent = '⛔ Describe the custom reason.'; return; }
+  var notes = document.getElementById('flag-notes').value.trim();
+  var files = Array.from(document.getElementById('flag-photos').files || []);
+  var btn = document.getElementById('flag-submit-btn');
+  btn.disabled = true;
+  document.getElementById('flag-status').textContent = files.length ? ('Uploading ' + files.length + '…') : 'Saving…';
+  setSlotFlag(slotId, type, { reason: reason, notes: notes, photos: files })
+    .then(function() {
+      closeFlagModal();
+      closeModal();
+    })
+    .catch(function(e) {
+      document.getElementById('flag-status').textContent = '⛔ ' + (e.message || 'Failed');
+    })
+    .finally(function() { btn.disabled = false; });
+}
+
+function handleClearFlag(slotId) {
+  var meta = slotFlagsData[slotId];
+  var photoCount = (meta && meta.photoUrls && meta.photoUrls.length) || 0;
+  var msg = 'Clear flag on ' + slotId + '?';
+  if (photoCount > 0) msg += '\n\nThis will also delete ' + photoCount + ' photo' + (photoCount === 1 ? '' : 's') + ' from storage.';
+  if (!confirm(msg)) return;
+  clearSlotFlag(slotId);
+}
+
+function markScrap(slotId)    { openFlagModal(slotId, 'scrap'); }
+function markHold(slotId)     { openFlagModal(slotId, 'hold'); }
+function markRedTag(slotId)   { openFlagModal(slotId, 'redTag'); }
+function markReserved(slotId) { openFlagModal(slotId, 'reserved'); }
+
 // ─── SHIFT BANNER ────────────────────────────────────────────────────────────
 function dateKey() { return new Date().toISOString().slice(0, 10); }
 
@@ -9434,7 +9531,7 @@ function maybeShowShiftBanner() {
   var topNotes = openNotes.slice(0, 3).map(function(n) {
     var firstLine = (n.body || '').split('\n')[0];
     if (firstLine.length > 80) firstLine = firstLine.substr(0, 77) + '...';
-    return '<div style="margin-top:4px;font-size:11px;color:var(--text)"><strong style="color:var(--accent)">[' + (n.category || '?') + ']</strong> ' + escapeHtml(firstLine) + '</div>';
+    return '<div style="margin-top:4px;font-size:11px;color:var(--text)"><strong style="color:var(--accent)">[' + (n.category || '?') + ']</strong> ' + escHtml(firstLine) + '</div>';
   }).join('');
 
   bannerEl.innerHTML =
