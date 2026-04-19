@@ -9758,13 +9758,41 @@ function closePickList() {
 function togglePicked(loadId, uid) {
   var load = loads[loadId];
   if (!load) return Promise.resolve();
-  var picked = load.picked ? JSON.parse(JSON.stringify(load.picked)) : {};
-  if (picked[uid]) {
-    delete picked[uid];
-  } else {
+  var picked = load.picked || {};
+  var newVal = !picked[uid];
+
+  if (newVal) picked[uid] = { at: new Date().toISOString(), by: getOperatorName() };
+  else delete picked[uid];
+  load.picked = picked;
+  renderPickList();
+  renderLoads();
+
+  return ref('loads/' + loadId + '/picked').set(picked).catch(function(e) {
+    console.warn('Pick write failed (may retry when online):', e.message);
+  });
+}
+
+function pickAll(loadId) {
+  var load = loads[loadId];
+  if (!load) return;
+  var picked = {};
+  (load.bundleUids || []).forEach(function(uid) {
     picked[uid] = { at: new Date().toISOString(), by: getOperatorName() };
-  }
-  return ref('loads/' + loadId + '/picked').set(picked);
+  });
+  load.picked = picked;
+  renderPickList();
+  renderLoads();
+  ref('loads/' + loadId + '/picked').set(picked);
+}
+
+function unpickAll(loadId) {
+  var load = loads[loadId];
+  if (!load) return;
+  if (!confirm('Clear all pick marks on this load?')) return;
+  load.picked = {};
+  renderPickList();
+  renderLoads();
+  ref('loads/' + loadId + '/picked').set({});
 }
 
 function renderPickList() {
@@ -9810,6 +9838,10 @@ function renderPickList() {
     '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">' +
       '<div style="flex:1;height:8px;background:var(--steel-light);border:1px solid var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + pctDone + '%;background:var(--accent);transition:width 0.3s"></div></div>' +
       '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + pickedCount + ' / ' + total + '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:6px;margin-top:6px">' +
+      '<button onclick="pickAll(\'' + load.id + '\')" style="background:var(--steel-light);color:var(--text);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">MARK ALL</button>' +
+      '<button onclick="unpickAll(\'' + load.id + '\')" style="background:none;color:var(--text-dim);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">CLEAR</button>' +
     '</div>';
 
   var html = '';
@@ -10026,6 +10058,12 @@ function renderLoads() {
 
   list.innerHTML = arr.map(function(l) {
     var statusColor = { draft: 'var(--text-dim)', building: '#f5d023', staged: '#4ab8ff', shipped: 'var(--safe)' }[l.status] || 'var(--text-dim)';
+    var showProgress = (l.status === 'staged' || l.status === 'building') && (l.bundleUids || []).length > 0;
+    var pickedCount = 0, pct = 0;
+    if (showProgress) {
+      pickedCount = Object.keys(l.picked || {}).filter(function(u) { return (l.bundleUids || []).indexOf(u) !== -1; }).length;
+      pct = Math.round((pickedCount / l.bundleUids.length) * 100);
+    }
     return '<div onclick="openLoadDetail(\'' + l.id + '\')" style="padding:12px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + statusColor + ';border-radius:6px;margin-bottom:6px;cursor:pointer">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
         '<div>' +
@@ -10035,6 +10073,10 @@ function renderLoads() {
         '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 8px;border-radius:3px;color:' + statusColor + ';border:1px solid ' + statusColor + ';letter-spacing:1px">' + l.status.toUpperCase() + '</div>' +
       '</div>' +
       '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:4px">' + (l.bundleUids || []).length + ' ' + LBL('bundles') + ' · ' + (l.totalWeight || 0).toLocaleString() + ' lb · ' + (l.totalLengthFt || 0) + 'ft</div>' +
+      (showProgress
+        ? '<div style="height:4px;background:var(--steel);border-radius:2px;margin-top:6px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--accent)"></div></div>' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--accent);margin-top:2px">' + pickedCount + ' / ' + l.bundleUids.length + ' picked</div>'
+        : '') +
     '</div>';
   }).join('');
 }
@@ -11050,6 +11092,8 @@ function _initAfterTenantKey(key) {
   subscribeShiftNotes();
   subscribeSlotFlags();
   subscribeLoads();
+  window.addEventListener('online', function() { updateSaveIndicator('connected ✓', '#336633'); });
+  window.addEventListener('offline', function() { updateSaveIndicator('offline — pick actions queued', '#f5a623'); });
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
   loadData(function(loaded) {
     populateLocationDropdown('straight');
