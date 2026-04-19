@@ -4123,6 +4123,17 @@ function dashStop() {
   if (_dashInterval) { clearInterval(_dashInterval); _dashInterval = null; }
 }
 
+var _dashRefreshTimer = null;
+function dashRefreshSoon() {
+  if (_dashRefreshTimer) clearTimeout(_dashRefreshTimer);
+  _dashRefreshTimer = setTimeout(function() {
+    var body = document.getElementById('dashboard-body');
+    if (body && !body.classList.contains('collapsed')) {
+      renderDashboard();
+    }
+  }, 1500);
+}
+
 function renderDashboard() {
   var container = document.getElementById('dash-content');
   if (!container) return;
@@ -10157,6 +10168,7 @@ function subscribeLoads() {
       renderLoadDetail(loads[overlay.dataset.loadId]);
     }
     if (_pickLoadId && document.getElementById('pick-overlay').classList.contains('active')) renderPickList();
+    dashRefreshSoon();
   });
 }
 
@@ -10987,6 +10999,7 @@ function subscribeShiftNotes() {
     shiftNotes = snap.val() || {};
     if (typeof renderShiftNotes === 'function') renderShiftNotes();
     if (typeof maybeShowShiftBanner === 'function') maybeShowShiftBanner();
+    dashRefreshSoon();
   });
 }
 
@@ -11066,6 +11079,7 @@ function subscribeAudit() {
     if (loadOv && loadOv.classList.contains('active') && loadOv.dataset.loadId && loads[loadOv.dataset.loadId]) {
       renderLoadDetail(loads[loadOv.dataset.loadId]);
     }
+    dashRefreshSoon();
   });
 }
 
@@ -11076,7 +11090,7 @@ var shippedBundlesRef = null;
 function subscribeShippedBundles() {
   if (shippedBundlesRef) shippedBundlesRef.off();
   shippedBundlesRef = ref('shippedBundles');
-  shippedBundlesRef.on('value', function(snap) { shippedBundlesCache = snap.val() || {}; });
+  shippedBundlesRef.on('value', function(snap) { shippedBundlesCache = snap.val() || {}; dashRefreshSoon(); });
 }
 
 // ─── BOL DATA + MODAL ────────────────────────────────────────────────────────
@@ -11391,6 +11405,7 @@ function subscribeSlotFlags() {
     Object.keys(raw).forEach(function(k) { slotFlagsData[fbDecode(k)] = raw[k]; });
     if (typeof renderAll === 'function') renderAll();
     if (typeof renderFlagsDashboard === 'function') renderFlagsDashboard();
+    dashRefreshSoon();
   });
 }
 
@@ -11882,6 +11897,7 @@ function saveData() {
       ref(FB_PATH).set(payload).then(function() {
         _pendingSave = false;
         updateSaveIndicator('saved ✓', '#336633');
+        if (typeof dashRefreshSoon === 'function') dashRefreshSoon();
       }).catch(function(e) {
         updateSaveIndicator('❌ ' + e.code, '#cc0000');
         console.error('Firebase save error:', e.code, e.message);
