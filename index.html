@@ -871,25 +871,6 @@
       <div id="shift-boundary-status" style="font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:16px;text-align:center;margin-top:6px"></div>
     </div>
 
-    <!-- Shipping Setup -->
-    <div style="padding:14px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px;margin-top:12px">
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">🚚 Shipping Setup</div>
-
-      <!-- Shipper Info -->
-      <div style="margin-bottom:14px">
-        <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:8px">Shipper Info</div>
-        <div id="shipper-form-body"></div>
-      </div>
-
-      <!-- Customers -->
-      <div style="border-top:1px solid var(--border);padding-top:14px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase">Customers</div>
-          <button onclick="openCustomerModal(null)" style="background:var(--accent);color:#001540;border:none;padding:5px 12px;border-radius:4px;font-family:'IBM Plex Mono',monospace;font-size:10px;cursor:pointer;font-weight:bold;letter-spacing:1px">+ ADD</button>
-        </div>
-        <div id="customer-list-body"></div>
-      </div>
-    </div>
 
   </div>
 </div>
@@ -1674,31 +1655,6 @@
     </div>
   </div>
 
-  <div class="section-card" id="sec-loads">
-    <button class="section-header" onclick="openSection('loads')">
-      <div class="sec-header-left">
-        <span class="sec-icon">🚛</span>
-        <span class="sec-title">LOADS</span>
-      </div>
-      <div class="sec-header-right">
-        <span id="loads-badge" class="sec-badge"></span>
-        <span class="sec-chevron">▼</span>
-      </div>
-    </button>
-    <div class="section-body collapsed" id="body-loads">
-      <div style="padding:16px">
-        <button class="btn btn-primary" onclick="onNewLoadClick()" style="margin-bottom:12px">+ NEW LOAD</button>
-        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
-          <button class="flt-btn flt-btn-active" id="loadflt-all" onclick="loadsFilterSet('all')">All</button>
-          <button class="flt-btn" id="loadflt-draft" onclick="loadsFilterSet('draft')">Draft</button>
-          <button class="flt-btn" id="loadflt-building" onclick="loadsFilterSet('building')">Building</button>
-          <button class="flt-btn" id="loadflt-staged" onclick="loadsFilterSet('staged')">Staged</button>
-          <button class="flt-btn" id="loadflt-shipped" onclick="loadsFilterSet('shipped')">Shipped</button>
-        </div>
-        <div id="loads-list"></div>
-      </div>
-    </div>
-  </div>
 
   <div class="section-card" id="sec-audit">
     <button class="section-header" onclick="openSection('audit')">
@@ -1716,10 +1672,8 @@
         <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
           <button class="flt-btn flt-btn-active" id="aflt-all" onclick="auditFilterSet('all')">All</button>
           <button class="flt-btn" id="aflt-bundle" onclick="auditFilterSet('bundle')">Bundles</button>
-          <button class="flt-btn" id="aflt-load" onclick="auditFilterSet('load')">Loads</button>
           <button class="flt-btn" id="aflt-flag" onclick="auditFilterSet('flag')">Flags</button>
           <button class="flt-btn" id="aflt-shiftNote" onclick="auditFilterSet('shiftNote')">Notes</button>
-          <button class="flt-btn" id="aflt-bol" onclick="auditFilterSet('bol')">BOLs</button>
         </div>
         <input type="text" id="audit-search" placeholder="Search summary, operator, entity ID…" oninput="renderAuditHistory()" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;margin-bottom:10px;box-sizing:border-box">
         <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
@@ -2474,21 +2428,6 @@
   </div>
 </div>
 
-<!-- LOAD DETAIL MODAL -->
-<div class="modal-overlay" id="load-detail-overlay" onclick="if(event.target===this)closeLoadDetail()">
-  <div class="modal" style="max-width:720px;width:95vw;max-height:90vh;overflow-y:auto">
-    <div class="modal-handle"></div>
-    <div id="load-detail-content"></div>
-  </div>
-</div>
-
-<!-- CUSTOMER EDIT MODAL -->
-<div class="modal-overlay" id="customer-modal-overlay" onclick="if(event.target===this)closeCustomerModal()">
-  <div class="modal" style="max-width:480px;width:95vw">
-    <div class="modal-handle"></div>
-    <div id="customer-modal-content"></div>
-  </div>
-</div>
 
 <!-- PICK LIST MODAL -->
 <div class="modal-overlay" id="pick-overlay" onclick="if(event.target===this)closePickList()">
@@ -2505,26 +2444,6 @@
 
 <div id="pick-print-root" style="display:none"></div>
 
-<!-- BUNDLE PICKER MODAL -->
-<div class="modal-overlay" id="bundle-picker-overlay" onclick="if(event.target===this)closeBundlePicker()">
-  <div class="modal" style="max-width:640px;width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
-    <div class="modal-handle"></div>
-    <div class="modal-title">ADD BUNDLES TO LOAD</div>
-    <input type="text" id="bundle-picker-search" placeholder="Search size, heat, location…" oninput="renderBundlePicker()" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;margin-bottom:12px">
-    <div id="bundle-picker-list" style="flex:1;overflow-y:auto;margin-bottom:12px"></div>
-    <div style="display:flex;gap:10px">
-      <button class="btn btn-primary" style="margin-top:0" onclick="submitBundlePicker()">ADD SELECTED</button>
-      <button class="btn-close-modal" onclick="closeBundlePicker()">Cancel</button>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="bol-overlay" onclick="if(event.target===this)closeBOLModal()">
-  <div class="modal" style="max-width:720px;width:96vw;max-height:92vh;overflow-y:auto">
-    <div class="modal-handle"></div>
-    <div id="bol-modal-content"></div>
-  </div>
-</div>
 
 <!-- INDUSTRY MODE SELECTOR -->
 <div id="mode-selector-overlay" onclick="handleModeSelectorClick(event)">
@@ -3380,14 +3299,6 @@ var shiftNotes = {};
 var shiftNotesRef = null;
 var slotFlagsData = {};
 var slotFlagsRef = null;
-var loads = {};
-var loadsRef = null;
-var shipperInfo = {};
-var customers = {};
-var shipperRef = null;
-var customersRef = null;
-var bols = {};
-var bolsRef = null;
 var auditLog = {};
 var auditRef = null;
 
@@ -3963,32 +3874,16 @@ function kpiReceivedInWindow(days) {
       if (new Date(i.receivedDate).getTime() >= cutoff) count += (i.bundles || 0);
     }
   });
-  Object.values(shippedBundlesCache || {}).forEach(function(i) {
-    if (i.receivedDate && !i.receivedDateBackfilled) {
-      if (new Date(i.receivedDate).getTime() >= cutoff) count += (i.bundles || 0);
-    }
-  });
   return count;
 }
 
 function kpiShippedInWindow(days) {
-  var cutoff = Date.now() - days * 86400000;
   var count = 0;
-  Object.values(shippedBundlesCache || {}).forEach(function(i) {
-    if (i.shippedAt) {
-      if (new Date(i.shippedAt).getTime() >= cutoff) count += (i.bundles || 0);
-    }
-  });
   return count;
 }
 
 function kpiShippedWeightTonsInWindow(days) {
-  var cutoff = Date.now() - days * 86400000;
-  var tons = 0;
-  Object.values(shippedBundlesCache || {}).forEach(function(i) {
-    if (i.shippedAt && new Date(i.shippedAt).getTime() >= cutoff) tons += (i.weightTons || 0);
-  });
-  return tons;
+  return 0;
 }
 
 function kpiLoadsShippedInWindow(days) {
@@ -4016,15 +3911,7 @@ function kpiRedTagCount() {
 }
 
 function kpiAvgTurnaroundDays() {
-  var diffs = [];
-  Object.values(shippedBundlesCache || {}).forEach(function(i) {
-    if (i.receivedDate && i.shippedAt && !i.receivedDateBackfilled) {
-      var d = (new Date(i.shippedAt).getTime() - new Date(i.receivedDate).getTime()) / 86400000;
-      if (d >= 0 && d < 365) diffs.push(d);
-    }
-  });
-  if (diffs.length === 0) return 0;
-  return Math.round(diffs.reduce(function(a, b) { return a + b; }, 0) / diffs.length);
+  return 0;
 }
 
 function kpiActionsToday() {
@@ -4069,12 +3956,6 @@ function kpiReceiveShipByDay(days) {
     if (result[key]) result[key].received += (i.bundles || 0);
   }
   inventory.forEach(tallyReceived);
-  Object.values(shippedBundlesCache || {}).forEach(tallyReceived);
-  Object.values(shippedBundlesCache || {}).forEach(function(i) {
-    if (!i.shippedAt) return;
-    var key = new Date(i.shippedAt).toISOString().slice(0, 10);
-    if (result[key]) result[key].shipped += (i.bundles || 0);
-  });
   return result;
 }
 
@@ -4366,9 +4247,7 @@ function toggleSection(name, btn) {
 
 function openSection(name) {
   var body = document.getElementById('body-' + name);
-  // Special case: loads body uses reversed naming convention
-  if (!body && name === 'loads') body = document.getElementById('loads-body');
-  var header = document.querySelector('#sec-' + name + ' .section-header');
+var header = document.querySelector('#sec-' + name + ' .section-header');
   if (!body) return;
 
   var isOpen = !body.classList.contains('collapsed');
@@ -4396,13 +4275,11 @@ function openSection(name) {
   if (name === 'flags')     renderFlagsDashboard();
   if (name === 'audit')     renderAuditHistory();
   if (name === 'shift-notes') renderShiftNotes();
-  if (name === 'loads')     renderLoads();
-  if (name === 'dashboard') { dashStart(); } else { dashStop(); }
+if (name === 'dashboard') { dashStart(); } else { dashStop(); }
 
   // Scroll to section
   var card = document.getElementById('sec-' + name);
-  if (!card && name === 'loads') card = document.getElementById('sec-loads');
-  if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
+if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
 }
 
 // Legacy switchTab — redirects to openSection
@@ -4895,8 +4772,7 @@ function addToArea22() {
     order: document.getElementById('a22-order').value.trim(),
     customer: document.getElementById('a22-customer').value.trim(),
     loc: 'AREA-22', logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString(),
-    loadId: null
+    receivedDate: new Date().toISOString()
   };
   area22Stacks.push(stack);
   inventory.push(stack);
@@ -5081,8 +4957,7 @@ function addToArea1() {
     order: document.getElementById('a1-order').value.trim(),
     customer: document.getElementById('a1-customer').value.trim(),
     loc: 'AREA-1', logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString(),
-    loadId: null
+    receivedDate: new Date().toISOString()
   };
   area1Stacks.push(stack);
   inventory.push(stack);
@@ -5759,8 +5634,7 @@ function confirmAddSecondary() {
     weightTons: secWtPerBdl * bundles,
     heat: '', ship: '', order: '', customer: '',
     loc: modalLoc, logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString(),
-    loadId: null
+    receivedDate: new Date().toISOString()
   };
 
   if (!storeExtra[modalLoc]) storeExtra[modalLoc] = [];
@@ -6961,8 +6835,7 @@ function runCSVImport() {
       ship: grp.ship, order: grp.order, customer: grp.customer,
       lpns: lpnStr,
       loc: loc, logged: 'imported',
-      receivedDate: grp.ship ? new Date(grp.ship).toISOString() : new Date().toISOString(),
-      loadId: null
+      receivedDate: grp.ship ? new Date(grp.ship).toISOString() : new Date().toISOString()
     };
 
     // If slot already has product, check if same or different
@@ -7240,8 +7113,7 @@ function runFullYardImport() {
           bundles: 1, weightTons: wtPerLpn, weightPerBundleTons: wtPerLpn,
           spoolWeightLbs: 0,
           lpns: lpn || '', loc: 'AREA-22', logged: 'fyi',
-          receivedDate: new Date().toISOString(),
-          loadId: null
+          receivedDate: new Date().toISOString()
         };
         area22Stacks.push(a22stack);
         inventory.push(a22stack);
@@ -7293,8 +7165,7 @@ function runFullYardImport() {
       weightTons: grp.wtTons, spoolWeightLbs: 0,
       heat: '', ship: '', order: '', customer: '',
       lpns: grp.lpns.join(', '), loc: loc, logged: 'fyi',
-      receivedDate: new Date().toISOString(),
-      loadId: null
+      receivedDate: new Date().toISOString()
     };
     if (store[loc]) {
       var ex = store[loc];
@@ -8257,8 +8128,7 @@ function ofFinalize() {
       weightPerBundleTons: bdlTons, weightTons: bdlTons * p.bundles,
       spoolWeightLbs: 0, ship: item.ship, order: item.order,
       customer: item.customer, loc: p.loc, logged: new Date().toLocaleTimeString(),
-      receivedDate: new Date().toISOString(),
-      loadId: null
+      receivedDate: new Date().toISOString()
     };
     var existing = store[p.loc];
     var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
@@ -8464,7 +8334,6 @@ function ofConfirmSplit() {
       spoolWeightLbs: 0, ship: item.ship || '', order: item.order || '',
       customer: item.customer || '', logged: new Date().toLocaleTimeString(),
       receivedDate: new Date().toISOString(),
-      loadId: null,
       splitPairedWith: pairedWith, splitTotal: bdl
     };
 
@@ -9052,8 +8921,7 @@ function logRun() {
           spoolWeightLbs: spoolLbsV,
           customer: document.getElementById('inp-customer').value.trim(),
           loc: p.loc, logged: new Date().toLocaleTimeString(),
-          receivedDate: new Date().toISOString(),
-          loadId: null
+          receivedDate: new Date().toISOString()
         };
         store[p.loc] = pItem;
         inventory.push(pItem);
@@ -9216,8 +9084,7 @@ function logRun() {
     customer: document.getElementById('inp-customer').value.trim(),
     heat: document.getElementById('inp-heat').value.trim(),
     loc: loc, logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString(),
-    loadId: null
+    receivedDate: new Date().toISOString()
   };
 
   var isSecondary = document.getElementById('inp-secondary').checked;
@@ -9928,8 +9795,6 @@ function openSettings() {
     var el = document.getElementById('shift-boundary-' + i);
     if (el) el.value = h;
   });
-  renderShipperForm();
-  renderCustomerList();
 }
 function closeSettings() {
   document.getElementById('settings-overlay').classList.remove('open');
@@ -10032,7 +9897,7 @@ var _auditFilter = 'all';
 
 function auditFilterSet(type) {
   _auditFilter = type;
-  ['all', 'bundle', 'load', 'flag', 'shiftNote', 'bol'].forEach(function(t) {
+  ['all', 'bundle', 'flag', 'shiftNote'].forEach(function(t) {
     var btn = document.getElementById('aflt-' + t);
     if (btn) btn.className = 'flt-btn' + (t === type ? ' flt-btn-active' : '');
   });
@@ -10171,846 +10036,6 @@ function deleteShiftNote(noteId) {
   });
 }
 
-// ─── LOADS CONSTANTS ─────────────────────────────────────────────────────────
-var TYPICAL_CHAIN_WLL_LB = 4700; // working load limit of 3/8" grade 70 chain
-var FMCSA_TIEDOWN_FRACTION = 0.5; // aggregate WLL must be >= 50% of cargo weight
-
-// ─── LOADS SUBSCRIPTION ──────────────────────────────────────────────────────
-function subscribeLoads() {
-  if (loadsRef) loadsRef.off();
-  loadsRef = ref('loads');
-  loadsRef.on('value', function(snap) {
-    loads = snap.val() || {};
-    if (typeof renderLoads === 'function') renderLoads();
-    if (typeof updateLoadsBadge === 'function') updateLoadsBadge();
-    var overlay = document.getElementById('load-detail-overlay');
-    if (overlay && overlay.classList.contains('active') && overlay.dataset.loadId && loads[overlay.dataset.loadId]) {
-      renderLoadDetail(loads[overlay.dataset.loadId]);
-    }
-    if (_pickLoadId && document.getElementById('pick-overlay').classList.contains('active')) renderPickList();
-    dashRefreshSoon();
-  });
-}
-
-// ─── LOADS CRUD ───────────────────────────────────────────────────────────────
-function generateLoadNumber() {
-  var today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-  var todays = Object.values(loads).filter(function(l) {
-    return l.loadNumber && l.loadNumber.indexOf('L-' + today) === 0;
-  });
-  var n = String(todays.length + 1).padStart(3, '0');
-  return 'L-' + today + '-' + n;
-}
-
-function createLoad(initial) {
-  var newLoad = Object.assign({
-    loadNumber: generateLoadNumber(),
-    status: 'draft',
-    customer: '', destination: '', carrier: '', scac: '',
-    truckNumber: '', driver: '', trailerNumber: '',
-    bundleUids: [],
-    totalWeight: 0,
-    totalLengthFt: 0,
-    maxWeight: 48000,
-    maxLengthFt: 53,
-    notes: '',
-    createdAt: new Date().toISOString(),
-    createdBy: getOperatorName(),
-    shippedAt: null, shippedBy: null
-  }, initial || {});
-  var pushRef = ref('loads').push();
-  newLoad.id = pushRef.key;
-  return pushRef.set(newLoad).then(function() {
-    writeAudit('load.create', 'load', newLoad.id, 'Created load ' + newLoad.loadNumber, { loadNumber: newLoad.loadNumber, customer: newLoad.customer });
-    return newLoad;
-  });
-}
-
-function updateLoad(loadId, patch) {
-  return ref('loads/' + loadId).update(patch);
-}
-
-function getFMCSATiedownCount(totalLengthFt) {
-  // FMCSA 49 CFR 393.110: min 2 tiedowns for first 10 ft, +1 per additional 10 ft
-  if (totalLengthFt <= 0) return 2;
-  if (totalLengthFt <= 10) return 2;
-  return 2 + Math.ceil((totalLengthFt - 10) / 10);
-}
-
-function getFMCSAMinAggregateWLL(totalWeightLb) {
-  return Math.ceil(totalWeightLb * FMCSA_TIEDOWN_FRACTION);
-}
-
-function getFMCSATiedownByWLL(totalWeightLb, chainWLL) {
-  chainWLL = chainWLL || TYPICAL_CHAIN_WLL_LB;
-  var minAgg = getFMCSAMinAggregateWLL(totalWeightLb);
-  return Math.ceil(minAgg / chainWLL);
-}
-
-function deleteLoad(loadId) {
-  var load = loads[loadId];
-  if (!load) return Promise.resolve();
-  if (load.status === 'shipped') return Promise.reject(new Error('Cannot delete shipped loads'));
-  var _delLoadNumber = load.loadNumber;
-  var uidsToFree = (load.bundleUids || []).slice();
-  var unassigns = uidsToFree.map(function(uid) {
-    return typeof unassignBundleFromLoad === 'function' ? unassignBundleFromLoad(uid) : Promise.resolve();
-  });
-  return Promise.all(unassigns).then(function() {
-    return ref('loads/' + loadId).remove();
-  }).then(function() {
-    writeAudit('load.delete', 'load', loadId, 'Deleted load ' + _delLoadNumber, { loadNumber: _delLoadNumber });
-  });
-}
-
-// ─── BUNDLE ASSIGNMENT HELPERS ────────────────────────────────────────────────
-function getAvailableBundlesForLoad() {
-  var out = [];
-  inventory.forEach(function(item) {
-    if (!item || !item.uid) return;
-    if (item.loadId) return;
-    if (item.loc && (scrapSlots[item.loc] || holdSlots[item.loc] || redTagSlots[item.loc] || reservedSlots[item.loc])) return;
-    out.push(item);
-  });
-  return out;
-}
-
-function addBundleToLoad(uid, loadId) {
-  var item = inventory.find(function(i) { return i.uid === uid; });
-  if (!item) return Promise.reject(new Error('Bundle not found: ' + uid));
-  if (item.loadId) return Promise.reject(new Error('Bundle already on load ' + item.loadId));
-  var load = loads[loadId];
-  if (!load) return Promise.reject(new Error('Load not found'));
-  if (load.status === 'shipped') return Promise.reject(new Error('Cannot modify shipped load'));
-
-  item.loadId = loadId;
-  if (item.loc && store[item.loc] && store[item.loc].uid === uid) store[item.loc].loadId = loadId;
-  Object.keys(storeExtra).forEach(function(slotId) {
-    (storeExtra[slotId] || []).forEach(function(ex) { if (ex.uid === uid) ex.loadId = loadId; });
-  });
-
-  var updatedUids = (load.bundleUids || []).concat([uid]);
-  saveData();
-
-  return ref('loads/' + loadId + '/bundleUids').set(updatedUids).then(function() {
-    return recomputeLoadTotals(loadId);
-  }).then(function() {
-    var _abl = loads[loadId];
-    writeAudit('load.bundle.add', 'load', loadId, 'Added bundle to ' + (_abl ? _abl.loadNumber : loadId), { uid: uid, loadId: loadId });
-  });
-}
-
-function unassignBundleFromLoad(uid) {
-  var item = inventory.find(function(i) { return i.uid === uid; });
-  if (!item || !item.loadId) return Promise.resolve();
-  var loadId = item.loadId;
-  item.loadId = null;
-  if (item.loc && store[item.loc] && store[item.loc].uid === uid) store[item.loc].loadId = null;
-  Object.keys(storeExtra).forEach(function(slotId) {
-    (storeExtra[slotId] || []).forEach(function(ex) { if (ex.uid === uid) ex.loadId = null; });
-  });
-
-  var load = loads[loadId];
-  if (!load) { saveData(); return Promise.resolve(); }
-  var updatedUids = (load.bundleUids || []).filter(function(u) { return u !== uid; });
-  saveData();
-  return ref('loads/' + loadId + '/bundleUids').set(updatedUids).then(function() {
-    return recomputeLoadTotals(loadId);
-  }).then(function() {
-    var _ubl = loads[loadId];
-    writeAudit('load.bundle.remove', 'load', loadId, 'Removed bundle from ' + (_ubl ? _ubl.loadNumber : loadId), { uid: uid, loadId: loadId });
-  });
-}
-
-function recomputeLoadTotals(loadId) {
-  var load = loads[loadId];
-  if (!load) return Promise.resolve();
-  var totalLbs = 0, maxLen = 0;
-  (load.bundleUids || []).forEach(function(uid) {
-    var b = inventory.find(function(i) { return i.uid === uid; });
-    if (b) {
-      totalLbs += (b.weightTons || 0) * 2000;
-      maxLen = Math.max(maxLen, parseFloat(b.length) || 0);
-    }
-  });
-  return ref('loads/' + loadId).update({
-    totalWeight: Math.round(totalLbs),
-    totalLengthFt: maxLen
-  });
-}
-
-// ─── LOAD STATE MACHINE ───────────────────────────────────────────────────────
-function advanceLoadStatus(loadId) {
-  var load = loads[loadId];
-  if (!load) return Promise.reject(new Error('Load not found'));
-  var flow = { draft: 'building', building: 'staged', staged: 'shipped' };
-  var next = flow[load.status];
-  if (!next) return Promise.reject(new Error('No next status from ' + load.status));
-  if (next === 'building' && (!load.customer || (load.bundleUids || []).length === 0)) {
-    return Promise.reject(new Error('Set customer and add at least one ' + LBL('bundle') + ' first.'));
-  }
-  if (next === 'staged' || next === 'shipped') {
-    var over = (load.totalWeight > (load.maxWeight || 48000)) || (load.totalLengthFt > (load.maxLengthFt || 53));
-    if (over) return Promise.reject(new Error('Over limit — resolve before advancing.'));
-  }
-  if (next === 'shipped') return shipLoad(loadId);
-  return updateLoad(loadId, { status: next }).then(function() {
-    writeAudit('load.status.' + next, 'load', loadId, load.loadNumber + ' status → ' + next, { loadNumber: load.loadNumber, status: next });
-  });
-}
-
-function regressLoadStatus(loadId) {
-  var load = loads[loadId];
-  if (!load) return Promise.reject(new Error('Load not found'));
-  var flow = { building: 'draft', staged: 'building' };
-  var prev = flow[load.status];
-  if (!prev) return Promise.reject(new Error('Cannot regress from ' + load.status));
-  return updateLoad(loadId, { status: prev });
-}
-
-function shipLoad(loadId) {
-  var load = loads[loadId];
-  if (!load) return Promise.reject(new Error('Load not found'));
-  if (load.status === 'shipped') return Promise.reject(new Error('Already shipped'));
-
-  var confirmed = confirm('Ship ' + load.loadNumber + ' to ' + (load.customer || 'customer') + '?\n\nThis removes ' + (load.bundleUids || []).length + ' ' + LBL('bundles') + ' from inventory. Cannot be undone.');
-  if (!confirmed) return Promise.reject(new Error('Cancelled by operator'));
-
-  var shippedAt = new Date().toISOString();
-  var shippedBy = getOperatorName();
-
-  var archivePromises = [];
-  (load.bundleUids || []).forEach(function(uid) {
-    var item = inventory.find(function(i) { return i.uid === uid; });
-    if (!item) return;
-
-    var snapshot = Object.assign({}, item, {
-      loadId: loadId,
-      loadNumber: load.loadNumber,
-      shippedAt: shippedAt,
-      shippedBy: shippedBy,
-      customer: load.customer,
-      destination: load.destination
-    });
-    archivePromises.push(ref('shippedBundles/' + uid).set(snapshot));
-
-    if (item.loc && store[item.loc] && store[item.loc].uid === uid) {
-      if (storeExtra[item.loc] && storeExtra[item.loc].length > 0) {
-        store[item.loc] = storeExtra[item.loc].shift();
-        if (storeExtra[item.loc].length === 0) delete storeExtra[item.loc];
-      } else {
-        store[item.loc] = null;
-      }
-    }
-    Object.keys(storeExtra).forEach(function(slotId) {
-      storeExtra[slotId] = (storeExtra[slotId] || []).filter(function(ex) { return ex.uid !== uid; });
-      if (storeExtra[slotId].length === 0) delete storeExtra[slotId];
-    });
-    var invIdx = inventory.findIndex(function(i) { return i.uid === uid; });
-    if (invIdx >= 0) inventory.splice(invIdx, 1);
-  });
-
-  return Promise.all(archivePromises).then(function() {
-    return ref('loads/' + loadId).update({
-      status: 'shipped',
-      shippedAt: shippedAt,
-      shippedBy: shippedBy
-    });
-  }).then(function() {
-    saveData();
-    renderAll();
-    var _shipBundleCount = (load.bundleUids || []).length;
-    writeAudit('load.ship', 'load', loadId, 'Shipped ' + load.loadNumber + ' — ' + _shipBundleCount + ' ' + LBL('bundles') + ' to ' + (load.customer || 'customer'), { loadNumber: load.loadNumber, bundleCount: _shipBundleCount, bundleUids: load.bundleUids || [], customer: load.customer, destination: load.destination });
-    showScrapToast('✓ ' + load.loadNumber + ' shipped — ' + _shipBundleCount + ' ' + LBL('bundles') + ' archived');
-  });
-}
-
-function renderLoadBOLs(load) {
-  var container = document.getElementById('load-bols-section');
-  if (!container) return;
-  var bolsForLoad = Object.values(bols).filter(function(b) { return b.loadId === load.id; });
-  if (bolsForLoad.length === 0) { container.innerHTML = ''; return; }
-  bolsForLoad.sort(function(a, b) { return (b.generatedAt || '').localeCompare(a.generatedAt || ''); });
-  var html = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">';
-  html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px">BOL HISTORY (' + bolsForLoad.length + ')</div>';
-  bolsForLoad.forEach(function(b) {
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--steel);border:1px solid var(--border);border-radius:4px;margin-bottom:3px">' +
-      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text)">' + escapeHtml(b.bolNumber) + '</div>' +
-      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim)">' + new Date(b.generatedAt).toLocaleString() + ' · ' + escapeHtml(b.generatedBy || '?') + '</div>' +
-      '<button onclick="reprintBOL(\'' + b.id + '\')" style="background:var(--steel-light);color:var(--accent);border:1px solid var(--accent);padding:4px 10px;border-radius:3px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">REPRINT</button>' +
-    '</div>';
-  });
-  html += '</div>';
-  container.innerHTML = html;
-}
-
-function renderLoadStateButtons(load) {
-  var container = document.getElementById('load-state-section');
-  if (!container) return;
-  var html = '';
-  var nextLabel = { draft: 'MARK AS BUILDING', building: 'MARK AS STAGED', staged: 'SHIP LOAD' }[load.status];
-  var nextColor = load.status === 'staged' ? 'var(--hot)' : 'var(--accent)';
-
-  if (nextLabel) {
-    html += '<button onclick="advanceLoadStatus(\'' + load.id + '\').catch(function(e) { alert(e.message); })" style="flex:1;min-width:140px;padding:12px;background:' + nextColor + ';color:#001540;border:none;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:2px;cursor:pointer;font-weight:bold">' + nextLabel + '</button>';
-  }
-
-  if (load.status === 'building' || load.status === 'staged') {
-    html += '<button onclick="regressLoadStatus(\'' + load.id + '\').catch(function(e) { alert(e.message); })" style="padding:12px 16px;background:var(--steel-light);color:var(--text-dim);border:1px solid var(--border);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">◂ BACK</button>';
-    html += '<button onclick="openPickList(\'' + load.id + '\')" style="padding:12px 20px;background:#4ab8ff;color:#001540;border:none;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;font-weight:bold">📋 OPEN PICK LIST</button>';
-  }
-
-  if (load.status === 'shipped') {
-    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--safe);padding:10px 12px;background:#0d1f10;border:1px solid var(--safe);border-radius:6px;flex:1">✓ Shipped by ' + escapeHtml(load.shippedBy || '?') + ' at ' + new Date(load.shippedAt).toLocaleString() + '</div>';
-  }
-
-  if (load.status === 'staged' || load.status === 'shipped') {
-    html += '<button onclick="openBOLModal(\'' + load.id + '\')" style="padding:12px 20px;background:#bb88ff;color:#001540;border:none;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:14px;letter-spacing:1px;cursor:pointer;font-weight:bold">📄 BOL</button>';
-  }
-
-  container.innerHTML = html;
-}
-
-// ─── PICK LIST ────────────────────────────────────────────────────────────────
-var _pickLoadId = null;
-
-function openPickList(loadId) {
-  _pickLoadId = loadId;
-  renderPickList();
-  document.getElementById('pick-overlay').classList.add('active');
-}
-
-function closePickList() {
-  document.getElementById('pick-overlay').classList.remove('active');
-  _pickLoadId = null;
-}
-
-function togglePicked(loadId, uid) {
-  var load = loads[loadId];
-  if (!load) return Promise.resolve();
-  var picked = load.picked || {};
-  var newVal = !picked[uid];
-
-  if (newVal) picked[uid] = { at: new Date().toISOString(), by: getOperatorName() };
-  else delete picked[uid];
-  load.picked = picked;
-  renderPickList();
-  renderLoads();
-
-  return ref('loads/' + loadId + '/picked').set(picked).catch(function(e) {
-    console.warn('Pick write failed (may retry when online):', e.message);
-  });
-}
-
-function pickAll(loadId) {
-  var load = loads[loadId];
-  if (!load) return;
-  var picked = {};
-  (load.bundleUids || []).forEach(function(uid) {
-    picked[uid] = { at: new Date().toISOString(), by: getOperatorName() };
-  });
-  load.picked = picked;
-  renderPickList();
-  renderLoads();
-  ref('loads/' + loadId + '/picked').set(picked);
-}
-
-function unpickAll(loadId) {
-  var load = loads[loadId];
-  if (!load) return;
-  if (!confirm('Clear all pick marks on this load?')) return;
-  load.picked = {};
-  renderPickList();
-  renderLoads();
-  ref('loads/' + loadId + '/picked').set({});
-}
-
-function renderPickList() {
-  var load = loads[_pickLoadId];
-  if (!load) return;
-  var uids = load.bundleUids || [];
-  var picked = load.picked || {};
-
-  var bundles = uids.map(function(uid) {
-    return inventory.find(function(i) { return i.uid === uid; });
-  }).filter(Boolean);
-
-  // Group by stanchion
-  var groups = {};
-  bundles.forEach(function(b) {
-    var stan = b.loc || 'OTHER';
-    if (stan.startsWith('RACK-')) stan = stan.split('.')[0];
-    else if (stan === 'CYCLE' || stan === 'AREA1' || stan === 'AREA22' || stan === 'AREA-1' || stan === 'AREA-22') { /* keep as-is */ }
-    else stan = stan.slice(0, -1); // strip side letter (e.g. '5A' → '5')
-    if (!groups[stan]) groups[stan] = [];
-    groups[stan].push(b);
-  });
-
-  var groupKeys = Object.keys(groups).sort(function(a, b) {
-    var na = parseInt(a), nb = parseInt(b);
-    if (!isNaN(na) && !isNaN(nb)) return na - nb;
-    if (!isNaN(na)) return -1;
-    if (!isNaN(nb)) return 1;
-    return a.localeCompare(b);
-  });
-
-  groupKeys.forEach(function(k) {
-    groups[k].sort(function(a, b) { return (a.receivedDate || '').localeCompare(b.receivedDate || ''); });
-  });
-
-  var total = bundles.length;
-  var pickedCount = bundles.filter(function(b) { return picked[b.uid]; }).length;
-  var pctDone = total > 0 ? Math.round((pickedCount / total) * 100) : 0;
-
-  document.getElementById('pick-header').innerHTML =
-    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--text);letter-spacing:2px">PICK LIST · ' + escapeHtml(load.loadNumber || '') + '</div>' +
-    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">' + escapeHtml(load.customer || '(no customer)') + (load.destination ? ' → ' + escapeHtml(load.destination) : '') + '</div>' +
-    '<div style="display:flex;align-items:center;gap:10px;margin-top:8px">' +
-      '<div style="flex:1;height:8px;background:var(--steel-light);border:1px solid var(--border);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + pctDone + '%;background:var(--accent);transition:width 0.3s"></div></div>' +
-      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + pickedCount + ' / ' + total + '</div>' +
-    '</div>' +
-    '<div style="display:flex;gap:6px;margin-top:6px">' +
-      '<button onclick="pickAll(\'' + load.id + '\')" style="background:var(--steel-light);color:var(--text);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">MARK ALL</button>' +
-      '<button onclick="unpickAll(\'' + load.id + '\')" style="background:none;color:var(--text-dim);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">CLEAR</button>' +
-    '</div>';
-
-  var html = '';
-  groupKeys.forEach(function(k) {
-    var groupLabel = k;
-    if (!isNaN(parseInt(k))) groupLabel = LBL('stan').toUpperCase() + ' ' + k;
-    else if (k === 'BSU') groupLabel = 'B.S.U';
-    else if (k.startsWith('RACK-')) groupLabel = 'RACK ' + k.replace('RACK-', '');
-    else if (k === 'AREA1' || k === 'AREA-1') groupLabel = 'AREA 1';
-    else if (k === 'AREA22' || k === 'AREA-22') groupLabel = 'AREA 22';
-
-    html += '<div style="margin-bottom:14px">';
-    html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--accent);letter-spacing:2px;padding:6px 10px;background:var(--steel);border-left:3px solid var(--accent);border-radius:0 4px 4px 0;margin-bottom:6px">' + escapeHtml(groupLabel) + '</div>';
-
-    groups[k].forEach(function(b) {
-      var isPicked = !!picked[b.uid];
-      var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
-      var meta = [b.heat, b.customer].filter(Boolean).join(' · ');
-      var bg = isPicked ? 'var(--steel)' : 'var(--steel-light)';
-      var strike = isPicked ? 'text-decoration:line-through;opacity:0.5' : '';
-
-      var flag = '';
-      if (holdSlots[b.loc]) flag = '<span style="background:#4ab8ff;color:#001540;padding:2px 6px;border-radius:3px;font-size:10px;font-family:\'IBM Plex Mono\',monospace;margin-left:6px">HOLD</span>';
-      else if (redTagSlots[b.loc]) flag = '<span style="background:var(--hot);color:#fff;padding:2px 6px;border-radius:3px;font-size:10px;font-family:\'IBM Plex Mono\',monospace;margin-left:6px">RED TAG</span>';
-
-      var ageDays = getItemAgeDays(b);
-      var ageBadge = ageDays !== null ? '<span class="age-badge ' + getAgeClass(ageDays) + '" style="margin-left:6px">' + formatAgeShort(ageDays) + '</span>' : '';
-
-      html += '<div onclick="togglePicked(\'' + escapeHtml(load.id) + '\', \'' + escapeHtml(b.uid) + '\')" style="display:flex;align-items:center;gap:12px;padding:14px;background:' + bg + ';border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer;' + strike + '">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:32px;color:' + (isPicked ? 'var(--safe)' : 'var(--text)') + ';min-width:70px;text-align:center;letter-spacing:1px">' + (isPicked ? '✓' : escapeHtml(b.loc || '?')) + '</div>' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:16px;color:var(--text)">' + escapeHtml(desc) + flag + ageBadge + '</div>' +
-          (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">' + escapeHtml(meta) + '</div>' : '') +
-          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--accent);margin-top:2px">' + (b.bundles || 0) + ' ' + LBL('bundles') + ' · ' + ((b.weightTons || 0) * 2000).toLocaleString() + ' lb</div>' +
-        '</div>' +
-      '</div>';
-    });
-
-    html += '</div>';
-  });
-
-  document.getElementById('pick-content').innerHTML = html;
-}
-
-function printPickSheet() {
-  var load = loads[_pickLoadId];
-  if (!load) { alert('No load to print.'); return; }
-
-  var bundles = (load.bundleUids || []).map(function(uid) {
-    return inventory.find(function(i) { return i.uid === uid; });
-  }).filter(Boolean);
-
-  var groups = {};
-  bundles.forEach(function(b) {
-    var stan = b.loc;
-    if (stan.startsWith('RACK-')) stan = stan.split('.')[0];
-    else if (stan === 'CYCLE' || stan === 'AREA1' || stan === 'AREA22') {}
-    else stan = stan.slice(0, -1);
-    if (!groups[stan]) groups[stan] = [];
-    groups[stan].push(b);
-  });
-  var groupKeys = Object.keys(groups).sort(function(a, b) {
-    var na = parseInt(a), nb = parseInt(b);
-    if (!isNaN(na) && !isNaN(nb)) return na - nb;
-    if (!isNaN(na)) return -1;
-    if (!isNaN(nb)) return 1;
-    return a.localeCompare(b);
-  });
-  groupKeys.forEach(function(k) {
-    groups[k].sort(function(a, b) { return (a.receivedDate || '').localeCompare(b.receivedDate || ''); });
-  });
-
-  var totalBundles = bundles.reduce(function(s, b) { return s + (b.bundles || 0); }, 0);
-  var totalWeight = load.totalWeight || 0;
-  var tiedowns = getFMCSATiedownCount(load.totalLengthFt);
-
-  var html = '<div class="ps-header">' +
-    '<div class="ps-title">PICK LIST — ' + escapeHtml(load.loadNumber) + '</div>' +
-    '<div class="ps-meta">' +
-      'Customer: ' + escapeHtml(load.customer || '—') + ' · Destination: ' + escapeHtml(load.destination || '—') + '<br>' +
-      'Carrier: ' + escapeHtml(load.carrier || '—') + ' · Truck: ' + escapeHtml(load.truckNumber || '—') + ' · Driver: ' + escapeHtml(load.driver || '—') + '<br>' +
-      'Printed ' + new Date().toLocaleString() + ' by ' + escapeHtml(getOperatorName()) +
-    '</div>' +
-  '</div>';
-
-  groupKeys.forEach(function(k) {
-    var groupLabel = k;
-    if (!isNaN(parseInt(k))) groupLabel = 'STANCHION ' + k;
-    else if (k === 'BSU') groupLabel = 'B.SU';
-    else if (k.startsWith('RACK-')) groupLabel = 'RACK ' + k.replace('RACK-', '');
-    else if (k === 'AREA1') groupLabel = 'AREA 1';
-    else if (k === 'AREA22') groupLabel = 'AREA 22';
-
-    html += '<div class="ps-group">';
-    html += '<div class="ps-group-head">' + escapeHtml(groupLabel) + '</div>';
-    html += '<table><thead><tr>' +
-      '<th style="width:30px">✓</th>' +
-      '<th style="width:60px">Slot</th>' +
-      '<th>Product</th>' +
-      '<th style="width:70px">Heat</th>' +
-      '<th style="width:60px">Bdl</th>' +
-      '<th style="width:70px">Weight</th>' +
-    '</tr></thead><tbody>';
-    groups[k].forEach(function(b) {
-      var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
-      html += '<tr>' +
-        '<td><span class="ps-check"></span></td>' +
-        '<td>' + escapeHtml(b.loc) + '</td>' +
-        '<td>' + escapeHtml(desc) + '</td>' +
-        '<td>' + escapeHtml(b.heat || '') + '</td>' +
-        '<td>' + (b.bundles || 0) + '</td>' +
-        '<td>' + ((b.weightTons || 0) * 2000).toLocaleString() + ' lb</td>' +
-      '</tr>';
-    });
-    html += '</tbody></table>';
-    html += '</div>';
-  });
-
-  html += '<div class="ps-footer">' +
-    '<strong>TOTALS:</strong> ' + bundles.length + ' items · ' + totalBundles + ' bundles · ' + totalWeight.toLocaleString() + ' lb · ' + load.totalLengthFt + 'ft max length<br>' +
-    '<strong>FMCSA tiedowns (min):</strong> ' + tiedowns + ' · Aggregate WLL ≥ ' + getFMCSAMinAggregateWLL(totalWeight).toLocaleString() + ' lb (50% cargo weight)<br>' +
-    '<strong>Driver signature:</strong> _______________________________ &nbsp;&nbsp;&nbsp; <strong>Date:</strong> ____________' +
-  '</div>';
-
-  document.getElementById('pick-print-root').innerHTML = html;
-  window.print();
-}
-
-// ─── BUNDLE PICKER ────────────────────────────────────────────────────────────
-var _pickerLoadId = null;
-var _pickerSelected = {};
-
-function openBundlePicker(loadId) {
-  _pickerLoadId = loadId;
-  _pickerSelected = {};
-  document.getElementById('bundle-picker-search').value = '';
-  renderBundlePicker();
-  document.getElementById('bundle-picker-overlay').classList.add('active');
-}
-
-function closeBundlePicker() {
-  document.getElementById('bundle-picker-overlay').classList.remove('active');
-  _pickerLoadId = null;
-  _pickerSelected = {};
-}
-
-function renderBundlePicker() {
-  var list = document.getElementById('bundle-picker-list');
-  if (!list) return;
-  var search = (document.getElementById('bundle-picker-search').value || '').toLowerCase().trim();
-  var available = getAvailableBundlesForLoad();
-  if (search) {
-    available = available.filter(function(b) {
-      var hay = [b.size, b.heat, b.loc, b.customer, b.grade, b.spec].filter(Boolean).join(' ').toLowerCase();
-      return hay.indexOf(search) !== -1;
-    });
-  }
-  if (available.length === 0) {
-    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px">No available ' + LBL('bundles') + '.</div>';
-    return;
-  }
-  list.innerHTML = available.map(function(b) {
-    var checked = _pickerSelected[b.uid] ? 'checked' : '';
-    var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
-    var meta = [b.heat, b.customer, b.order].filter(Boolean).join(' · ');
-    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--steel-light);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer">' +
-      '<input type="checkbox" ' + checked + ' onchange="_pickerSelected[\'' + b.uid + '\'] = this.checked" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + desc + '</div>' +
-        (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + meta + '</div>' : '') +
-      '</div>' +
-      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);text-align:right;flex-shrink:0">' + escapeHtml(b.loc) + '<br>' + (b.bundles || 0) + ' ' + LBL('bdlAbbr') + '</div>' +
-    '</label>';
-  }).join('');
-}
-
-function submitBundlePicker() {
-  var loadId = _pickerLoadId;
-  if (!loadId) return;
-  var uids = Object.keys(_pickerSelected).filter(function(u) { return _pickerSelected[u]; });
-  if (uids.length === 0) { closeBundlePicker(); return; }
-  var promises = uids.map(function(uid) { return addBundleToLoad(uid, loadId); });
-  Promise.all(promises).then(function() {
-    closeBundlePicker();
-    openLoadDetail(loadId);
-  }).catch(function(e) {
-    alert('Some bundles failed to add: ' + e.message);
-  });
-}
-
-// ─── LOADS UI ─────────────────────────────────────────────────────────────────
-var _loadFilter = 'all';
-
-function loadsFilterSet(status) {
-  _loadFilter = status;
-  ['all','draft','building','staged','shipped'].forEach(function(s) {
-    var btn = document.getElementById('loadflt-' + s);
-    if (btn) btn.className = 'flt-btn' + (s === status ? ' flt-btn-active' : '');
-  });
-  renderLoads();
-}
-
-function renderLoads() {
-  var list = document.getElementById('loads-list');
-  if (!list) return;
-  var arr = Object.values(loads);
-  if (_loadFilter !== 'all') arr = arr.filter(function(l) { return l.status === _loadFilter; });
-  arr.sort(function(a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
-
-  if (arr.length === 0) {
-    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px">No loads match the filter.</div>';
-    return;
-  }
-
-  list.innerHTML = arr.map(function(l) {
-    var statusColor = { draft: 'var(--text-dim)', building: '#f5d023', staged: '#4ab8ff', shipped: 'var(--safe)' }[l.status] || 'var(--text-dim)';
-    var showProgress = (l.status === 'staged' || l.status === 'building') && (l.bundleUids || []).length > 0;
-    var pickedCount = 0, pct = 0;
-    if (showProgress) {
-      pickedCount = Object.keys(l.picked || {}).filter(function(u) { return (l.bundleUids || []).indexOf(u) !== -1; }).length;
-      pct = Math.round((pickedCount / l.bundleUids.length) * 100);
-    }
-    return '<div onclick="openLoadDetail(\'' + l.id + '\')" style="padding:12px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + statusColor + ';border-radius:6px;margin-bottom:6px;cursor:pointer">' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
-        '<div>' +
-          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--text);letter-spacing:2px">' + escapeHtml(l.loadNumber) + '</div>' +
-          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">' + escapeHtml(l.customer || '(no customer)') + (l.destination ? ' → ' + escapeHtml(l.destination) : '') + '</div>' +
-        '</div>' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 8px;border-radius:3px;color:' + statusColor + ';border:1px solid ' + statusColor + ';letter-spacing:1px">' + l.status.toUpperCase() + '</div>' +
-      '</div>' +
-      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:4px">' + (l.bundleUids || []).length + ' ' + LBL('bundles') + ' · ' + (l.totalWeight || 0).toLocaleString() + ' lb · ' + (l.totalLengthFt || 0) + 'ft</div>' +
-      (showProgress
-        ? '<div style="height:4px;background:var(--steel);border-radius:2px;margin-top:6px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--accent)"></div></div>' +
-          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--accent);margin-top:2px">' + pickedCount + ' / ' + l.bundleUids.length + ' picked</div>'
-        : '') +
-    '</div>';
-  }).join('');
-}
-
-function updateLoadsBadge() {
-  var active = Object.values(loads).filter(function(l) { return l.status !== 'shipped'; }).length;
-  var badge = document.getElementById('loads-badge');
-  if (badge) badge.textContent = active > 0 ? active : '';
-}
-
-function onNewLoadClick() {
-  createLoad({}).then(function(newLoad) { openLoadDetail(newLoad.id); });
-}
-
-function openLoadDetail(loadId) {
-  var load = loads[loadId];
-  if (!load) return;
-  document.getElementById('load-detail-overlay').dataset.loadId = loadId;
-  renderLoadDetail(load);
-  document.getElementById('load-detail-overlay').classList.add('active');
-}
-
-function closeLoadDetail() {
-  document.getElementById('load-detail-overlay').classList.remove('active');
-}
-
-function renderLoadDetail(load) {
-  var container = document.getElementById('load-detail-content');
-  if (!container) return;
-  var editable = load.status !== 'shipped';
-  var statusColor = { draft: 'var(--text-dim)', building: '#f5d023', staged: '#4ab8ff', shipped: 'var(--safe)' }[load.status] || 'var(--text-dim)';
-
-  var html = '';
-  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">';
-  html +=   '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--text);letter-spacing:2px">' + escapeHtml(load.loadNumber) + '</div>';
-  html +=   '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">Created by ' + escapeHtml(load.createdBy || '?') + ' · ' + new Date(load.createdAt).toLocaleString() + '</div></div>';
-  html +=   '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;padding:3px 10px;border-radius:4px;color:' + statusColor + ';border:1px solid ' + statusColor + ';letter-spacing:1px">' + load.status.toUpperCase() + '</div>';
-  html += '</div>';
-
-  function field(key, label, placeholder) {
-    var val = escapeHtml(load[key] || '');
-    return '<div class="form-group"><label>' + label + '</label>' +
-      (editable
-        ? '<input type="text" value="' + val + '" placeholder="' + (placeholder || '') + '" onchange="updateLoad(\'' + load.id + '\', {' + key + ': this.value})">'
-        : '<div style="padding:12px;background:var(--steel);border:1px solid var(--border);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:13px">' + (val || '—') + '</div>') +
-    '</div>';
-  }
-
-  var customerField;
-  if (editable) {
-    var cval = escapeHtml(load.customer || '');
-    customerField = '<div class="form-group"><label>Customer</label>' +
-      '<div style="display:flex;gap:6px;align-items:center">' +
-        '<input type="text" value="' + cval + '" placeholder="ACME Construction" onchange="updateLoad(\'' + load.id + '\', {customer: this.value})" style="flex:1">' +
-        '<button id="customer-pick-btn-' + load.id + '" onclick="openCustomerPicker(\'' + load.id + '\')" style="white-space:nowrap;background:var(--steel-light);color:var(--accent);border:1px solid var(--accent);padding:7px 10px;border-radius:5px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">&#8659; Pick</button>' +
-      '</div>' +
-    '</div>';
-  } else {
-    customerField = field('customer', 'Customer', 'ACME Construction');
-  }
-  html += '<div class="form-row">' + customerField + field('destination', 'Destination', 'Address or job site') + '</div>';
-  html += '<div class="form-row">' + field('carrier', 'Carrier', 'XYZ Trucking') + field('scac', 'SCAC', 'XYZT') + '</div>';
-  html += '<div class="form-row">' + field('truckNumber', 'Truck #', '4521') + field('trailerNumber', 'Trailer #', 'TR-8899') + '</div>';
-  html += field('driver', 'Driver', 'John Smith');
-
-  html += '<div id="load-bundles-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"></div>';
-  html += '<div id="load-totals-section" style="margin-top:16px"></div>';
-  html += '<div id="load-bols-section"></div>';
-  html += '<div id="load-state-section" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap"></div>';
-
-  var loadAudit = renderMiniAudit('load', load.id);
-  if (loadAudit) {
-    html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">' + loadAudit + '</div>';
-  }
-
-  if (load.status === 'draft') {
-    html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);text-align:right">' +
-      '<button onclick="if(confirm(\'Delete this draft load?\')) { deleteLoad(\'' + load.id + '\').then(closeLoadDetail); }" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:6px 12px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">DELETE LOAD</button>' +
-    '</div>';
-  }
-
-  html += '<div style="margin-top:16px;text-align:right"><button class="btn-close-modal" onclick="closeLoadDetail()">Close</button></div>';
-
-  container.innerHTML = html;
-  renderLoadBundles(load);
-  renderLoadTotals(load);
-  renderLoadBOLs(load);
-  renderLoadStateButtons(load);
-}
-
-function renderLoadBundles(load) {
-  var container = document.getElementById('load-bundles-section');
-  if (!container) return;
-  var editable = load.status !== 'shipped';
-  var uids = load.bundleUids || [];
-
-  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
-    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--text);letter-spacing:2px">' + LBL('bundlesCap').toUpperCase() + ' (' + uids.length + ')</div>' +
-    (editable ? '<button onclick="openBundlePicker(\'' + load.id + '\')" style="background:var(--accent);color:#001540;border:none;padding:6px 14px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;font-weight:bold">+ ADD ' + LBL('bundles').toUpperCase() + '</button>' : '') +
-  '</div>';
-
-  if (uids.length === 0) {
-    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px;background:var(--steel);border-radius:6px">No ' + LBL('bundles') + ' on this load yet.</div>';
-  } else {
-    html += uids.map(function(uid) {
-      var b = inventory.find(function(i) { return i.uid === uid; });
-      if (!b) return '<div style="padding:8px;color:var(--hot);font-family:\'IBM Plex Mono\',monospace;font-size:11px">Missing bundle (uid: ' + escapeHtml(uid) + ')</div>';
-      var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
-      var meta = [b.heat, b.customer, b.order].filter(Boolean).join(' · ');
-      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--steel-light);border:1px solid var(--border);border-radius:6px;margin-bottom:4px">' +
-        '<div style="flex:1;min-width:0">' +
-          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + escapeHtml(desc) + '</div>' +
-          (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + escapeHtml(meta) + '</div>' : '') +
-          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">' + escapeHtml(b.loc) + ' · ' + (b.bundles || 0) + ' ' + LBL('bdlAbbr') + ' · ' + Math.round((b.weightTons || 0) * 2000).toLocaleString() + ' lb</div>' +
-        '</div>' +
-        (editable ? '<button onclick="unassignBundleFromLoad(\'' + uid + '\').then(function(){ openLoadDetail(\'' + load.id + '\'); })" style="background:none;color:var(--hot);border:none;font-size:20px;cursor:pointer;padding:0 6px;flex-shrink:0">×</button>' : '') +
-      '</div>';
-    }).join('');
-  }
-
-  container.innerHTML = html;
-}
-
-function renderLoadTotals(load) {
-  var container = document.getElementById('load-totals-section');
-  if (!container) return;
-
-  var weightPct = (load.totalWeight / (load.maxWeight || 48000)) * 100;
-  var lengthPct = (load.totalLengthFt / (load.maxLengthFt || 53)) * 100;
-
-  function barColor(pct) {
-    if (pct < 80) return 'var(--safe)';
-    if (pct < 95) return '#f5d023';
-    if (pct < 100) return 'var(--warn)';
-    return 'var(--hot)';
-  }
-
-  var tiedownsByLength = getFMCSATiedownCount(load.totalLengthFt);
-  var tiedownsByWeight = getFMCSATiedownByWLL(load.totalWeight);
-  var tiedownsRequired = Math.max(tiedownsByLength, tiedownsByWeight);
-  var minAggWLL = getFMCSAMinAggregateWLL(load.totalWeight);
-
-  var overLimit = weightPct >= 100 || lengthPct >= 100;
-
-  var pieceCount = (load.bundleUids || []).reduce(function(sum, uid) {
-    var b = inventory.find(function(i) { return i.uid === uid; });
-    return sum + ((b && b.bundles) || 0);
-  }, 0);
-
-  var heats = new Set();
-  (load.bundleUids || []).forEach(function(uid) {
-    var b = inventory.find(function(i) { return i.uid === uid; });
-    if (b && b.heat) heats.add(b.heat);
-  });
-
-  var editable = load.status !== 'shipped';
-
-  container.innerHTML =
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">' +
-      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px">CAPS:</div>' +
-      '<label style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:4px">Max weight (lb)' +
-        (editable
-          ? '<input type="number" value="' + (load.maxWeight || 48000) + '" min="1" style="width:90px;background:var(--steel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:\'IBM Plex Mono\',monospace;font-size:10px" onchange="updateLoad(\'' + load.id + '\', { maxWeight: parseFloat(this.value) || 48000 })">'
-          : '<span style="color:var(--text);margin-left:4px">' + (load.maxWeight || 48000).toLocaleString() + '</span>') +
-      '</label>' +
-      '<label style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:4px">Max length (ft)' +
-        (editable
-          ? '<input type="number" value="' + (load.maxLengthFt || 53) + '" min="1" style="width:70px;background:var(--steel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:\'IBM Plex Mono\',monospace;font-size:10px" onchange="updateLoad(\'' + load.id + '\', { maxLengthFt: parseFloat(this.value) || 53 })">'
-          : '<span style="color:var(--text);margin-left:4px">' + (load.maxLengthFt || 53) + '</span>') +
-      '</label>' +
-    '</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
-      '<div style="flex:1;min-width:150px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:10px">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px">WEIGHT</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:' + barColor(weightPct) + ';letter-spacing:1px">' + load.totalWeight.toLocaleString() + ' / ' + (load.maxWeight || 48000).toLocaleString() + ' lb</div>' +
-        '<div style="height:4px;background:var(--steel-light);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:' + Math.min(100, weightPct) + '%;background:' + barColor(weightPct) + '"></div></div>' +
-      '</div>' +
-      '<div style="flex:1;min-width:150px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:10px">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px">LENGTH</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:' + barColor(lengthPct) + ';letter-spacing:1px">' + load.totalLengthFt + ' / ' + (load.maxLengthFt || 53) + ' ft</div>' +
-        '<div style="height:4px;background:var(--steel-light);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:' + Math.min(100, lengthPct) + '%;background:' + barColor(lengthPct) + '"></div></div>' +
-      '</div>' +
-    '</div>' +
-    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' +
-      '<div style="flex:1;min-width:100px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:8px 10px">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">Pieces</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--text)">' + pieceCount + '</div>' +
-      '</div>' +
-      '<div style="flex:1;min-width:100px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:8px 10px">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">Distinct heats</div>' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--text)">' + heats.size + '</div>' +
-      '</div>' +
-    '</div>' +
-    '<div style="background:#0d1f10;border:1px solid var(--border);border-radius:6px;padding:10px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text)">' +
-      '<div style="color:var(--accent);margin-bottom:4px;letter-spacing:1px">FMCSA TIEDOWN GUIDE (49 CFR 393)</div>' +
-      '<div>Minimum tiedowns required: <strong style="color:var(--safe)">' + tiedownsRequired + '</strong></div>' +
-      '<div style="color:var(--text-dim);font-size:10px;margin-top:2px">• By length (' + load.totalLengthFt + 'ft): ' + tiedownsByLength + ' minimum</div>' +
-      '<div style="color:var(--text-dim);font-size:10px">• By weight (assuming ' + TYPICAL_CHAIN_WLL_LB.toLocaleString() + 'lb WLL per tiedown): ' + tiedownsByWeight + ' minimum</div>' +
-      '<div style="margin-top:4px">Aggregate WLL required: <strong style="color:var(--safe)">' + minAggWLL.toLocaleString() + ' lb</strong> (50% of cargo weight)</div>' +
-      '<div style="color:var(--text-dim);font-size:10px;margin-top:2px">Re-tension within 50 miles, then every 150 miles or 3 hours of driving.</div>' +
-    '</div>' +
-    (overLimit ? '<div style="margin-top:8px;padding:10px;background:#2a0a0a;border:1px solid var(--hot);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--hot)">⛔ OVER LIMIT — resolve before advancing to Staged or Shipped.</div>' : '');
-}
-
 // ─── SHIFT NOTES SUBSCRIPTION ────────────────────────────────────────────────
 function subscribeShiftNotes() {
   if (shiftNotesRef) shiftNotesRef.off();
@@ -11020,37 +10045,6 @@ function subscribeShiftNotes() {
     if (typeof renderShiftNotes === 'function') renderShiftNotes();
     if (typeof maybeShowShiftBanner === 'function') maybeShowShiftBanner();
     dashRefreshSoon();
-  });
-}
-
-// ─── SHIPPER / CUSTOMER SUBSCRIPTIONS ────────────────────────────────────────
-function subscribeShipper() {
-  if (shipperRef) shipperRef.off();
-  shipperRef = ref('shipper');
-  shipperRef.on('value', function(snap) {
-    shipperInfo = snap.val() || {};
-    renderShipperForm();
-  });
-}
-
-function subscribeCustomers() {
-  if (customersRef) customersRef.off();
-  customersRef = ref('customers');
-  customersRef.on('value', function(snap) {
-    customers = snap.val() || {};
-    renderCustomerList();
-  });
-}
-
-function subscribeBOLs() {
-  if (bolsRef) bolsRef.off();
-  bolsRef = ref('bols');
-  bolsRef.on('value', function(snap) {
-    bols = snap.val() || {};
-    var overlay = document.getElementById('load-detail-overlay');
-    if (overlay && overlay.classList.contains('active') && overlay.dataset.loadId && loads[overlay.dataset.loadId]) {
-      renderLoadBOLs(loads[overlay.dataset.loadId]);
-    }
   });
 }
 
@@ -11094,325 +10088,8 @@ function subscribeAudit() {
       var ov = document.getElementById('modal-overlay');
       if (ov && ov.classList.contains('active')) { try { showModal(modalLoc); } catch(e) {} }
     }
-    // Re-render load detail modal if open
-    var loadOv = document.getElementById('load-detail-overlay');
-    if (loadOv && loadOv.classList.contains('active') && loadOv.dataset.loadId && loads[loadOv.dataset.loadId]) {
-      renderLoadDetail(loads[loadOv.dataset.loadId]);
-    }
     dashRefreshSoon();
   });
-}
-
-// ─── SHIPPED BUNDLES CACHE ───────────────────────────────────────────────────
-var shippedBundlesCache = {};
-var shippedBundlesRef = null;
-
-function subscribeShippedBundles() {
-  if (shippedBundlesRef) shippedBundlesRef.off();
-  shippedBundlesRef = ref('shippedBundles');
-  shippedBundlesRef.on('value', function(snap) { shippedBundlesCache = snap.val() || {}; dashRefreshSoon(); });
-}
-
-// ─── BOL DATA + MODAL ────────────────────────────────────────────────────────
-function findInShippedBundles(uid) {
-  return shippedBundlesCache[uid] || null;
-}
-
-function buildBOLData(loadId, options) {
-  options = options || {};
-  var load = loads[loadId];
-  if (!load) throw new Error('Load not found');
-
-  var lineItems = (load.bundleUids || []).map(function(uid) {
-    var b = inventory.find(function(i) { return i.uid === uid; }) || findInShippedBundles(uid);
-    if (!b) return null;
-    var desc = [b.grade ? 'Gr ' + b.grade : '', b.spec, b.size, b.length ? formatLength(b.length) : '', b.type === 'spool' ? 'coil' : 'straight'].filter(Boolean).join(' ');
-    return {
-      pkgs: 1,
-      description: desc,
-      heat: b.heat || '',
-      weightLb: Math.round((b.weightTons || 0) * 2000),
-      lengthFt: parseFloat(b.length) || 0,
-      bundleCount: b.bundles || 0,
-      pieces: (b.bundles || 0) * (b.pieces || 0)
-    };
-  }).filter(Boolean);
-
-  var totals = {
-    pkgs: lineItems.length,
-    weightLb: lineItems.reduce(function(s, x) { return s + x.weightLb; }, 0),
-    bundleCount: lineItems.reduce(function(s, x) { return s + x.bundleCount; }, 0),
-    pieces: lineItems.reduce(function(s, x) { return s + x.pieces; }, 0),
-    maxLengthFt: lineItems.reduce(function(m, x) { return Math.max(m, x.lengthFt); }, 0)
-  };
-
-  var custRecord = Object.values(customers).find(function(c) { return c.name === load.customer; }) || {};
-
-  return {
-    bolNumber: 'BOL-' + load.loadNumber,
-    date: load.shippedAt ? new Date(load.shippedAt).toISOString().slice(0,10) : new Date().toISOString().slice(0,10),
-    isHazmat: !!options.isHazmat,
-    shipper: shipperInfo || {},
-    consignee: {
-      name: load.customer || '',
-      addressLine1: custRecord.addressLine1 || load.destination || '',
-      addressLine2: custRecord.addressLine2 || '',
-      city: custRecord.city || '',
-      state: custRecord.state || '',
-      zip: custRecord.zip || '',
-      contactName: custRecord.contactName || '',
-      contactPhone: custRecord.contactPhone || ''
-    },
-    carrier: {
-      name: load.carrier || '',
-      scac: load.scac || '',
-      truckNumber: load.truckNumber || '',
-      trailerNumber: load.trailerNumber || '',
-      driver: load.driver || '',
-      proNumber: options.proNumber || ''
-    },
-    lineItems: lineItems,
-    totals: totals,
-    specialInstructions: load.notes || '',
-    loadId: loadId,
-    loadNumber: load.loadNumber,
-    generatedAt: new Date().toISOString(),
-    generatedBy: getOperatorName()
-  };
-}
-
-var _bolDraft = null;
-
-function openBOLModal(loadId) {
-  try {
-    _bolDraft = buildBOLData(loadId, {});
-  } catch(e) {
-    alert(e.message); return;
-  }
-  renderBOLModal();
-  document.getElementById('bol-overlay').classList.add('active');
-}
-
-function closeBOLModal() {
-  document.getElementById('bol-overlay').classList.remove('active');
-  _bolDraft = null;
-}
-
-function renderBOLModal() {
-  if (!_bolDraft) return;
-  var d = _bolDraft;
-  var html = '';
-  html += '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--text);letter-spacing:2px;margin-bottom:4px">BILL OF LADING PREVIEW</div>';
-  html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-bottom:12px">' + escapeHtml(d.bolNumber) + ' · ' + escapeHtml(d.date) + '</div>';
-
-  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">';
-  html += '<div style="background:var(--steel-light);padding:10px;border-radius:6px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--text-dim);letter-spacing:1px">FROM (SHIPPER)</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);white-space:pre-line">' + escapeHtml([d.shipper.name, d.shipper.addressLine1, d.shipper.addressLine2, [d.shipper.city, d.shipper.state, d.shipper.zip].filter(Boolean).join(', '), d.shipper.phone].filter(Boolean).join('\n')) + '</div></div>';
-  html += '<div style="background:var(--steel-light);padding:10px;border-radius:6px;border:1px solid var(--border)"><div style="font-size:9px;color:var(--text-dim);letter-spacing:1px">TO (CONSIGNEE)</div><div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);white-space:pre-line">' + escapeHtml([d.consignee.name, d.consignee.addressLine1, d.consignee.addressLine2, [d.consignee.city, d.consignee.state, d.consignee.zip].filter(Boolean).join(', '), d.consignee.contactName ? 'Attn: ' + d.consignee.contactName : '', d.consignee.contactPhone].filter(Boolean).join('\n')) + '</div></div>';
-  html += '</div>';
-
-  html += '<div class="form-group"><label>PRO # (optional, provided by carrier)</label><input type="text" id="bol-pro" value="' + escapeHtml(d.carrier.proNumber || '') + '" placeholder="PRO number"></div>';
-  html += '<div class="form-group"><label><input type="checkbox" id="bol-hazmat" ' + (d.isHazmat ? 'checked' : '') + ' style="width:16px;height:16px;margin-right:6px">This shipment contains HAZARDOUS MATERIAL (triggers hazmat placarding on BOL)</label></div>';
-
-  html += '<div style="margin:12px 0"><div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:var(--text);letter-spacing:2px;margin-bottom:6px">LINE ITEMS (' + d.lineItems.length + ')</div>';
-  html += '<div style="max-height:200px;overflow-y:auto;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:8px">';
-  d.lineItems.forEach(function(li) {
-    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text);padding:2px 0;border-bottom:1px solid var(--border)">' + escapeHtml(li.description) + ' · H ' + escapeHtml(li.heat || '—') + ' · ' + li.weightLb.toLocaleString() + ' lb · ' + li.bundleCount + ' bdl</div>';
-  });
-  html += '</div></div>';
-
-  html += '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px">';
-  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">PKGS</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + d.totals.pkgs + '</div></div>';
-  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">BUNDLES</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + d.totals.bundleCount + '</div></div>';
-  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">WEIGHT</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:var(--accent)">' + d.totals.weightLb.toLocaleString() + ' lb</div></div>';
-  html += '<div style="background:var(--steel);padding:8px;border-radius:4px;border:1px solid var(--border);text-align:center"><div style="font-size:9px;color:var(--text-dim)">MAX LEN</div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--accent)">' + d.totals.maxLengthFt + 'ft</div></div>';
-  html += '</div>';
-
-  html += '<div class="form-group"><label>Special Instructions</label><textarea id="bol-notes" rows="2" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;border-radius:6px;outline:none;resize:vertical">' + escapeHtml(d.specialInstructions || '') + '</textarea></div>';
-
-  html += '<div style="display:flex;gap:10px;margin-top:14px">';
-  html += '<button class="btn btn-primary" style="margin-top:0" onclick="generateBOLPDF()">📄 GENERATE PDF</button>';
-  html += '<button class="btn-close-modal" onclick="closeBOLModal()">Cancel</button>';
-  html += '</div>';
-
-  document.getElementById('bol-modal-content').innerHTML = html;
-}
-
-function generateBOLPDF() {
-  if (!_bolDraft) return;
-  _bolDraft.carrier.proNumber = document.getElementById('bol-pro').value.trim();
-  _bolDraft.isHazmat = document.getElementById('bol-hazmat').checked;
-  _bolDraft.specialInstructions = document.getElementById('bol-notes').value.trim();
-  generateBOLPDF_internal(_bolDraft, { skipArchive: false });
-}
-
-function reprintBOL(bolId) {
-  var d = bols[bolId];
-  if (!d) { alert('BOL not found.'); return; }
-  generateBOLPDF_internal(d, { skipArchive: true });
-}
-
-function generateBOLPDF_internal(d, opts) {
-  opts = opts || {};
-  var doc = new jspdf.jsPDF({ unit: 'pt', format: 'letter' });
-  var W = doc.internal.pageSize.getWidth();
-  var M = 40;
-
-  // Title
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text('STRAIGHT BILL OF LADING', W/2, 50, { align: 'center' });
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Non-Negotiable', W/2, 66, { align: 'center' });
-
-  // BOL # + Date (top-right)
-  doc.setFontSize(10);
-  doc.setFont('helvetica', 'bold');
-  doc.text('BOL #: ' + d.bolNumber, W - M, 50, { align: 'right' });
-  doc.text('Date: ' + d.date, W - M, 64, { align: 'right' });
-
-  // Divider
-  doc.setDrawColor(0);
-  doc.setLineWidth(1);
-  doc.line(M, 80, W - M, 80);
-
-  // Parties — two columns
-  var partyY = 90;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('FROM (SHIPPER)', M, partyY);
-  doc.text('TO (CONSIGNEE)', W/2 + 10, partyY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-
-  var shipperLines = [d.shipper.name, d.shipper.addressLine1, d.shipper.addressLine2, [d.shipper.city, d.shipper.state, d.shipper.zip].filter(Boolean).join(', '), d.shipper.phone].filter(Boolean);
-  var consigneeLines = [d.consignee.name, d.consignee.addressLine1, d.consignee.addressLine2, [d.consignee.city, d.consignee.state, d.consignee.zip].filter(Boolean).join(', '), d.consignee.contactName ? 'Attn: ' + d.consignee.contactName : '', d.consignee.contactPhone].filter(Boolean);
-
-  shipperLines.forEach(function(line, i) { doc.text(line, M, partyY + 14 + i * 12); });
-  consigneeLines.forEach(function(line, i) { doc.text(line, W/2 + 10, partyY + 14 + i * 12); });
-
-  var partyBottom = partyY + 14 + Math.max(shipperLines.length, consigneeLines.length) * 12 + 6;
-  doc.line(M, partyBottom, W - M, partyBottom);
-
-  // Carrier section
-  var carrierY = partyBottom + 10;
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(9);
-  doc.text('CARRIER', M, carrierY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(10);
-  var carrierLine = [
-    d.carrier.name ? 'Name: ' + d.carrier.name : '',
-    d.carrier.scac ? 'SCAC: ' + d.carrier.scac : '',
-    d.carrier.truckNumber ? 'Truck: ' + d.carrier.truckNumber : '',
-    d.carrier.trailerNumber ? 'Trailer: ' + d.carrier.trailerNumber : '',
-    d.carrier.driver ? 'Driver: ' + d.carrier.driver : '',
-    d.carrier.proNumber ? 'PRO: ' + d.carrier.proNumber : ''
-  ].filter(Boolean).join('   ');
-  doc.text(carrierLine, M, carrierY + 14);
-
-  var carrierBottom = carrierY + 24;
-  doc.line(M, carrierBottom, W - M, carrierBottom);
-
-  // Hazmat banner
-  var tableY = carrierBottom + 10;
-  if (d.isHazmat) {
-    doc.setFillColor(255, 200, 200);
-    doc.rect(M, tableY, W - 2*M, 20, 'F');
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(12);
-    doc.setTextColor(180, 0, 0);
-    doc.text('\u26a0 HAZARDOUS MATERIAL \u2014 Placards Required', W/2, tableY + 14, { align: 'center' });
-    doc.setTextColor(0, 0, 0);
-    tableY += 30;
-  } else {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(9);
-    doc.text('NON-HAZARDOUS', M, tableY + 10);
-    tableY += 20;
-  }
-
-  // Line items table
-  doc.autoTable({
-    startY: tableY,
-    head: [['Pkgs', 'Description', 'Heat #', 'Weight (lb)', 'Length (ft)', 'Bdl', 'Pieces']],
-    body: d.lineItems.map(function(li) {
-      return [li.pkgs, li.description, li.heat, li.weightLb.toLocaleString(), li.lengthFt, li.bundleCount, li.pieces];
-    }),
-    foot: [[d.totals.pkgs + ' pkgs', 'TOTALS', '', d.totals.weightLb.toLocaleString() + ' lb', d.totals.maxLengthFt + ' ft max', d.totals.bundleCount, d.totals.pieces]],
-    theme: 'grid',
-    styles: { fontSize: 9, cellPadding: 4 },
-    headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], fontStyle: 'bold' },
-    footStyles: { fillColor: [240, 240, 240], textColor: [0, 0, 0], fontStyle: 'bold' }
-  });
-
-  var afterTableY = doc.lastAutoTable.finalY + 16;
-
-  // Special instructions
-  if (d.specialInstructions) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(9);
-    doc.text('SPECIAL INSTRUCTIONS', M, afterTableY);
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(9);
-    var wrapped = doc.splitTextToSize(d.specialInstructions, W - 2*M);
-    doc.text(wrapped, M, afterTableY + 12);
-    afterTableY += 14 + wrapped.length * 10;
-  }
-
-  // MTR statement
-  if (d.shipper.mtrStatement) {
-    doc.setFont('helvetica', 'italic');
-    doc.setFontSize(8);
-    var mtrWrapped = doc.splitTextToSize(d.shipper.mtrStatement, W - 2*M);
-    doc.text(mtrWrapped, M, afterTableY + 4);
-    afterTableY += 4 + mtrWrapped.length * 9;
-  }
-
-  // Received in good order statement
-  afterTableY += 10;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8);
-  var ackText = 'Received the above property in apparent good order, except as noted. Subject to terms and conditions of the uniform straight bill of lading.';
-  var ackWrapped = doc.splitTextToSize(ackText, W - 2*M);
-  doc.text(ackWrapped, M, afterTableY);
-  afterTableY += ackWrapped.length * 10 + 10;
-
-  // Signature lines — two columns
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('Shipper Signature', M, afterTableY);
-  doc.text('Consignee Signature', W/2 + 10, afterTableY);
-  doc.setFont('helvetica', 'normal');
-  doc.line(M, afterTableY + 24, W/2 - 20, afterTableY + 24);
-  doc.line(W/2 + 10, afterTableY + 24, W - M, afterTableY + 24);
-  doc.text('Date: ________________', M, afterTableY + 36);
-  doc.text('Date: ________________', W/2 + 10, afterTableY + 36);
-
-  // Footer
-  var footerY = doc.internal.pageSize.getHeight() - 30;
-  doc.setFontSize(8);
-  doc.setTextColor(100, 100, 100);
-  doc.text('Generated ' + new Date(d.generatedAt).toLocaleString() + ' by ' + d.generatedBy, M, footerY);
-  doc.text('Load: ' + d.loadNumber, W - M, footerY, { align: 'right' });
-
-  if (!opts.skipArchive) {
-    var pushRef = ref('bols').push();
-    var snapshot = Object.assign({}, d, { id: pushRef.key });
-    pushRef.set(snapshot).then(function() {
-      writeAudit('bol.generate', 'bol', snapshot.id, 'Generated BOL ' + d.bolNumber + ' for ' + d.loadNumber, { bolNumber: d.bolNumber, loadId: d.loadId, loadNumber: d.loadNumber, bundleCount: (d.lineItems || []).length, totalWeight: d.totals ? d.totals.weightLb : 0 });
-      doc.save(d.bolNumber + '.pdf');
-      closeBOLModal();
-      showScrapToast('\u2713 BOL generated and archived');
-    }).catch(function(e) {
-      alert('BOL archive failed: ' + e.message + '. Download will proceed without archive.');
-      doc.save(d.bolNumber + '.pdf');
-    });
-  } else {
-    writeAudit('bol.reprint', 'bol', d.id || '', 'Reprinted BOL ' + d.bolNumber, { bolNumber: d.bolNumber });
-    doc.save(d.bolNumber + ' (reprint).pdf');
-    showScrapToast('\u2713 BOL reprinted from archive');
-  }
 }
 
 // ─── SLOT FLAGS SUBSCRIPTION + HELPERS ───────────────────────────────────────
@@ -11910,7 +10587,6 @@ function saveData() {
         })(),
         runCycle:       runCycle,
         runCycleNextId: runCycleNextId,
-        loadIdMigrated: true,
         savedAt: new Date().toISOString()
       };
       updateSaveIndicator('saving…', '#f5a623');
@@ -11986,20 +10662,6 @@ function loadData(callback) {
         _backfillCount++;
       });
       if (_backfillCount > 0) { console.log('Backfill: stamped receivedDate on ' + _backfillCount + ' items'); saveData(); }
-      // One-time migration: default loadId = null on any item missing it
-      if (!payload.loadIdMigrated) {
-        var _loadIdFixed = 0;
-        function _fixLoadId(item) {
-          if (!item) return;
-          if (!('loadId' in item)) { item.loadId = null; _loadIdFixed++; }
-        }
-        Object.values(store).forEach(_fixLoadId);
-        Object.values(storeExtra).forEach(function(arr) { (arr || []).forEach(_fixLoadId); });
-        inventory.forEach(_fixLoadId);
-        area1Stacks.forEach(_fixLoadId);
-        area22Stacks.forEach(_fixLoadId);
-        if (_loadIdFixed > 0) { console.log('Backfilled loadId: null on ' + _loadIdFixed + ' items'); saveData(); }
-      }
       // Section 7 dynamic racks
       if (payload.sec7Racks) {
         SPOOL_SECTIONS[7] = payload.sec7Racks;
@@ -12237,11 +10899,6 @@ function _initAfterTenantKey(key) {
   initFirebase();
   subscribeShiftNotes();
   subscribeSlotFlags();
-  subscribeLoads();
-  subscribeShipper();
-  subscribeCustomers();
-  subscribeBOLs();
-  subscribeShippedBundles();
   subscribeAudit();
   window.addEventListener('online', function() { updateSaveIndicator('connected ✓', '#336633'); });
   window.addEventListener('offline', function() { updateSaveIndicator('offline — pick actions queued', '#f5a623'); });
@@ -12255,172 +10912,6 @@ function _initAfterTenantKey(key) {
     updateImportProfileUI();
     _showPinOrApp(key); // identity flows through — never re-read from globals
   });
-}
-
-// ─── SHIPPER INFO ─────────────────────────────────────────────────────────────
-var SHIPPER_FIELDS = [
-  { key: 'name',         label: 'Company Name'    },
-  { key: 'addressLine1', label: 'Address Line 1'  },
-  { key: 'addressLine2', label: 'Address Line 2'  },
-  { key: 'city',         label: 'City'            },
-  { key: 'state',        label: 'State'           },
-  { key: 'zip',          label: 'ZIP'             },
-  { key: 'phone',        label: 'Phone'           },
-  { key: 'mtrStatement', label: 'MTR Statement'   }
-];
-
-function renderShipperForm() {
-  var el = document.getElementById('shipper-form-body');
-  if (!el) return;
-  el.innerHTML = SHIPPER_FIELDS.map(function(f) {
-    var val = escapeHtml(shipperInfo[f.key] || '');
-    return '<div style="margin-bottom:6px">' +
-      '<label style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:2px">' + f.label.toUpperCase() + '</label>' +
-      '<input type="text" value="' + val + '" placeholder="' + f.label + '"' +
-        ' style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:7px 9px;border-radius:5px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;outline:none"' +
-        ' data-shipper-key="' + f.key + '"' +
-        ' onblur="saveShipperField(this)">' +
-    '</div>';
-  }).join('');
-}
-
-function saveShipperField(input) {
-  var key = input.getAttribute('data-shipper-key');
-  if (!key) return;
-  var patch = {};
-  patch[key] = input.value.trim();
-  ref('shipper').update(patch);
-}
-
-// ─── CUSTOMER DIRECTORY ───────────────────────────────────────────────────────
-function renderCustomerList() {
-  var el = document.getElementById('customer-list-body');
-  if (!el) return;
-  var ids = Object.keys(customers);
-  if (ids.length === 0) {
-    el.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px">No customers yet.</div>';
-    return;
-  }
-  el.innerHTML = ids.map(function(id) {
-    var c = customers[id];
-    var addr = [c.city, c.state].filter(Boolean).join(', ');
-    return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--steel);border:1px solid var(--border);border-radius:6px;margin-bottom:5px">' +
-      '<div style="flex:1;min-width:0">' +
-        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + escapeHtml(c.name || '(no name)') + '</div>' +
-        (addr ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + escapeHtml(addr) + '</div>' : '') +
-      '</div>' +
-      '<div style="display:flex;gap:6px;flex-shrink:0">' +
-        '<button onclick="openCustomerModal(\'' + id + '\')" style="background:none;color:var(--accent);border:1px solid var(--accent);padding:3px 8px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">Edit</button>' +
-        '<button onclick="deleteCustomer(\'' + id + '\')" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:3px 8px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">Del</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function openCustomerModal(customerId) {
-  var c = customerId ? (customers[customerId] || {}) : {};
-  var isNew = !customerId;
-  var el = document.getElementById('customer-modal-content');
-  if (!el) return;
-
-  var fields = [
-    { key: 'name',         label: 'Company Name'   },
-    { key: 'addressLine1', label: 'Address Line 1' },
-    { key: 'addressLine2', label: 'Address Line 2' },
-    { key: 'city',         label: 'City'           },
-    { key: 'state',        label: 'State'          },
-    { key: 'zip',          label: 'ZIP'            },
-    { key: 'contactName',  label: 'Contact Name'   },
-    { key: 'contactPhone', label: 'Contact Phone'  },
-    { key: 'notes',        label: 'Notes'          }
-  ];
-
-  el.innerHTML =
-    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;letter-spacing:2px;margin-bottom:14px">' + (isNew ? 'ADD CUSTOMER' : 'EDIT CUSTOMER') + '</div>' +
-    fields.map(function(f) {
-      var val = escapeHtml(c[f.key] || '');
-      return '<div class="form-group">' +
-        '<label>' + f.label + '</label>' +
-        '<input type="text" id="cust-field-' + f.key + '" value="' + val + '" placeholder="' + f.label + '">' +
-      '</div>';
-    }).join('') +
-    '<div style="display:flex;gap:8px;margin-top:14px">' +
-      '<button onclick="saveCustomer(\'' + (customerId || '') + '\')" style="flex:1;background:var(--accent);color:#001540;border:none;padding:10px;border-radius:6px;font-family:\'Bebas Neue\',sans-serif;font-size:16px;letter-spacing:1px;cursor:pointer">SAVE</button>' +
-      '<button onclick="closeCustomerModal()" style="background:none;color:var(--text-dim);border:1px solid var(--border);padding:10px 16px;border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:12px;cursor:pointer">Cancel</button>' +
-    '</div>';
-
-  document.getElementById('customer-modal-overlay').classList.add('active');
-}
-
-function saveCustomer(customerId) {
-  var fields = ['name','addressLine1','addressLine2','city','state','zip','contactName','contactPhone','notes'];
-  var data = {};
-  fields.forEach(function(k) {
-    var el = document.getElementById('cust-field-' + k);
-    data[k] = el ? el.value.trim() : '';
-  });
-  if (!data.name) { alert('Customer name is required.'); return; }
-
-  var targetRef = customerId
-    ? ref('customers/' + customerId)
-    : ref('customers').push();
-
-  data.id = customerId || targetRef.key;
-  targetRef.set(data).then(function() { closeCustomerModal(); });
-}
-
-function deleteCustomer(customerId) {
-  if (!confirm('Delete this customer? This cannot be undone.')) return;
-  ref('customers/' + customerId).remove();
-}
-
-function closeCustomerModal() {
-  document.getElementById('customer-modal-overlay').classList.remove('active');
-}
-
-// ─── CUSTOMER PICKER (load detail) ────────────────────────────────────────────
-function openCustomerPicker(loadId) {
-  var existing = document.getElementById('customer-picker-dropdown');
-  if (existing) { existing.remove(); return; }
-
-  var ids = Object.keys(customers);
-  if (ids.length === 0) { alert('No customers in directory. Add customers in Settings → Shipping Setup.'); return; }
-
-  var dropdown = document.createElement('div');
-  dropdown.id = 'customer-picker-dropdown';
-  dropdown.style.cssText = 'position:absolute;z-index:9000;background:var(--steel-mid);border:1px solid var(--border);border-radius:6px;box-shadow:0 4px 16px rgba(0,0,0,0.6);min-width:260px;max-height:260px;overflow-y:auto;padding:4px 0';
-
-  ids.forEach(function(id) {
-    var c = customers[id];
-    var row = document.createElement('div');
-    row.style.cssText = 'padding:9px 12px;cursor:pointer;font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)';
-    var addr = [c.addressLine1, c.city, c.state].filter(Boolean).join(', ');
-    row.innerHTML = '<div style="font-weight:bold">' + escapeHtml(c.name || '(no name)') + '</div>' +
-      (addr ? '<div style="font-size:10px;color:var(--text-dim)">' + escapeHtml(addr) + '</div>' : '');
-    row.onmouseover = function() { row.style.background = 'var(--steel-light)'; };
-    row.onmouseout = function() { row.style.background = ''; };
-    row.onclick = function() {
-      var dest = [c.addressLine1, c.city, c.state, c.zip].filter(Boolean).join(', ');
-      updateLoad(loadId, { customer: c.name || '', destination: dest }).then(function() {
-        dropdown.remove();
-      });
-    };
-    dropdown.appendChild(row);
-  });
-
-  var btn = document.getElementById('customer-pick-btn-' + loadId);
-  if (btn) {
-    btn.parentNode.style.position = 'relative';
-    btn.parentNode.appendChild(dropdown);
-  }
-
-  function clickAway(e) {
-    if (!dropdown.contains(e.target) && e.target.id !== ('customer-pick-btn-' + loadId)) {
-      dropdown.remove();
-      document.removeEventListener('click', clickAway, true);
-    }
-  }
-  setTimeout(function() { document.addEventListener('click', clickAway, true); }, 0);
 }
 
 // Change PIN — validates current PIN, enforces 4-digit new PIN, saves to Firebase.
