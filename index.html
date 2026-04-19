@@ -3870,6 +3870,11 @@ function makeSlot(id, side) {
   if (isReserved) div.classList.add('reserved-slot');
   div.id = 'slot-'+id;
   var item = store[id];
+  var _primItem = store[id];
+  if (_primItem) {
+    var _ageDays = getItemAgeDays(_primItem);
+    div.classList.add(getAgeClass(_ageDays));
+  }
 
   if (isScrap) {
     div.innerHTML = '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:13px;font-weight:900;color:#cc0000;letter-spacing:1px;line-height:1">SCRAP</div>';
@@ -4045,6 +4050,7 @@ function makeArea22Stack(stack) {
   var urgent = days !== null && days <= 2;
   var isSpool = stack.type === 'spool';
   div.classList.add(urgent ? 'occupied-urgent' : (isSpool ? 'occupied-spool' : 'occupied-straight'));
+  div.classList.add(getAgeClass(getItemAgeDays(stack)));
   div.innerHTML =
     '<div class="a22-id">'+stack.id+'</div>'+
     '<div class="a22-type-icon">'+(isSpool?'🔵':'🟢')+'</div>'+
@@ -4223,6 +4229,7 @@ function makeArea1Stack(stack) {
   var urgent = days !== null && days <= 2;
   var isSpool = stack.type === 'spool';
   div.classList.add(urgent ? 'occupied-urgent' : (isSpool ? 'occupied-spool' : 'occupied-straight'));
+  div.classList.add(getAgeClass(getItemAgeDays(stack)));
   div.innerHTML =
     '<div class="a22-id">'+stack.id+'</div>'+
     '<div class="a22-type-icon">'+(isSpool?'🔵':'🟢')+'</div>'+
@@ -4544,7 +4551,7 @@ function buildModalRows(item, isSpool, days) {
     rows += mrow('Received', rcvDisp);
     var ageDays = getItemAgeDays(item);
     if (ageDays !== null) {
-      rows += mrow('Age', ageDays + (ageDays === 1 ? ' day' : ' days'));
+      rows += '<div class="modal-row"><span class="modal-key">Age</span><span class="modal-val"><span class="age-badge ' + getAgeClass(ageDays) + '">' + formatAgeLong(ageDays) + '</span></span></div>';
     }
   }
   // Split pair note
@@ -8729,6 +8736,8 @@ function renderInventory() {
     ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
+    var _invAgeDays = getItemAgeDays(item);
+    var _invAgeClass = getAgeClass(_invAgeDays);
 
     return '<div class="inv-item'+(urgent?' urgent':(isArea22||isArea1)?' area22-item':isSpool?' spool-item':'')+'" onclick="goToLoc(\''+clickId+'\',\''+areaFlag+'\')">'+
       // Product on top — bold, prominent
@@ -8737,6 +8746,8 @@ function renderInventory() {
       '<div class="inv-location-row"><span class="inv-loc-label">📍</span><span class="inv-loc">'+dispLoc+'</span></div>'+
       // Optional info line
       (infoLine ? '<div class="inv-info-line">'+infoLine+'</div>' : '')+
+      // Age badge
+      '<div style="margin-bottom:4px"><span class="age-badge '+_invAgeClass+'">'+formatAgeShort(_invAgeDays)+'</span></div>'+
       // Tags row
       '<div class="inv-meta">'+
         '<span class="tag tag-size">'+item.size+'</span>'+
