@@ -1545,6 +1545,45 @@
     </div>
   </div>
 
+  <div class="section-card" id="sec-shift-notes">
+    <button class="section-header" onclick="openSection('shift-notes')">
+      <div class="sec-header-left">
+        <span class="sec-icon">📋</span>
+        <span class="sec-title">SHIFT NOTES</span>
+      </div>
+      <div class="sec-header-right">
+        <span id="shift-notes-badge" class="sec-badge"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-shift-notes">
+      <div class="form-wrap">
+        <div class="form-group">
+          <label>Category</label>
+          <select id="note-category">
+            <option value="Inventory">Inventory</option>
+            <option value="Equipment">Equipment</option>
+            <option value="Safety">Safety</option>
+            <option value="Customer">Customer</option>
+            <option value="Other" selected>Other</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Note</label>
+          <textarea id="note-body" rows="3" placeholder="What happened? What does the next shift need to know?" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:12px;font-family:'IBM Plex Mono',monospace;font-size:14px;border-radius:6px;outline:none;resize:vertical"></textarea>
+        </div>
+        <div class="form-group">
+          <label>Photos (optional)</label>
+          <input type="file" id="note-photos" accept="image/*" capture="environment" multiple style="width:100%;padding:10px;background:var(--steel-light);border:1px solid var(--border);color:var(--text);border-radius:6px">
+          <div id="note-photo-preview" style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px"></div>
+        </div>
+        <button class="btn btn-primary" id="note-submit-btn" onclick="submitShiftNote()">ADD NOTE</button>
+        <div id="note-status" style="margin-top:8px;font-family:'IBM Plex Mono',monospace;font-size:11px;min-height:14px"></div>
+        <div id="shift-notes-list" style="margin-top:20px"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- DETAIL MODAL -->
@@ -9257,6 +9296,78 @@ function subscribeShiftNotes() {
   });
 }
 
+// ─── SHIFT NOTES UI ──────────────────────────────────────────────────────────
+function submitShiftNote() {
+  var body = document.getElementById('note-body').value.trim();
+  if (!body) { document.getElementById('note-status').textContent = '⛔ Write something before submitting.'; return; }
+  var category = document.getElementById('note-category').value || 'Other';
+  var files = Array.from(document.getElementById('note-photos').files || []);
+  var btn = document.getElementById('note-submit-btn');
+  var statusEl = document.getElementById('note-status');
+  btn.disabled = true;
+  statusEl.style.color = 'var(--warn)';
+  statusEl.textContent = files.length ? ('Uploading ' + files.length + ' photo' + (files.length===1?'':'s') + '…') : 'Saving…';
+  var uploads = files.map(function(f) { return uploadPhoto(f, 'shiftNotes'); });
+  Promise.all(uploads).then(function(photoUrls) {
+    return addShiftNote({
+      operatorName: getOperatorName(),
+      timestamp: new Date().toISOString(),
+      category: category,
+      body: body,
+      photoUrls: photoUrls,
+      status: 'open',
+      resolvedAt: null,
+      resolvedBy: null
+    });
+  }).then(function() {
+    document.getElementById('note-body').value = '';
+    document.getElementById('note-photos').value = '';
+    document.getElementById('note-photo-preview').innerHTML = '';
+    statusEl.style.color = 'var(--safe)';
+    statusEl.textContent = '✓ Note added';
+    setTimeout(function() { statusEl.textContent = ''; }, 2000);
+  }).catch(function(e) {
+    statusEl.style.color = 'var(--hot)';
+    statusEl.textContent = '⛔ ' + (e.message || 'Save failed');
+  }).finally(function() { btn.disabled = false; });
+}
+
+function renderShiftNotes() {
+  var list = document.getElementById('shift-notes-list');
+  if (!list) return;
+  var notes = Object.values(shiftNotes || {});
+  notes.sort(function(a, b) {
+    if (a.status !== b.status) return a.status === 'open' ? -1 : 1;
+    return (b.timestamp || '').localeCompare(a.timestamp || '');
+  });
+
+  if (notes.length === 0) {
+    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:12px">No shift notes yet.</div>';
+  } else {
+    list.innerHTML = notes.map(function(n) {
+      var statusColor = n.status === 'open' ? 'var(--warn)' : 'var(--text-dim)';
+      var photoHtml = (n.photoUrls || []).map(function(p) {
+        return '<img src="' + p.url + '" style="width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border);cursor:pointer" onclick="window.open(\'' + p.url + '\', \'_blank\')">';
+      }).join('');
+      var actionBtns = n.status === 'open'
+        ? '<button onclick="resolveShiftNote(\'' + n.id + '\', getOperatorName())" style="background:var(--accent);color:#001540;border:none;padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;margin-right:4px">RESOLVE</button>'
+        : '<button onclick="reopenShiftNote(\'' + n.id + '\')" style="background:var(--steel-light);color:var(--text);border:1px solid var(--border);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;margin-right:4px">REOPEN</button>';
+      actionBtns += '<button onclick="if(confirm(\'Delete this note?\')) deleteShiftNote(\'' + n.id + '\')" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:4px 10px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">DELETE</button>';
+      return '<div style="padding:10px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + statusColor + ';border-radius:6px;margin-bottom:8px">' +
+        '<div style="display:flex;justify-content:space-between;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-bottom:4px"><span>' + (n.operatorName || 'Unknown') + ' · ' + new Date(n.timestamp).toLocaleString() + '</span><span style="background:var(--steel);padding:1px 6px;border-radius:3px">' + (n.category || 'Other') + '</span></div>' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--text);white-space:pre-wrap;margin-bottom:6px">' + escHtml(n.body) + '</div>' +
+        (photoHtml ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">' + photoHtml + '</div>' : '') +
+        (n.status === 'resolved' ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--safe);margin-bottom:6px">✓ Resolved by ' + (n.resolvedBy || '?') + ' at ' + new Date(n.resolvedAt).toLocaleString() + '</div>' : '') +
+        '<div>' + actionBtns + '</div>' +
+      '</div>';
+    }).join('');
+  }
+
+  var openCount = notes.filter(function(n) { return n.status === 'open'; }).length;
+  var badge = document.getElementById('shift-notes-badge');
+  if (badge) badge.textContent = openCount > 0 ? openCount : '';
+}
+
 function updateSaveIndicator(msg, color) {
   var el = document.getElementById('save-indicator');
   if (el) { el.textContent = '💾 ' + msg; el.style.color = color || '#336633'; }
@@ -9691,6 +9802,17 @@ function changeTenantPin() {
 
 // ─── INIT ────────────────────────────────────────────────────────
 document.getElementById('header-date').textContent=new Date().toLocaleDateString('en-US',{weekday:'short',month:'short',day:'numeric'});
+
+document.getElementById('note-photos').addEventListener('change', function(e) {
+  var previewEl = document.getElementById('note-photo-preview');
+  previewEl.innerHTML = '';
+  Array.from(e.target.files || []).forEach(function(f) {
+    var img = document.createElement('img');
+    img.src = URL.createObjectURL(f);
+    img.style.cssText = 'width:48px;height:48px;object-fit:cover;border-radius:4px;border:1px solid var(--border)';
+    previewEl.appendChild(img);
+  });
+});
 
 // Apply initial mode body classes (may be overridden by applyTenantModeLock inside _initAfterTenantKey)
 document.body.setAttribute('data-mode', APP_MODE);
