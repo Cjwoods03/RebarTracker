@@ -3554,6 +3554,20 @@ function formatAgeLong(days) {
   return days + ' days old';
 }
 
+function findOldestInSlot(slotId) {
+  var items = slotAllItems(slotId);
+  if (items.length < 2) return null;
+  var oldest = null;
+  var oldestTime = Infinity;
+  items.forEach(function(it) {
+    if (!it || !it.receivedDate) return;
+    var t = new Date(it.receivedDate).getTime();
+    if (isNaN(t)) return;
+    if (t < oldestTime) { oldestTime = t; oldest = it; }
+  });
+  return oldest;
+}
+
 // Format a stored length string for display (e.g. "20.5" -> "20ft 6in")
 function formatLength(lenStr) {
   if (!lenStr || lenStr === 'Coil') return lenStr || 'Coil';
@@ -3874,6 +3888,13 @@ function makeSlot(id, side) {
   if (_primItem) {
     var _ageDays = getItemAgeDays(_primItem);
     div.classList.add(getAgeClass(_ageDays));
+  }
+  var _oldest = findOldestInSlot(id);
+  if (_oldest && store[id] && _oldest.uid === store[id].uid) {
+    var _pfBadge = document.createElement('span');
+    _pfBadge.className = 'pick-first-badge';
+    _pfBadge.textContent = 'PICK FIRST';
+    div.appendChild(_pfBadge);
   }
 
   if (isScrap) {
@@ -4612,17 +4633,20 @@ function renderSecondaryList(slotId) {
   if (allItems.length <= 1) { container.innerHTML = ''; return; }
 
   var html = '<div class="secondary-items-wrap"><div class="secondary-item-label">All products in this slot</div>';
+  var _oldestInSlot = findOldestInSlot(slotId);
 
   // Show primary item first
   var primary = store[slotId];
   if (primary) {
     var primMeta = (primary.grade ? ' Gr'+primary.grade : '') + (primary.spec ? ' '+primary.spec : '');
+    var primPickFirst = (_oldestInSlot && primary.uid === _oldestInSlot.uid) ? '<span class="pick-first-badge">PICK FIRST</span>' : '';
     html += '<div class="secondary-item-row" style="border-left:2px solid var(--accent)">' +
       '<div class="secondary-item-info">' +
         '<strong style="color:var(--accent)">' + primary.size + '</strong>' +
         (primary.length ? ' · ' + formatLength(primary.length) : '') +
         (primMeta ? '<span style="color:var(--text-dim);font-size:10px"> ' + primMeta.trim() + '</span>' : '') +
         ' · ' + primary.bundles + ' ' + LBL('bundles') +
+        primPickFirst +
       '</div>' +
       '<div style="display:flex;gap:5px">' +
       '<button class="secondary-remove-btn" style="background:#1a2a1a;color:var(--accent);border:1px solid var(--accent)" onclick="openEditModal(\'primary\',0)">EDIT</button>' +
@@ -4635,12 +4659,14 @@ function renderSecondaryList(slotId) {
   extras.forEach(function(ei, idx) {
     var safeSlotId = (slotId||'').replace(/\\/g,'\\\\').replace(/'/g,"\\'");
     var eiMeta = (ei.grade ? ' Gr'+ei.grade : '') + (ei.spec ? ' '+ei.spec : '');
+    var eiPickFirst = (_oldestInSlot && ei.uid === _oldestInSlot.uid) ? '<span class="pick-first-badge">PICK FIRST</span>' : '';
     html += '<div class="secondary-item-row">' +
       '<div class="secondary-item-info">' +
         '<strong style="color:var(--text)">' + ei.size + '</strong>' +
         (ei.length ? ' · ' + formatLength(ei.length) : '') +
         (eiMeta ? '<span style="color:var(--text-dim);font-size:10px"> ' + eiMeta.trim() + '</span>' : '') +
         ' · ' + ei.bundles + ' ' + LBL('bundles') +
+        eiPickFirst +
       '</div>' +
       '<div style="display:flex;gap:5px">' +
       '<button class="secondary-remove-btn" style="background:#1a2a1a;color:var(--accent);border:1px solid var(--accent)" onclick="openEditModal(\'extra\',' + idx + ')">EDIT</button>' +
