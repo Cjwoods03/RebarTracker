@@ -3138,6 +3138,8 @@ var redTagSlots = {}; // slotId -> true
 var reservedSlots = {}; // slotId -> true — reserved for upcoming run, not yet physically placed
 var shiftNotes = {};
 var shiftNotesRef = null;
+var slotFlagsData = {};
+var slotFlagsRef = null;
 
 function buildStore() {
   for (var s = 1; s <= STANCHION_COUNT; s++) {
@@ -4680,6 +4682,21 @@ function buildModalRows(item, isSpool, days) {
   // Show EBS locator code if mapped
   var ebsCode = item.loc ? getLocatorCode(item.loc) : null;
   if (ebsCode) rows += mrow('EBS Locator', '<span style="color:var(--accent);font-family:\'IBM Plex Mono\',monospace">' + ebsCode + '</span>');
+  // Slot flag metadata
+  if (item && item.loc) {
+    var flagMeta = slotFlagsData[item.loc];
+    if (flagMeta) {
+      var typeLabel = { scrap: 'SCRAP', hold: 'HOLD', redTag: 'RED TAG', reserved: 'RESERVED' }[flagMeta.type] || flagMeta.type;
+      var typeColor = { scrap: 'var(--text-dim)', hold: '#4ab8ff', redTag: 'var(--hot)', reserved: '#bb88ff' }[flagMeta.type];
+      rows += '<div style="margin-top:8px;padding:10px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + typeColor + ';border-radius:6px">' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:14px;color:' + typeColor + ';letter-spacing:2px;margin-bottom:4px">' + typeLabel + '</div>' +
+        (flagMeta.reason ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text);margin-bottom:4px"><strong>Reason:</strong> ' + escHtml(flagMeta.reason) + '</div>' : '') +
+        (flagMeta.notes ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-bottom:4px;white-space:pre-wrap">' + escHtml(flagMeta.notes) + '</div>' : '') +
+        ((flagMeta.photoUrls || []).length ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin:6px 0">' + flagMeta.photoUrls.map(function(p) { return '<img src="' + p.url + '" style="width:48px;height:48px;object-fit:cover;border-radius:4px;cursor:pointer" onclick="window.open(\'' + p.url + '\',\'_blank\')">'; }).join('') + '</div>' : '') +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim)">Set by ' + escHtml(flagMeta.setBy || '?') + ' at ' + new Date(flagMeta.setAt).toLocaleString() + '</div>' +
+      '</div>';
+    }
+  }
   return rows;
 }
 function mrow(k,v) { return '<div class="modal-row"><span class="modal-key">'+k+'</span><span class="modal-val">'+v+'</span></div>'; }
@@ -9331,6 +9348,68 @@ function subscribeShiftNotes() {
   });
 }
 
+// ─── SLOT FLAGS SUBSCRIPTION + HELPERS ───────────────────────────────────────
+function subscribeSlotFlags() {
+  if (slotFlagsRef) slotFlagsRef.off();
+  slotFlagsRef = ref('slotFlags');
+  slotFlagsRef.on('value', function(snap) {
+    var raw = snap.val() || {};
+    slotFlagsData = {};
+    Object.keys(raw).forEach(function(k) { slotFlagsData[fbDecode(k)] = raw[k]; });
+    if (typeof renderAll === 'function') renderAll();
+    if (typeof renderFlagsDashboard === 'function') renderFlagsDashboard();
+  });
+}
+
+function setSlotFlag(slotId, type, details) {
+  details = details || {};
+  var validTypes = { scrap: scrapSlots, hold: holdSlots, redTag: redTagSlots, reserved: reservedSlots };
+  var flagObj = validTypes[type];
+  if (!flagObj) return Promise.reject(new Error('Invalid flag type: ' + type));
+
+  var files = details.photos || [];
+  var uploads = files.map(function(f) { return uploadPhoto(f, 'slotFlags/' + fbEncode(slotId)); });
+
+  return Promise.all(uploads).then(function(results) {
+    // Clear any other flag types first — only one flag per slot at a time
+    Object.keys(validTypes).forEach(function(t) { if (t !== type) delete validTypes[t][slotId]; });
+    flagObj[slotId] = true;
+
+    var record = {
+      type: type,
+      reason: details.reason || '',
+      photoUrls: results,
+      setBy: getOperatorName(),
+      setAt: new Date().toISOString(),
+      notes: details.notes || ''
+    };
+    return ref('slotFlags/' + fbEncode(slotId)).set(record);
+  }).then(function() {
+    saveData();
+    renderAll();
+  });
+}
+
+function clearSlotFlag(slotId) {
+  delete scrapSlots[slotId];
+  delete holdSlots[slotId];
+  delete redTagSlots[slotId];
+  delete reservedSlots[slotId];
+
+  var meta = slotFlagsData[slotId];
+  var photoDeletes = [];
+  if (meta && meta.photoUrls && meta.photoUrls.length) {
+    photoDeletes = meta.photoUrls.map(function(p) { return deletePhoto(p.path); });
+  }
+
+  return Promise.all(photoDeletes).then(function() {
+    return ref('slotFlags/' + fbEncode(slotId)).remove();
+  }).then(function() {
+    saveData();
+    renderAll();
+  });
+}
+
 // ─── SHIFT BANNER ────────────────────────────────────────────────────────────
 function dateKey() { return new Date().toISOString().slice(0, 10); }
 
@@ -9857,6 +9936,7 @@ function _initAfterTenantKey(key) {
   buildStore();
   initFirebase();
   subscribeShiftNotes();
+  subscribeSlotFlags();
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
   loadData(function(loaded) {
     populateLocationDropdown('straight');
