@@ -1528,6 +1528,23 @@
     </div>
   </div>
 
+  <!-- ═══ SECTION: AGING REPORT ═══ -->
+  <div class="section-card" id="sec-aging">
+    <button class="section-header" onclick="openSection('aging')">
+      <div class="sec-header-left">
+        <span class="sec-icon">📊</span>
+        <span class="sec-title">AGING REPORT</span>
+      </div>
+      <div class="sec-header-right">
+        <span id="aging-badge" class="sec-badge"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="body-aging">
+      <div id="aging-report-content" style="padding:16px"></div>
+    </div>
+  </div>
+
 </div>
 
 <!-- DETAIL MODAL -->
@@ -3662,6 +3679,7 @@ function openSection(name) {
       if (chevron) chevron.textContent = '▲';
     }
     if (name === 'map') renderAll();
+    if (name === 'aging') renderAgingReport();
   }
   // Scroll to section
   var card = document.getElementById('sec-' + name);
@@ -8787,6 +8805,70 @@ function renderInventory() {
     '</div>';
   }).join('');
   updateBadges();
+  var agingBody = document.getElementById('body-aging');
+  if (agingBody && !agingBody.classList.contains('collapsed')) renderAgingReport();
+}
+
+function renderAgingReport() {
+  var container = document.getElementById('aging-report-content');
+  if (!container) return;
+  var buckets = { fresh: [], yellow: [], orange: [], red: [], unknown: [] };
+  inventory.forEach(function(item) {
+    if (!item) return;
+    var days = getItemAgeDays(item);
+    var cls = getAgeClass(days);
+    var key = cls.replace('age-', '');
+    if (!buckets[key]) buckets[key] = [];
+    buckets[key].push({ item: item, days: days });
+  });
+
+  var tilesHtml = '';
+  [
+    { key: 'fresh',   label: '0–30 days', color: 'var(--safe)' },
+    { key: 'yellow',  label: '31–60 days', color: '#f5d023' },
+    { key: 'orange',  label: '61–90 days', color: 'var(--warn)' },
+    { key: 'red',     label: '90+ days',   color: 'var(--hot)' },
+    { key: 'unknown', label: 'Unknown',    color: 'var(--text-dim)' }
+  ].forEach(function(bucket) {
+    var items = buckets[bucket.key] || [];
+    var totalTons = items.reduce(function(s, x) { return s + (x.item.weightTons || 0); }, 0);
+    tilesHtml += '<div style="flex:1;min-width:110px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + bucket.color + ';border-radius:6px;padding:10px 12px">' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:1px">' + bucket.label + '</div>' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:26px;color:' + bucket.color + ';line-height:1.1">' + items.length + '</div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + totalTons.toFixed(1) + 't</div>' +
+      '</div>';
+  });
+  tilesHtml = '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">' + tilesHtml + '</div>';
+
+  var allItems = [].concat(buckets.red, buckets.orange, buckets.yellow, buckets.fresh, buckets.unknown)
+    .sort(function(a, b) { return (b.days || 0) - (a.days || 0); });
+  var listHtml = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-bottom:8px">Sorted by age, oldest first. Tap any row to jump to that ' + LBL('stan').toLowerCase() + '.</div>';
+  listHtml += allItems.map(function(x) {
+    var item = x.item;
+    var days = x.days;
+    var cls = getAgeClass(days);
+    var label = [item.size, formatLength(item.length || ''), item.grade, item.spec].filter(Boolean).join(' · ');
+    var meta = [item.heat, item.customer, item.order].filter(Boolean).join(' · ');
+    var areaFlag = item.loc === 'AREA-22' ? ',\'a22\'' : (item.loc === 'AREA-1' ? ',\'a1\'' : '');
+    return '<div onclick="goToLoc(\'' + item.loc + '\'' + areaFlag + ')" style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid currentColor;border-radius:6px;margin-bottom:4px;cursor:pointer" class="' + cls + '">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + label + '</div>' +
+        (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">' + meta + '</div>' : '') +
+      '</div>' +
+      '<div style="text-align:right;margin-left:12px">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + item.loc + '</div>' +
+        '<span class="age-badge ' + cls + '" style="margin-top:2px">' + formatAgeShort(days) + '</span>' +
+      '</div>' +
+      '</div>';
+  }).join('');
+
+  var printBtn = '<button onclick="window.print()" style="margin-top:12px;padding:10px 16px;background:var(--steel-light);color:var(--text);border:1px solid var(--border);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;cursor:pointer;letter-spacing:1px">PRINT REPORT</button>';
+
+  container.innerHTML = tilesHtml + listHtml + printBtn;
+
+  var stale = (buckets.orange.length + buckets.red.length);
+  var badge = document.getElementById('aging-badge');
+  if (badge) badge.textContent = stale > 0 ? stale + ' stale' : '';
 }
 
 function goToLoc(locOrId,areaFlag) {
