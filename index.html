@@ -348,6 +348,41 @@
   .slot.redtag-slot { border-color: #ff4444 !important; background: #cc0000 !important; }
   .slot.redtag-slot.occupied { background: #aa0000 !important; border-color: #ff4444 !important; }
 
+  /* Age stripe — left edge only so it doesn't conflict with existing border status colors */
+  .slot.age-fresh   { box-shadow: inset 3px 0 0 var(--safe); }
+  .slot.age-yellow  { box-shadow: inset 3px 0 0 #f5d023; }
+  .slot.age-orange  { box-shadow: inset 3px 0 0 var(--warn); }
+  .slot.age-red     { box-shadow: inset 3px 0 0 var(--hot); }
+  .slot.age-unknown { box-shadow: inset 3px 0 0 var(--text-dim); }
+
+  /* Inventory card age badge */
+  .age-badge {
+    display: inline-block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+  }
+  .age-badge.age-fresh   { background: #0d1f10; color: var(--safe); }
+  .age-badge.age-yellow  { background: #2a2500; color: #f5d023; }
+  .age-badge.age-orange  { background: #2a1800; color: var(--warn); }
+  .age-badge.age-red     { background: #2a0a0a; color: var(--hot); }
+  .age-badge.age-unknown { background: var(--steel-light); color: var(--text-dim); }
+
+  /* PICK FIRST badge */
+  .pick-first-badge {
+    display: inline-block;
+    background: var(--accent);
+    color: #001540;
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 9px;
+    padding: 2px 5px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+    margin-left: 4px;
+  }
+
   /* SLOT CONTEXT POPUP MENU */
   .slot-ctx-menu {
     position: fixed; z-index: 500;
@@ -3495,6 +3530,28 @@ function getItemAgeDays(item) {
   var t = new Date(item.receivedDate).getTime();
   if (isNaN(t)) return null;
   return Math.floor((Date.now() - t) / 86400000);
+}
+
+function getAgeClass(days) {
+  if (days === null || days === undefined) return 'age-unknown';
+  if (days <= 30) return 'age-fresh';
+  if (days <= 60) return 'age-yellow';
+  if (days <= 90) return 'age-orange';
+  return 'age-red';
+}
+
+function formatAgeShort(days) {
+  if (days === null) return '?';
+  if (days === 0) return 'today';
+  if (days === 1) return '1d';
+  return days + 'd';
+}
+
+function formatAgeLong(days) {
+  if (days === null) return 'Age unknown';
+  if (days === 0) return 'Received today';
+  if (days === 1) return '1 day old';
+  return days + ' days old';
 }
 
 // Format a stored length string for display (e.g. "20.5" -> "20ft 6in")
