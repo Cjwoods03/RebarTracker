@@ -3483,6 +3483,20 @@ function clearLengthInputs() {
   document.getElementById('inp-length-in').value = '';
 }
 
+function formatReceivedDate(iso) {
+  if (!iso) return '';
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return '';
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+function getItemAgeDays(item) {
+  if (!item || !item.receivedDate) return null;
+  var t = new Date(item.receivedDate).getTime();
+  if (isNaN(t)) return null;
+  return Math.floor((Date.now() - t) / 86400000);
+}
+
 // Format a stored length string for display (e.g. "20.5" -> "20ft 6in")
 function formatLength(lenStr) {
   if (!lenStr || lenStr === 'Coil') return lenStr || 'Coil';
@@ -4465,6 +4479,17 @@ function buildModalRows(item, isSpool, days) {
   if (item.customer) rows += mrow(LBL('customerLbl'), item.customer);
   if (item.ship) rows += mrow('Ship Date', item.ship + (days!==null?' ('+days+'d)':''));
   rows += mrow('Logged', item.logged);
+  if (item.receivedDate) {
+    var rcvDisp = formatReceivedDate(item.receivedDate);
+    if (item.receivedDateBackfilled) {
+      rcvDisp += ' <span style="color:var(--text-dim);font-size:10px">(estimated)</span>';
+    }
+    rows += mrow('Received', rcvDisp);
+    var ageDays = getItemAgeDays(item);
+    if (ageDays !== null) {
+      rows += mrow('Age', ageDays + (ageDays === 1 ? ' day' : ' days'));
+    }
+  }
   // Split pair note
   if (item.splitPairedWith) {
     var pairKey = item.splitPairedWith.slice(0, -1);
