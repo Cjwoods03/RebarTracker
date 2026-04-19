@@ -1165,6 +1165,10 @@
               <div class="optional-label"><span data-mode-label="customerLbl">Customer</span><span class="optional-badge">optional</span></div>
               <input type="text" id="inp-customer" placeholder="Customer name">
             </div>
+            <div class="form-group">
+              <div class="optional-label"><span>Heat #</span><span class="optional-badge">optional</span></div>
+              <input type="text" id="inp-heat" placeholder="HT-XXXX-XXXX" autocomplete="off">
+            </div>
           </div>
         </div>
         <div class="form-group">
@@ -7142,6 +7146,7 @@ function openSplitFromForm() {
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
+      heat: document.getElementById('inp-heat').value.trim(),
       _totalBundles: bundles
     };
     _of.totalBundles = bundles;
@@ -8286,6 +8291,7 @@ function logRun() {
     weightTons: weightTons,
     spoolWeightLbs: spoolLbsStored,
     customer: document.getElementById('inp-customer').value.trim(),
+    heat: document.getElementById('inp-heat').value.trim(),
     loc: loc, logged: new Date().toLocaleTimeString(),
     receivedDate: new Date().toISOString()
   };
@@ -8320,14 +8326,16 @@ function logRun() {
     if (canMerge) {
       existing.bundles += item.bundles;
       existing.weightTons = (existing.weightTons || 0) + (item.weightTons || 0);
-      // Fill in grade/spec if existing entry had them blank (e.g. from FYI import)
+      // Fill in grade/spec/heat if existing entry had them blank (e.g. from FYI import)
       if (!existing.grade && item.grade) existing.grade = item.grade;
       if (!existing.spec  && item.spec)  existing.spec  = item.spec;
+      if (!existing.heat  && item.heat)  existing.heat  = item.heat;
       if (!existing.receivedDate && item.receivedDate) existing.receivedDate = item.receivedDate;
       var invEntry = inventory.find(function(i){ return i.uid && existing.uid && i.uid === existing.uid; });
       if (invEntry) { invEntry.bundles = existing.bundles; invEntry.weightTons = existing.weightTons;
                       if (!invEntry.grade && item.grade) invEntry.grade = item.grade;
                       if (!invEntry.spec  && item.spec)  invEntry.spec  = item.spec;
+                      if (!invEntry.heat  && item.heat)  invEntry.heat  = item.heat;
                       if (!invEntry.receivedDate && item.receivedDate) invEntry.receivedDate = item.receivedDate; }
     } else {
       alert('⛔ ' + loc + ' already holds a different product.\n\nCheck "Secondary stack" to log on top of the existing item, or choose a different slot.');
@@ -8340,7 +8348,7 @@ function logRun() {
 
   if (isReserve) reservedSlots[loc] = true;
 
-  ['inp-bundles','inp-pieces','inp-bdl-wt','inp-customer'].forEach(function(id){document.getElementById(id).value='';});
+  ['inp-bundles','inp-pieces','inp-bdl-wt','inp-customer','inp-heat'].forEach(function(id){document.getElementById(id).value='';});
   var wc = document.getElementById('weight-calc'); if (wc) wc.style.display = 'none';
   var bwh = document.getElementById('bdl-wt-hint'); if (bwh) bwh.style.display = 'none';
   clearLengthInputs();
