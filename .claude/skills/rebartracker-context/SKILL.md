@@ -229,8 +229,16 @@ Scope grew beyond original 3 bugs. Final commits:
 - Bug E fixed — area counter reset when zone empties, loadData normalizes stale state (d2bda81)
 - Session 1 verified marker committed (empty commit)
 
-### Session 2 — RECEIVED DATE + HEAT (in progress)
-[update as work lands]
+### Session 2 — RECEIVED DATE + HEAT (complete)
+- 17c8351 — receivedDate ISO timestamp added to all item creation paths; preserved on merge
+- 4f5342f — loadData backfill migration: stamps receivedDate on legacy items, sets receivedDateBackfilled: true
+- 51de983 — formatReceivedDate + getItemAgeDays helpers; Received and Age rows in slot detail modal
+- 2674a71 — Session 2 verified marker
+
+New item schema fields: receivedDate (ISO 8601, all creation paths), receivedDateBackfilled: true (migration-stamped items only)
+New functions: formatReceivedDate(iso) and getItemAgeDays(item) near formatLength (~line 3486)
+Architecture note: loadData backfill block sits immediately after counter-normalization (~line 9104), safe to run every load, no-ops once all items are stamped.
+Note: e2e2830 (Heat # on LOG RUN form) was skipped — heat capture is intentionally limited to CSV import and edit modal only.
 
 ### Sessions 3-10 — not yet started
 See playbook for upcoming scope.
