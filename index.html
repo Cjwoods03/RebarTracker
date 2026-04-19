@@ -9764,6 +9764,25 @@ function shipLoad(loadId) {
   });
 }
 
+function renderLoadBOLs(load) {
+  var container = document.getElementById('load-bols-section');
+  if (!container) return;
+  var bolsForLoad = Object.values(bols).filter(function(b) { return b.loadId === load.id; });
+  if (bolsForLoad.length === 0) { container.innerHTML = ''; return; }
+  bolsForLoad.sort(function(a, b) { return (b.generatedAt || '').localeCompare(a.generatedAt || ''); });
+  var html = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">';
+  html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px">BOL HISTORY (' + bolsForLoad.length + ')</div>';
+  bolsForLoad.forEach(function(b) {
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--steel);border:1px solid var(--border);border-radius:4px;margin-bottom:3px">' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text)">' + escapeHtml(b.bolNumber) + '</div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim)">' + new Date(b.generatedAt).toLocaleString() + ' · ' + escapeHtml(b.generatedBy || '?') + '</div>' +
+      '<button onclick="reprintBOL(\'' + b.id + '\')" style="background:var(--steel-light);color:var(--accent);border:1px solid var(--accent);padding:4px 10px;border-radius:3px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px">REPRINT</button>' +
+    '</div>';
+  });
+  html += '</div>';
+  container.innerHTML = html;
+}
+
 function renderLoadStateButtons(load) {
   var container = document.getElementById('load-state-section');
   if (!container) return;
@@ -10194,6 +10213,7 @@ function renderLoadDetail(load) {
 
   html += '<div id="load-bundles-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"></div>';
   html += '<div id="load-totals-section" style="margin-top:16px"></div>';
+  html += '<div id="load-bols-section"></div>';
   html += '<div id="load-state-section" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap"></div>';
 
   if (load.status === 'draft') {
@@ -10207,6 +10227,7 @@ function renderLoadDetail(load) {
   container.innerHTML = html;
   renderLoadBundles(load);
   renderLoadTotals(load);
+  renderLoadBOLs(load);
   renderLoadStateButtons(load);
 }
 
@@ -10357,7 +10378,13 @@ function subscribeCustomers() {
 function subscribeBOLs() {
   if (bolsRef) bolsRef.off();
   bolsRef = ref('bols');
-  bolsRef.on('value', function(snap) { bols = snap.val() || {}; });
+  bolsRef.on('value', function(snap) {
+    bols = snap.val() || {};
+    var overlay = document.getElementById('load-detail-overlay');
+    if (overlay && overlay.classList.contains('active') && overlay.dataset.loadId && loads[overlay.dataset.loadId]) {
+      renderLoadBOLs(loads[overlay.dataset.loadId]);
+    }
+  });
 }
 
 // ─── SHIPPED BUNDLES CACHE ───────────────────────────────────────────────────
@@ -10496,12 +10523,20 @@ function renderBOLModal() {
 
 function generateBOLPDF() {
   if (!_bolDraft) return;
-  // Capture latest edits from preview
   _bolDraft.carrier.proNumber = document.getElementById('bol-pro').value.trim();
   _bolDraft.isHazmat = document.getElementById('bol-hazmat').checked;
   _bolDraft.specialInstructions = document.getElementById('bol-notes').value.trim();
+  generateBOLPDF_internal(_bolDraft, { skipArchive: false });
+}
 
-  var d = _bolDraft;
+function reprintBOL(bolId) {
+  var d = bols[bolId];
+  if (!d) { alert('BOL not found.'); return; }
+  generateBOLPDF_internal(d, { skipArchive: true });
+}
+
+function generateBOLPDF_internal(d, opts) {
+  opts = opts || {};
   var doc = new jspdf.jsPDF({ unit: 'pt', format: 'letter' });
   var W = doc.internal.pageSize.getWidth();
   var M = 40;
@@ -10645,17 +10680,21 @@ function generateBOLPDF() {
   doc.text('Generated ' + new Date(d.generatedAt).toLocaleString() + ' by ' + d.generatedBy, M, footerY);
   doc.text('Load: ' + d.loadNumber, W - M, footerY, { align: 'right' });
 
-  // Archive snapshot to Firebase, then download
-  var pushRef = ref('bols').push();
-  var snapshot = Object.assign({}, d, { id: pushRef.key });
-  pushRef.set(snapshot).then(function() {
-    doc.save(d.bolNumber + '.pdf');
-    closeBOLModal();
-    showScrapToast('\u2713 BOL generated and archived');
-  }).catch(function(e) {
-    alert('BOL archive failed: ' + e.message + '. Download will proceed without archive.');
-    doc.save(d.bolNumber + '.pdf');
-  });
+  if (!opts.skipArchive) {
+    var pushRef = ref('bols').push();
+    var snapshot = Object.assign({}, d, { id: pushRef.key });
+    pushRef.set(snapshot).then(function() {
+      doc.save(d.bolNumber + '.pdf');
+      closeBOLModal();
+      showScrapToast('\u2713 BOL generated and archived');
+    }).catch(function(e) {
+      alert('BOL archive failed: ' + e.message + '. Download will proceed without archive.');
+      doc.save(d.bolNumber + '.pdf');
+    });
+  } else {
+    doc.save(d.bolNumber + ' (reprint).pdf');
+    showScrapToast('\u2713 BOL reprinted from archive');
+  }
 }
 
 // ─── SLOT FLAGS SUBSCRIPTION + HELPERS ───────────────────────────────────────
