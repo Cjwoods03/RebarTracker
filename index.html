@@ -2384,6 +2384,20 @@
   </div>
 </div>
 
+<!-- BUNDLE PICKER MODAL -->
+<div class="modal-overlay" id="bundle-picker-overlay" onclick="if(event.target===this)closeBundlePicker()">
+  <div class="modal" style="max-width:640px;width:95vw;max-height:85vh;overflow:hidden;display:flex;flex-direction:column">
+    <div class="modal-handle"></div>
+    <div class="modal-title">ADD BUNDLES TO LOAD</div>
+    <input type="text" id="bundle-picker-search" placeholder="Search size, heat, location…" oninput="renderBundlePicker()" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:10px 12px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none;margin-bottom:12px">
+    <div id="bundle-picker-list" style="flex:1;overflow-y:auto;margin-bottom:12px"></div>
+    <div style="display:flex;gap:10px">
+      <button class="btn btn-primary" style="margin-top:0" onclick="submitBundlePicker()">ADD SELECTED</button>
+      <button class="btn-close-modal" onclick="closeBundlePicker()">Cancel</button>
+    </div>
+  </div>
+</div>
+
 <!-- INDUSTRY MODE SELECTOR -->
 <div id="mode-selector-overlay" onclick="handleModeSelectorClick(event)">
   <div id="mode-selector-panel">
@@ -4349,7 +4363,8 @@ function addToArea22() {
     order: document.getElementById('a22-order').value.trim(),
     customer: document.getElementById('a22-customer').value.trim(),
     loc: 'AREA-22', logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString()
+    receivedDate: new Date().toISOString(),
+    loadId: null
   };
   area22Stacks.push(stack);
   inventory.push(stack);
@@ -4534,7 +4549,8 @@ function addToArea1() {
     order: document.getElementById('a1-order').value.trim(),
     customer: document.getElementById('a1-customer').value.trim(),
     loc: 'AREA-1', logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString()
+    receivedDate: new Date().toISOString(),
+    loadId: null
   };
   area1Stacks.push(stack);
   inventory.push(stack);
@@ -5197,7 +5213,8 @@ function confirmAddSecondary() {
     weightTons: secWtPerBdl * bundles,
     heat: '', ship: '', order: '', customer: '',
     loc: modalLoc, logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString()
+    receivedDate: new Date().toISOString(),
+    loadId: null
   };
 
   if (!storeExtra[modalLoc]) storeExtra[modalLoc] = [];
@@ -6375,7 +6392,8 @@ function runCSVImport() {
       ship: grp.ship, order: grp.order, customer: grp.customer,
       lpns: lpnStr,
       loc: loc, logged: 'imported',
-      receivedDate: grp.ship ? new Date(grp.ship).toISOString() : new Date().toISOString()
+      receivedDate: grp.ship ? new Date(grp.ship).toISOString() : new Date().toISOString(),
+      loadId: null
     };
 
     // If slot already has product, check if same or different
@@ -6648,7 +6666,8 @@ function runFullYardImport() {
           bundles: 1, weightTons: wtPerLpn, weightPerBundleTons: wtPerLpn,
           spoolWeightLbs: 0,
           lpns: lpn || '', loc: 'AREA-22', logged: 'fyi',
-          receivedDate: new Date().toISOString()
+          receivedDate: new Date().toISOString(),
+          loadId: null
         };
         area22Stacks.push(a22stack);
         inventory.push(a22stack);
@@ -6700,7 +6719,8 @@ function runFullYardImport() {
       weightTons: grp.wtTons, spoolWeightLbs: 0,
       heat: '', ship: '', order: '', customer: '',
       lpns: grp.lpns.join(', '), loc: loc, logged: 'fyi',
-      receivedDate: new Date().toISOString()
+      receivedDate: new Date().toISOString(),
+      loadId: null
     };
     if (store[loc]) {
       var ex = store[loc];
@@ -7663,7 +7683,8 @@ function ofFinalize() {
       weightPerBundleTons: bdlTons, weightTons: bdlTons * p.bundles,
       spoolWeightLbs: 0, ship: item.ship, order: item.order,
       customer: item.customer, loc: p.loc, logged: new Date().toLocaleTimeString(),
-      receivedDate: new Date().toISOString()
+      receivedDate: new Date().toISOString(),
+      loadId: null
     };
     var existing = store[p.loc];
     var isMerge = existing && existing.size === item.size && parseFloat(existing.length) === parseFloat(item.length) &&
@@ -7869,6 +7890,7 @@ function ofConfirmSplit() {
       spoolWeightLbs: 0, ship: item.ship || '', order: item.order || '',
       customer: item.customer || '', logged: new Date().toLocaleTimeString(),
       receivedDate: new Date().toISOString(),
+      loadId: null,
       splitPairedWith: pairedWith, splitTotal: bdl
     };
 
@@ -8456,7 +8478,8 @@ function logRun() {
           spoolWeightLbs: spoolLbsV,
           customer: document.getElementById('inp-customer').value.trim(),
           loc: p.loc, logged: new Date().toLocaleTimeString(),
-          receivedDate: new Date().toISOString()
+          receivedDate: new Date().toISOString(),
+          loadId: null
         };
         store[p.loc] = pItem;
         inventory.push(pItem);
@@ -8614,7 +8637,8 @@ function logRun() {
     customer: document.getElementById('inp-customer').value.trim(),
     heat: document.getElementById('inp-heat').value.trim(),
     loc: loc, logged: new Date().toLocaleTimeString(),
-    receivedDate: new Date().toISOString()
+    receivedDate: new Date().toISOString(),
+    loadId: null
   };
 
   var isSecondary = document.getElementById('inp-secondary').checked;
@@ -9434,6 +9458,10 @@ function subscribeLoads() {
     loads = snap.val() || {};
     if (typeof renderLoads === 'function') renderLoads();
     if (typeof updateLoadsBadge === 'function') updateLoadsBadge();
+    var overlay = document.getElementById('load-detail-overlay');
+    if (overlay && overlay.classList.contains('active') && overlay.dataset.loadId && loads[overlay.dataset.loadId]) {
+      renderLoadDetail(loads[overlay.dataset.loadId]);
+    }
   });
 }
 
@@ -9482,6 +9510,138 @@ function deleteLoad(loadId) {
   });
   return Promise.all(unassigns).then(function() {
     return ref('loads/' + loadId).remove();
+  });
+}
+
+// ─── BUNDLE ASSIGNMENT HELPERS ────────────────────────────────────────────────
+function getAvailableBundlesForLoad() {
+  var out = [];
+  inventory.forEach(function(item) {
+    if (!item || !item.uid) return;
+    if (item.loadId) return;
+    if (item.loc && (scrapSlots[item.loc] || holdSlots[item.loc] || redTagSlots[item.loc] || reservedSlots[item.loc])) return;
+    out.push(item);
+  });
+  return out;
+}
+
+function addBundleToLoad(uid, loadId) {
+  var item = inventory.find(function(i) { return i.uid === uid; });
+  if (!item) return Promise.reject(new Error('Bundle not found: ' + uid));
+  if (item.loadId) return Promise.reject(new Error('Bundle already on load ' + item.loadId));
+  var load = loads[loadId];
+  if (!load) return Promise.reject(new Error('Load not found'));
+  if (load.status === 'shipped') return Promise.reject(new Error('Cannot modify shipped load'));
+
+  item.loadId = loadId;
+  if (item.loc && store[item.loc] && store[item.loc].uid === uid) store[item.loc].loadId = loadId;
+  Object.keys(storeExtra).forEach(function(slotId) {
+    (storeExtra[slotId] || []).forEach(function(ex) { if (ex.uid === uid) ex.loadId = loadId; });
+  });
+
+  var updatedUids = (load.bundleUids || []).concat([uid]);
+  saveData();
+
+  return ref('loads/' + loadId + '/bundleUids').set(updatedUids).then(function() {
+    return recomputeLoadTotals(loadId);
+  });
+}
+
+function unassignBundleFromLoad(uid) {
+  var item = inventory.find(function(i) { return i.uid === uid; });
+  if (!item || !item.loadId) return Promise.resolve();
+  var loadId = item.loadId;
+  item.loadId = null;
+  if (item.loc && store[item.loc] && store[item.loc].uid === uid) store[item.loc].loadId = null;
+  Object.keys(storeExtra).forEach(function(slotId) {
+    (storeExtra[slotId] || []).forEach(function(ex) { if (ex.uid === uid) ex.loadId = null; });
+  });
+
+  var load = loads[loadId];
+  if (!load) { saveData(); return Promise.resolve(); }
+  var updatedUids = (load.bundleUids || []).filter(function(u) { return u !== uid; });
+  saveData();
+  return ref('loads/' + loadId + '/bundleUids').set(updatedUids).then(function() {
+    return recomputeLoadTotals(loadId);
+  });
+}
+
+function recomputeLoadTotals(loadId) {
+  var load = loads[loadId];
+  if (!load) return Promise.resolve();
+  var totalLbs = 0, maxLen = 0;
+  (load.bundleUids || []).forEach(function(uid) {
+    var b = inventory.find(function(i) { return i.uid === uid; });
+    if (b) {
+      totalLbs += (b.weightTons || 0) * 2000;
+      maxLen = Math.max(maxLen, parseFloat(b.length) || 0);
+    }
+  });
+  return ref('loads/' + loadId).update({
+    totalWeight: Math.round(totalLbs),
+    totalLengthFt: maxLen
+  });
+}
+
+// ─── BUNDLE PICKER ────────────────────────────────────────────────────────────
+var _pickerLoadId = null;
+var _pickerSelected = {};
+
+function openBundlePicker(loadId) {
+  _pickerLoadId = loadId;
+  _pickerSelected = {};
+  document.getElementById('bundle-picker-search').value = '';
+  renderBundlePicker();
+  document.getElementById('bundle-picker-overlay').classList.add('active');
+}
+
+function closeBundlePicker() {
+  document.getElementById('bundle-picker-overlay').classList.remove('active');
+  _pickerLoadId = null;
+  _pickerSelected = {};
+}
+
+function renderBundlePicker() {
+  var list = document.getElementById('bundle-picker-list');
+  if (!list) return;
+  var search = (document.getElementById('bundle-picker-search').value || '').toLowerCase().trim();
+  var available = getAvailableBundlesForLoad();
+  if (search) {
+    available = available.filter(function(b) {
+      var hay = [b.size, b.heat, b.loc, b.customer, b.grade, b.spec].filter(Boolean).join(' ').toLowerCase();
+      return hay.indexOf(search) !== -1;
+    });
+  }
+  if (available.length === 0) {
+    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px">No available ' + LBL('bundles') + '.</div>';
+    return;
+  }
+  list.innerHTML = available.map(function(b) {
+    var checked = _pickerSelected[b.uid] ? 'checked' : '';
+    var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
+    var meta = [b.heat, b.customer, b.order].filter(Boolean).join(' · ');
+    return '<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;background:var(--steel-light);border:1px solid var(--border);border-radius:6px;margin-bottom:4px;cursor:pointer">' +
+      '<input type="checkbox" ' + checked + ' onchange="_pickerSelected[\'' + b.uid + '\'] = this.checked" style="width:18px;height:18px;accent-color:var(--accent);flex-shrink:0">' +
+      '<div style="flex:1;min-width:0">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + desc + '</div>' +
+        (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + meta + '</div>' : '') +
+      '</div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);text-align:right;flex-shrink:0">' + escapeHtml(b.loc) + '<br>' + (b.bundles || 0) + ' ' + LBL('bdlAbbr') + '</div>' +
+    '</label>';
+  }).join('');
+}
+
+function submitBundlePicker() {
+  var loadId = _pickerLoadId;
+  if (!loadId) return;
+  var uids = Object.keys(_pickerSelected).filter(function(u) { return _pickerSelected[u]; });
+  if (uids.length === 0) { closeBundlePicker(); return; }
+  var promises = uids.map(function(uid) { return addBundleToLoad(uid, loadId); });
+  Promise.all(promises).then(function() {
+    closeBundlePicker();
+    openLoadDetail(loadId);
+  }).catch(function(e) {
+    alert('Some bundles failed to add: ' + e.message);
   });
 }
 
@@ -9537,6 +9697,7 @@ function onNewLoadClick() {
 function openLoadDetail(loadId) {
   var load = loads[loadId];
   if (!load) return;
+  document.getElementById('load-detail-overlay').dataset.loadId = loadId;
   renderLoadDetail(load);
   document.getElementById('load-detail-overlay').classList.add('active');
 }
@@ -9583,6 +9744,40 @@ function renderLoadDetail(load) {
   }
 
   html += '<div style="margin-top:16px;text-align:right"><button class="btn-close-modal" onclick="closeLoadDetail()">Close</button></div>';
+
+  container.innerHTML = html;
+  renderLoadBundles(load);
+}
+
+function renderLoadBundles(load) {
+  var container = document.getElementById('load-bundles-section');
+  if (!container) return;
+  var editable = load.status !== 'shipped';
+  var uids = load.bundleUids || [];
+
+  var html = '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+    '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--text);letter-spacing:2px">' + LBL('bundlesCap').toUpperCase() + ' (' + uids.length + ')</div>' +
+    (editable ? '<button onclick="openBundlePicker(\'' + load.id + '\')" style="background:var(--accent);color:#001540;border:none;padding:6px 14px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer;letter-spacing:1px;font-weight:bold">+ ADD ' + LBL('bundles').toUpperCase() + '</button>' : '') +
+  '</div>';
+
+  if (uids.length === 0) {
+    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px;background:var(--steel);border-radius:6px">No ' + LBL('bundles') + ' on this load yet.</div>';
+  } else {
+    html += uids.map(function(uid) {
+      var b = inventory.find(function(i) { return i.uid === uid; });
+      if (!b) return '<div style="padding:8px;color:var(--hot);font-family:\'IBM Plex Mono\',monospace;font-size:11px">Missing bundle (uid: ' + escapeHtml(uid) + ')</div>';
+      var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
+      var meta = [b.heat, b.customer, b.order].filter(Boolean).join(' · ');
+      return '<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:var(--steel-light);border:1px solid var(--border);border-radius:6px;margin-bottom:4px">' +
+        '<div style="flex:1;min-width:0">' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:var(--text)">' + escapeHtml(desc) + '</div>' +
+          (meta ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">' + escapeHtml(meta) + '</div>' : '') +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">' + escapeHtml(b.loc) + ' · ' + (b.bundles || 0) + ' ' + LBL('bdlAbbr') + ' · ' + Math.round((b.weightTons || 0) * 2000).toLocaleString() + ' lb</div>' +
+        '</div>' +
+        (editable ? '<button onclick="unassignBundleFromLoad(\'' + uid + '\').then(function(){ openLoadDetail(\'' + load.id + '\'); })" style="background:none;color:var(--hot);border:none;font-size:20px;cursor:pointer;padding:0 6px;flex-shrink:0">×</button>' : '') +
+      '</div>';
+    }).join('');
+  }
 
   container.innerHTML = html;
 }
@@ -10090,6 +10285,7 @@ function saveData() {
         })(),
         runCycle:       runCycle,
         runCycleNextId: runCycleNextId,
+        loadIdMigrated: true,
         savedAt: new Date().toISOString()
       };
       updateSaveIndicator('saving…', '#f5a623');
@@ -10164,6 +10360,20 @@ function loadData(callback) {
         _backfillCount++;
       });
       if (_backfillCount > 0) { console.log('Backfill: stamped receivedDate on ' + _backfillCount + ' items'); saveData(); }
+      // One-time migration: default loadId = null on any item missing it
+      if (!payload.loadIdMigrated) {
+        var _loadIdFixed = 0;
+        function _fixLoadId(item) {
+          if (!item) return;
+          if (!('loadId' in item)) { item.loadId = null; _loadIdFixed++; }
+        }
+        Object.values(store).forEach(_fixLoadId);
+        Object.values(storeExtra).forEach(function(arr) { (arr || []).forEach(_fixLoadId); });
+        inventory.forEach(_fixLoadId);
+        area1Stacks.forEach(_fixLoadId);
+        area22Stacks.forEach(_fixLoadId);
+        if (_loadIdFixed > 0) { console.log('Backfilled loadId: null on ' + _loadIdFixed + ' items'); saveData(); }
+      }
       // Section 7 dynamic racks
       if (payload.sec7Racks) {
         SPOOL_SECTIONS[7] = payload.sec7Racks;
