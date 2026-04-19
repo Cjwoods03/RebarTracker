@@ -1638,6 +1638,32 @@
     </div>
   </div>
 
+  <div class="section-card">
+    <button class="section-header" onclick="openSection('loads')">
+      <div class="sec-header-left">
+        <span class="sec-icon">🚛</span>
+        <span class="sec-title">LOADS</span>
+      </div>
+      <div class="sec-header-right">
+        <span id="loads-badge" class="sec-badge"></span>
+        <span class="sec-chevron">▼</span>
+      </div>
+    </button>
+    <div class="section-body collapsed" id="loads-body">
+      <div style="padding:16px">
+        <button class="btn btn-primary" onclick="onNewLoadClick()" style="margin-bottom:12px">+ NEW LOAD</button>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
+          <button class="flt-btn flt-btn-active" id="loadflt-all" onclick="loadsFilterSet('all')">All</button>
+          <button class="flt-btn" id="loadflt-draft" onclick="loadsFilterSet('draft')">Draft</button>
+          <button class="flt-btn" id="loadflt-building" onclick="loadsFilterSet('building')">Building</button>
+          <button class="flt-btn" id="loadflt-staged" onclick="loadsFilterSet('staged')">Staged</button>
+          <button class="flt-btn" id="loadflt-shipped" onclick="loadsFilterSet('shipped')">Shipped</button>
+        </div>
+        <div id="loads-list"></div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- DETAIL MODAL -->
@@ -2347,6 +2373,14 @@
   <div class="ctx-item" id="ctx-unreserve-item" onclick="applySlotStatus('unreserve')" style="display:none">
     <div class="ctx-dot" style="background:#1a0a2e;border:1px dashed #8844cc"></div>
     <span style="color:#bb88ff">Remove Reserved</span>
+  </div>
+</div>
+
+<!-- LOAD DETAIL MODAL -->
+<div class="modal-overlay" id="load-detail-overlay" onclick="if(event.target===this)closeLoadDetail()">
+  <div class="modal" style="max-width:720px;width:95vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-handle"></div>
+    <div id="load-detail-content"></div>
   </div>
 </div>
 
@@ -3201,6 +3235,8 @@ var shiftNotes = {};
 var shiftNotesRef = null;
 var slotFlagsData = {};
 var slotFlagsRef = null;
+var loads = {};
+var loadsRef = null;
 
 function buildStore() {
   for (var s = 1; s <= STANCHION_COUNT; s++) {
@@ -9390,6 +9426,167 @@ function deleteShiftNote(noteId) {
   });
 }
 
+// ─── LOADS SUBSCRIPTION ──────────────────────────────────────────────────────
+function subscribeLoads() {
+  if (loadsRef) loadsRef.off();
+  loadsRef = ref('loads');
+  loadsRef.on('value', function(snap) {
+    loads = snap.val() || {};
+    if (typeof renderLoads === 'function') renderLoads();
+    if (typeof updateLoadsBadge === 'function') updateLoadsBadge();
+  });
+}
+
+// ─── LOADS CRUD ───────────────────────────────────────────────────────────────
+function generateLoadNumber() {
+  var today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+  var todays = Object.values(loads).filter(function(l) {
+    return l.loadNumber && l.loadNumber.indexOf('L-' + today) === 0;
+  });
+  var n = String(todays.length + 1).padStart(3, '0');
+  return 'L-' + today + '-' + n;
+}
+
+function createLoad(initial) {
+  var newLoad = Object.assign({
+    loadNumber: generateLoadNumber(),
+    status: 'draft',
+    customer: '', destination: '', carrier: '', scac: '',
+    truckNumber: '', driver: '', trailerNumber: '',
+    bundleUids: [],
+    totalWeight: 0,
+    totalLengthFt: 0,
+    maxWeight: 48000,
+    maxLengthFt: 53,
+    notes: '',
+    createdAt: new Date().toISOString(),
+    createdBy: getOperatorName(),
+    shippedAt: null, shippedBy: null
+  }, initial || {});
+  var pushRef = ref('loads').push();
+  newLoad.id = pushRef.key;
+  return pushRef.set(newLoad).then(function() { return newLoad; });
+}
+
+function updateLoad(loadId, patch) {
+  return ref('loads/' + loadId).update(patch);
+}
+
+function deleteLoad(loadId) {
+  var load = loads[loadId];
+  if (!load) return Promise.resolve();
+  if (load.status === 'shipped') return Promise.reject(new Error('Cannot delete shipped loads'));
+  var uidsToFree = (load.bundleUids || []).slice();
+  var unassigns = uidsToFree.map(function(uid) {
+    return typeof unassignBundleFromLoad === 'function' ? unassignBundleFromLoad(uid) : Promise.resolve();
+  });
+  return Promise.all(unassigns).then(function() {
+    return ref('loads/' + loadId).remove();
+  });
+}
+
+// ─── LOADS UI ─────────────────────────────────────────────────────────────────
+var _loadFilter = 'all';
+
+function loadsFilterSet(status) {
+  _loadFilter = status;
+  ['all','draft','building','staged','shipped'].forEach(function(s) {
+    var btn = document.getElementById('loadflt-' + s);
+    if (btn) btn.className = 'flt-btn' + (s === status ? ' flt-btn-active' : '');
+  });
+  renderLoads();
+}
+
+function renderLoads() {
+  var list = document.getElementById('loads-list');
+  if (!list) return;
+  var arr = Object.values(loads);
+  if (_loadFilter !== 'all') arr = arr.filter(function(l) { return l.status === _loadFilter; });
+  arr.sort(function(a, b) { return (b.createdAt || '').localeCompare(a.createdAt || ''); });
+
+  if (arr.length === 0) {
+    list.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);text-align:center;padding:16px">No loads match the filter.</div>';
+    return;
+  }
+
+  list.innerHTML = arr.map(function(l) {
+    var statusColor = { draft: 'var(--text-dim)', building: '#f5d023', staged: '#4ab8ff', shipped: 'var(--safe)' }[l.status] || 'var(--text-dim)';
+    return '<div onclick="openLoadDetail(\'' + l.id + '\')" style="padding:12px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + statusColor + ';border-radius:6px;margin-bottom:6px;cursor:pointer">' +
+      '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px">' +
+        '<div>' +
+          '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:16px;color:var(--text);letter-spacing:2px">' + escapeHtml(l.loadNumber) + '</div>' +
+          '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);margin-top:2px">' + escapeHtml(l.customer || '(no customer)') + (l.destination ? ' → ' + escapeHtml(l.destination) : '') + '</div>' +
+        '</div>' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 8px;border-radius:3px;color:' + statusColor + ';border:1px solid ' + statusColor + ';letter-spacing:1px">' + l.status.toUpperCase() + '</div>' +
+      '</div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:4px">' + (l.bundleUids || []).length + ' ' + LBL('bundles') + ' · ' + (l.totalWeight || 0).toLocaleString() + ' lb · ' + (l.totalLengthFt || 0) + 'ft</div>' +
+    '</div>';
+  }).join('');
+}
+
+function updateLoadsBadge() {
+  var active = Object.values(loads).filter(function(l) { return l.status !== 'shipped'; }).length;
+  var badge = document.getElementById('loads-badge');
+  if (badge) badge.textContent = active > 0 ? active : '';
+}
+
+function onNewLoadClick() {
+  createLoad({}).then(function(newLoad) { openLoadDetail(newLoad.id); });
+}
+
+function openLoadDetail(loadId) {
+  var load = loads[loadId];
+  if (!load) return;
+  renderLoadDetail(load);
+  document.getElementById('load-detail-overlay').classList.add('active');
+}
+
+function closeLoadDetail() {
+  document.getElementById('load-detail-overlay').classList.remove('active');
+}
+
+function renderLoadDetail(load) {
+  var container = document.getElementById('load-detail-content');
+  if (!container) return;
+  var editable = load.status !== 'shipped';
+  var statusColor = { draft: 'var(--text-dim)', building: '#f5d023', staged: '#4ab8ff', shipped: 'var(--safe)' }[load.status] || 'var(--text-dim)';
+
+  var html = '';
+  html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">';
+  html +=   '<div><div style="font-family:\'Bebas Neue\',sans-serif;font-size:22px;color:var(--text);letter-spacing:2px">' + escapeHtml(load.loadNumber) + '</div>';
+  html +=   '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:2px">Created by ' + escapeHtml(load.createdBy || '?') + ' · ' + new Date(load.createdAt).toLocaleString() + '</div></div>';
+  html +=   '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;padding:3px 10px;border-radius:4px;color:' + statusColor + ';border:1px solid ' + statusColor + ';letter-spacing:1px">' + load.status.toUpperCase() + '</div>';
+  html += '</div>';
+
+  function field(key, label, placeholder) {
+    var val = escapeHtml(load[key] || '');
+    return '<div class="form-group"><label>' + label + '</label>' +
+      (editable
+        ? '<input type="text" value="' + val + '" placeholder="' + (placeholder || '') + '" onchange="updateLoad(\'' + load.id + '\', {' + key + ': this.value})">'
+        : '<div style="padding:12px;background:var(--steel);border:1px solid var(--border);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:13px">' + (val || '—') + '</div>') +
+    '</div>';
+  }
+
+  html += '<div class="form-row">' + field('customer', 'Customer', 'ACME Construction') + field('destination', 'Destination', 'Address or job site') + '</div>';
+  html += '<div class="form-row">' + field('carrier', 'Carrier', 'XYZ Trucking') + field('scac', 'SCAC', 'XYZT') + '</div>';
+  html += '<div class="form-row">' + field('truckNumber', 'Truck #', '4521') + field('trailerNumber', 'Trailer #', 'TR-8899') + '</div>';
+  html += field('driver', 'Driver', 'John Smith');
+
+  html += '<div id="load-bundles-section" style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border)"></div>';
+  html += '<div id="load-totals-section" style="margin-top:16px"></div>';
+  html += '<div id="load-state-section" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap"></div>';
+
+  if (load.status === 'draft') {
+    html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);text-align:right">' +
+      '<button onclick="if(confirm(\'Delete this draft load?\')) { deleteLoad(\'' + load.id + '\').then(closeLoadDetail); }" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:6px 12px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">DELETE LOAD</button>' +
+    '</div>';
+  }
+
+  html += '<div style="margin-top:16px;text-align:right"><button class="btn-close-modal" onclick="closeLoadDetail()">Close</button></div>';
+
+  container.innerHTML = html;
+}
+
 // ─── SHIFT NOTES SUBSCRIPTION ────────────────────────────────────────────────
 function subscribeShiftNotes() {
   if (shiftNotesRef) shiftNotesRef.off();
@@ -10204,6 +10401,7 @@ function _initAfterTenantKey(key) {
   initFirebase();
   subscribeShiftNotes();
   subscribeSlotFlags();
+  subscribeLoads();
   setInterval(maybeShowShiftBanner, 5 * 60 * 1000);
   loadData(function(loaded) {
     populateLocationDropdown('straight');
