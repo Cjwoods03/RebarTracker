@@ -9102,6 +9102,28 @@ function loadData(callback) {
       if (area1Stacks.length === 0 && area1NextId > 1)   { area1NextId  = 1; _needsReset = true; }
       if (area22Stacks.length === 0 && area22NextId > 1) { area22NextId = 1; _needsReset = true; }
       if (_needsReset) saveData();
+      // One-time migration: stamp receivedDate on any item that's missing it
+      var _backfillItems = [];
+      Object.keys(store).forEach(function(k) { if (store[k]) _backfillItems.push(store[k]); });
+      Object.keys(storeExtra).forEach(function(k) { if (Array.isArray(storeExtra[k])) storeExtra[k].forEach(function(i) { _backfillItems.push(i); }); });
+      inventory.forEach(function(i) { _backfillItems.push(i); });
+      area1Stacks.forEach(function(i) { _backfillItems.push(i); });
+      area22Stacks.forEach(function(i) { _backfillItems.push(i); });
+      var _backfillCount = 0;
+      var _todayStr = new Date().toDateString();
+      _backfillItems.forEach(function(item) {
+        if (!item || item.receivedDate) return;
+        var iso = null;
+        if (item.logged && typeof item.logged === 'string') {
+          var parsed = new Date(_todayStr + ' ' + item.logged);
+          if (!isNaN(parsed.getTime())) iso = parsed.toISOString();
+        }
+        if (!iso) iso = new Date().toISOString();
+        item.receivedDate = iso;
+        item.receivedDateBackfilled = true;
+        _backfillCount++;
+      });
+      if (_backfillCount > 0) { console.log('Backfill: stamped receivedDate on ' + _backfillCount + ' items'); saveData(); }
       // Section 7 dynamic racks
       if (payload.sec7Racks) {
         SPOOL_SECTIONS[7] = payload.sec7Racks;
