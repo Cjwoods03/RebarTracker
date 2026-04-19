@@ -1674,7 +1674,7 @@
     </div>
   </div>
 
-  <div class="section-card">
+  <div class="section-card" id="sec-loads">
     <button class="section-header" onclick="openSection('loads')">
       <div class="sec-header-left">
         <span class="sec-icon">🚛</span>
@@ -1685,7 +1685,7 @@
         <span class="sec-chevron">▼</span>
       </div>
     </button>
-    <div class="section-body collapsed" id="loads-body">
+    <div class="section-body collapsed" id="body-loads">
       <div style="padding:16px">
         <button class="btn btn-primary" onclick="onNewLoadClick()" style="margin-bottom:12px">+ NEW LOAD</button>
         <div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:12px">
@@ -4366,22 +4366,42 @@ function toggleSection(name, btn) {
 
 function openSection(name) {
   var body = document.getElementById('body-' + name);
+  // Special case: loads body uses reversed naming convention
+  if (!body && name === 'loads') body = document.getElementById('loads-body');
   var header = document.querySelector('#sec-' + name + ' .section-header');
-  if (body && body.classList.contains('collapsed')) {
-    body.classList.remove('collapsed');
+  if (!body) return;
+
+  var isOpen = !body.classList.contains('collapsed');
+  if (isOpen) {
+    // Close it
+    body.classList.add('collapsed');
     if (header) {
-      header.classList.add('active');
+      header.classList.remove('active');
       var chevron = header.querySelector('.sec-chevron');
-      if (chevron) chevron.textContent = '▲';
+      if (chevron) chevron.textContent = '▼';
     }
-    if (name === 'map') renderAll();
-    if (name === 'aging') renderAgingReport();
-    if (name === 'flags') renderFlagsDashboard();
-    if (name === 'audit') renderAuditHistory();
-    if (name === 'dashboard') { dashStart(); } else { dashStop(); }
+    if (name === 'dashboard') dashStop();
+    return;
   }
+
+  // Open it
+  body.classList.remove('collapsed');
+  if (header) {
+    header.classList.add('active');
+    var chevron = header.querySelector('.sec-chevron');
+    if (chevron) chevron.textContent = '▲';
+  }
+  if (name === 'map')       renderAll();
+  if (name === 'aging')     renderAgingReport();
+  if (name === 'flags')     renderFlagsDashboard();
+  if (name === 'audit')     renderAuditHistory();
+  if (name === 'shift-notes') renderShiftNotes();
+  if (name === 'loads')     renderLoads();
+  if (name === 'dashboard') { dashStart(); } else { dashStop(); }
+
   // Scroll to section
   var card = document.getElementById('sec-' + name);
+  if (!card && name === 'loads') card = document.getElementById('sec-loads');
   if (card) setTimeout(function() { card.scrollIntoView({ behavior: 'smooth', block: 'start' }); }, 50);
 }
 
