@@ -9450,6 +9450,10 @@ function deleteShiftNote(noteId) {
   });
 }
 
+// ─── LOADS CONSTANTS ─────────────────────────────────────────────────────────
+var TYPICAL_CHAIN_WLL_LB = 4700; // working load limit of 3/8" grade 70 chain
+var FMCSA_TIEDOWN_FRACTION = 0.5; // aggregate WLL must be >= 50% of cargo weight
+
 // ─── LOADS SUBSCRIPTION ──────────────────────────────────────────────────────
 function subscribeLoads() {
   if (loadsRef) loadsRef.off();
@@ -9498,6 +9502,23 @@ function createLoad(initial) {
 
 function updateLoad(loadId, patch) {
   return ref('loads/' + loadId).update(patch);
+}
+
+function getFMCSATiedownCount(totalLengthFt) {
+  // FMCSA 49 CFR 393.110: min 2 tiedowns for first 10 ft, +1 per additional 10 ft
+  if (totalLengthFt <= 0) return 2;
+  if (totalLengthFt <= 10) return 2;
+  return 2 + Math.ceil((totalLengthFt - 10) / 10);
+}
+
+function getFMCSAMinAggregateWLL(totalWeightLb) {
+  return Math.ceil(totalWeightLb * FMCSA_TIEDOWN_FRACTION);
+}
+
+function getFMCSATiedownByWLL(totalWeightLb, chainWLL) {
+  chainWLL = chainWLL || TYPICAL_CHAIN_WLL_LB;
+  var minAgg = getFMCSAMinAggregateWLL(totalWeightLb);
+  return Math.ceil(minAgg / chainWLL);
 }
 
 function deleteLoad(loadId) {
@@ -9747,6 +9768,7 @@ function renderLoadDetail(load) {
 
   container.innerHTML = html;
   renderLoadBundles(load);
+  renderLoadTotals(load);
 }
 
 function renderLoadBundles(load) {
@@ -9780,6 +9802,87 @@ function renderLoadBundles(load) {
   }
 
   container.innerHTML = html;
+}
+
+function renderLoadTotals(load) {
+  var container = document.getElementById('load-totals-section');
+  if (!container) return;
+
+  var weightPct = (load.totalWeight / (load.maxWeight || 48000)) * 100;
+  var lengthPct = (load.totalLengthFt / (load.maxLengthFt || 53)) * 100;
+
+  function barColor(pct) {
+    if (pct < 80) return 'var(--safe)';
+    if (pct < 95) return '#f5d023';
+    if (pct < 100) return 'var(--warn)';
+    return 'var(--hot)';
+  }
+
+  var tiedownsByLength = getFMCSATiedownCount(load.totalLengthFt);
+  var tiedownsByWeight = getFMCSATiedownByWLL(load.totalWeight);
+  var tiedownsRequired = Math.max(tiedownsByLength, tiedownsByWeight);
+  var minAggWLL = getFMCSAMinAggregateWLL(load.totalWeight);
+
+  var overLimit = weightPct >= 100 || lengthPct >= 100;
+
+  var pieceCount = (load.bundleUids || []).reduce(function(sum, uid) {
+    var b = inventory.find(function(i) { return i.uid === uid; });
+    return sum + ((b && b.bundles) || 0);
+  }, 0);
+
+  var heats = new Set();
+  (load.bundleUids || []).forEach(function(uid) {
+    var b = inventory.find(function(i) { return i.uid === uid; });
+    if (b && b.heat) heats.add(b.heat);
+  });
+
+  var editable = load.status !== 'shipped';
+
+  container.innerHTML =
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center">' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px">CAPS:</div>' +
+      '<label style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:4px">Max weight (lb)' +
+        (editable
+          ? '<input type="number" value="' + (load.maxWeight || 48000) + '" min="1" style="width:90px;background:var(--steel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:\'IBM Plex Mono\',monospace;font-size:10px" onchange="updateLoad(\'' + load.id + '\', { maxWeight: parseFloat(this.value) || 48000 })">'
+          : '<span style="color:var(--text);margin-left:4px">' + (load.maxWeight || 48000).toLocaleString() + '</span>') +
+      '</label>' +
+      '<label style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);display:flex;align-items:center;gap:4px">Max length (ft)' +
+        (editable
+          ? '<input type="number" value="' + (load.maxLengthFt || 53) + '" min="1" style="width:70px;background:var(--steel);color:var(--text);border:1px solid var(--border);border-radius:4px;padding:2px 6px;font-family:\'IBM Plex Mono\',monospace;font-size:10px" onchange="updateLoad(\'' + load.id + '\', { maxLengthFt: parseFloat(this.value) || 53 })">'
+          : '<span style="color:var(--text);margin-left:4px">' + (load.maxLengthFt || 53) + '</span>') +
+      '</label>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">' +
+      '<div style="flex:1;min-width:150px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:10px">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px">WEIGHT</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:' + barColor(weightPct) + ';letter-spacing:1px">' + load.totalWeight.toLocaleString() + ' / ' + (load.maxWeight || 48000).toLocaleString() + ' lb</div>' +
+        '<div style="height:4px;background:var(--steel-light);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:' + Math.min(100, weightPct) + '%;background:' + barColor(weightPct) + '"></div></div>' +
+      '</div>' +
+      '<div style="flex:1;min-width:150px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:10px">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px">LENGTH</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:' + barColor(lengthPct) + ';letter-spacing:1px">' + load.totalLengthFt + ' / ' + (load.maxLengthFt || 53) + ' ft</div>' +
+        '<div style="height:4px;background:var(--steel-light);border-radius:2px;margin-top:4px;overflow:hidden"><div style="height:100%;width:' + Math.min(100, lengthPct) + '%;background:' + barColor(lengthPct) + '"></div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">' +
+      '<div style="flex:1;min-width:100px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:8px 10px">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">Pieces</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--text)">' + pieceCount + '</div>' +
+      '</div>' +
+      '<div style="flex:1;min-width:100px;background:var(--steel);border:1px solid var(--border);border-radius:6px;padding:8px 10px">' +
+        '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim)">Distinct heats</div>' +
+        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:18px;color:var(--text)">' + heats.size + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div style="background:#0d1f10;border:1px solid var(--border);border-radius:6px;padding:10px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text)">' +
+      '<div style="color:var(--accent);margin-bottom:4px;letter-spacing:1px">FMCSA TIEDOWN GUIDE (49 CFR 393)</div>' +
+      '<div>Minimum tiedowns required: <strong style="color:var(--safe)">' + tiedownsRequired + '</strong></div>' +
+      '<div style="color:var(--text-dim);font-size:10px;margin-top:2px">• By length (' + load.totalLengthFt + 'ft): ' + tiedownsByLength + ' minimum</div>' +
+      '<div style="color:var(--text-dim);font-size:10px">• By weight (assuming ' + TYPICAL_CHAIN_WLL_LB.toLocaleString() + 'lb WLL per tiedown): ' + tiedownsByWeight + ' minimum</div>' +
+      '<div style="margin-top:4px">Aggregate WLL required: <strong style="color:var(--safe)">' + minAggWLL.toLocaleString() + ' lb</strong> (50% of cargo weight)</div>' +
+      '<div style="color:var(--text-dim);font-size:10px;margin-top:2px">Re-tension within 50 miles, then every 150 miles or 3 hours of driving.</div>' +
+    '</div>' +
+    (overLimit ? '<div style="margin-top:8px;padding:10px;background:#2a0a0a;border:1px solid var(--hot);border-radius:6px;font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--hot)">⛔ OVER LIMIT — resolve before advancing to Staged or Shipped.</div>' : '');
 }
 
 // ─── SHIFT NOTES SUBSCRIPTION ────────────────────────────────────────────────
