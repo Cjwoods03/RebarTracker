@@ -724,6 +724,22 @@
     border: 1px solid var(--border); border-radius: 8px;
     font-family: 'IBM Plex Mono', monospace; font-size: 11px; cursor: pointer;
   }
+
+@media print {
+  body > *:not(#pick-print-root) { display: none !important; }
+  #pick-print-root { display: block !important; position: static !important; color: #000 !important; background: #fff !important; padding: 20px; font-family: Arial, sans-serif; }
+  #pick-print-root .ps-header { border-bottom: 2px solid #000; padding-bottom: 10px; margin-bottom: 12px; }
+  #pick-print-root .ps-title { font-size: 22px; font-weight: bold; margin-bottom: 2px; }
+  #pick-print-root .ps-meta { font-size: 11px; color: #555; }
+  #pick-print-root .ps-group { margin-top: 12px; }
+  #pick-print-root .ps-group-head { font-size: 14px; font-weight: bold; background: #eee; padding: 4px 8px; border-left: 4px solid #000; }
+  #pick-print-root table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 11px; }
+  #pick-print-root th, #pick-print-root td { border: 1px solid #999; padding: 4px 6px; text-align: left; }
+  #pick-print-root th { background: #f2f2f2; font-weight: bold; }
+  #pick-print-root .ps-check { width: 20px; height: 20px; border: 1px solid #000; display: inline-block; }
+  #pick-print-root .ps-footer { margin-top: 16px; font-size: 11px; border-top: 1px solid #999; padding-top: 8px; }
+  @page { margin: 0.5in; }
+}
 </style>
 </head>
 <body>
@@ -2396,6 +2412,8 @@
     </div>
   </div>
 </div>
+
+<div id="pick-print-root" style="display:none"></div>
 
 <!-- BUNDLE PICKER MODAL -->
 <div class="modal-overlay" id="bundle-picker-overlay" onclick="if(event.target===this)closeBundlePicker()">
@@ -9837,6 +9855,86 @@ function renderPickList() {
 }
 
 function printPickSheet() {
+  var load = loads[_pickLoadId];
+  if (!load) { alert('No load to print.'); return; }
+
+  var bundles = (load.bundleUids || []).map(function(uid) {
+    return inventory.find(function(i) { return i.uid === uid; });
+  }).filter(Boolean);
+
+  var groups = {};
+  bundles.forEach(function(b) {
+    var stan = b.loc;
+    if (stan.startsWith('RACK-')) stan = stan.split('.')[0];
+    else if (stan === 'CYCLE' || stan === 'AREA1' || stan === 'AREA22') {}
+    else stan = stan.slice(0, -1);
+    if (!groups[stan]) groups[stan] = [];
+    groups[stan].push(b);
+  });
+  var groupKeys = Object.keys(groups).sort(function(a, b) {
+    var na = parseInt(a), nb = parseInt(b);
+    if (!isNaN(na) && !isNaN(nb)) return na - nb;
+    if (!isNaN(na)) return -1;
+    if (!isNaN(nb)) return 1;
+    return a.localeCompare(b);
+  });
+  groupKeys.forEach(function(k) {
+    groups[k].sort(function(a, b) { return (a.receivedDate || '').localeCompare(b.receivedDate || ''); });
+  });
+
+  var totalBundles = bundles.reduce(function(s, b) { return s + (b.bundles || 0); }, 0);
+  var totalWeight = load.totalWeight || 0;
+  var tiedowns = getFMCSATiedownCount(load.totalLengthFt);
+
+  var html = '<div class="ps-header">' +
+    '<div class="ps-title">PICK LIST — ' + escapeHtml(load.loadNumber) + '</div>' +
+    '<div class="ps-meta">' +
+      'Customer: ' + escapeHtml(load.customer || '—') + ' · Destination: ' + escapeHtml(load.destination || '—') + '<br>' +
+      'Carrier: ' + escapeHtml(load.carrier || '—') + ' · Truck: ' + escapeHtml(load.truckNumber || '—') + ' · Driver: ' + escapeHtml(load.driver || '—') + '<br>' +
+      'Printed ' + new Date().toLocaleString() + ' by ' + escapeHtml(getOperatorName()) +
+    '</div>' +
+  '</div>';
+
+  groupKeys.forEach(function(k) {
+    var groupLabel = k;
+    if (!isNaN(parseInt(k))) groupLabel = 'STANCHION ' + k;
+    else if (k === 'BSU') groupLabel = 'B.SU';
+    else if (k.startsWith('RACK-')) groupLabel = 'RACK ' + k.replace('RACK-', '');
+    else if (k === 'AREA1') groupLabel = 'AREA 1';
+    else if (k === 'AREA22') groupLabel = 'AREA 22';
+
+    html += '<div class="ps-group">';
+    html += '<div class="ps-group-head">' + escapeHtml(groupLabel) + '</div>';
+    html += '<table><thead><tr>' +
+      '<th style="width:30px">✓</th>' +
+      '<th style="width:60px">Slot</th>' +
+      '<th>Product</th>' +
+      '<th style="width:70px">Heat</th>' +
+      '<th style="width:60px">Bdl</th>' +
+      '<th style="width:70px">Weight</th>' +
+    '</tr></thead><tbody>';
+    groups[k].forEach(function(b) {
+      var desc = [b.size, formatLength(b.length || ''), b.grade, b.spec].filter(Boolean).join(' · ');
+      html += '<tr>' +
+        '<td><span class="ps-check"></span></td>' +
+        '<td>' + escapeHtml(b.loc) + '</td>' +
+        '<td>' + escapeHtml(desc) + '</td>' +
+        '<td>' + escapeHtml(b.heat || '') + '</td>' +
+        '<td>' + (b.bundles || 0) + '</td>' +
+        '<td>' + ((b.weightTons || 0) * 2000).toLocaleString() + ' lb</td>' +
+      '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '</div>';
+  });
+
+  html += '<div class="ps-footer">' +
+    '<strong>TOTALS:</strong> ' + bundles.length + ' items · ' + totalBundles + ' bundles · ' + totalWeight.toLocaleString() + ' lb · ' + load.totalLengthFt + 'ft max length<br>' +
+    '<strong>FMCSA tiedowns (min):</strong> ' + tiedowns + ' · Aggregate WLL ≥ ' + getFMCSAMinAggregateWLL(totalWeight).toLocaleString() + ' lb (50% cargo weight)<br>' +
+    '<strong>Driver signature:</strong> _______________________________ &nbsp;&nbsp;&nbsp; <strong>Date:</strong> ____________' +
+  '</div>';
+
+  document.getElementById('pick-print-root').innerHTML = html;
   window.print();
 }
 
