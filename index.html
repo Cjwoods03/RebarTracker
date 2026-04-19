@@ -4922,6 +4922,13 @@ function buildModalRows(item, isSpool, days) {
       '</div>';
     }
   }
+  // Mini audit trail for this bundle and its slot
+  if (item && item.uid) {
+    rows += renderMiniAudit('bundle', item.uid);
+  }
+  if (item && item.loc) {
+    rows += renderMiniAudit('slot', item.loc);
+  }
   return rows;
 }
 function mrow(k,v) { return '<div class="modal-row"><span class="modal-key">'+k+'</span><span class="modal-val">'+v+'</span></div>'; }
@@ -10447,6 +10454,11 @@ function renderLoadDetail(load) {
   html += '<div id="load-bols-section"></div>';
   html += '<div id="load-state-section" style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);display:flex;gap:8px;flex-wrap:wrap"></div>';
 
+  var loadAudit = renderMiniAudit('load', load.id);
+  if (loadAudit) {
+    html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">' + loadAudit + '</div>';
+  }
+
   if (load.status === 'draft') {
     html += '<div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);text-align:right">' +
       '<button onclick="if(confirm(\'Delete this draft load?\')) { deleteLoad(\'' + load.id + '\').then(closeLoadDetail); }" style="background:none;color:var(--hot);border:1px solid var(--hot);padding:6px 12px;border-radius:4px;font-family:\'IBM Plex Mono\',monospace;font-size:10px;cursor:pointer">DELETE LOAD</button>' +
@@ -10618,6 +10630,34 @@ function subscribeBOLs() {
   });
 }
 
+// ─── MINI-AUDIT HELPERS ───────────────────────────────────────────────────────
+function getAuditForEntity(entityType, entityId) {
+  if (!entityId) return [];
+  var entries = Object.values(auditLog).filter(function(e) {
+    return e.entityType === entityType && e.entityId === entityId;
+  });
+  entries.sort(function(a, b) { return (b.at || '').localeCompare(a.at || ''); });
+  return entries;
+}
+
+function renderMiniAudit(entityType, entityId) {
+  var entries = getAuditForEntity(entityType, entityId);
+  if (entries.length === 0) return '';
+  var html = '<div style="margin-top:12px;padding-top:12px;border-top:1px solid var(--border)">';
+  html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;margin-bottom:6px">HISTORY (' + entries.length + ')</div>';
+  html += entries.slice(0, 5).map(function(e) {
+    return '<div style="padding:6px 10px;background:var(--steel);border:1px solid var(--border);border-radius:4px;margin-bottom:3px">' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text)">' + escHtml(e.summary) + '</div>' +
+      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--text-dim);margin-top:1px">' + escHtml(e.by || '?') + ' · ' + new Date(e.at).toLocaleString() + '</div>' +
+    '</div>';
+  }).join('');
+  if (entries.length > 5) {
+    html += '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-top:4px">+ ' + (entries.length - 5) + ' more — see full Activity History</div>';
+  }
+  html += '</div>';
+  return html;
+}
+
 // ─── AUDIT SUBSCRIPTION ──────────────────────────────────────────────────────
 function subscribeAudit() {
   if (auditRef) auditRef.off();
@@ -10625,6 +10665,16 @@ function subscribeAudit() {
   auditRef.orderByChild('at').limitToLast(500).on('value', function(snap) {
     auditLog = snap.val() || {};
     if (typeof renderAuditHistory === 'function') renderAuditHistory();
+    // Re-render slot modal if open
+    if (modalLoc && typeof showModal === 'function') {
+      var ov = document.getElementById('modal-overlay');
+      if (ov && ov.classList.contains('active')) { try { showModal(modalLoc); } catch(e) {} }
+    }
+    // Re-render load detail modal if open
+    var loadOv = document.getElementById('load-detail-overlay');
+    if (loadOv && loadOv.classList.contains('active') && loadOv.dataset.loadId && loads[loadOv.dataset.loadId]) {
+      renderLoadDetail(loads[loadOv.dataset.loadId]);
+    }
   });
 }
 
