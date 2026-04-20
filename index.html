@@ -736,19 +736,15 @@
     <!-- Shift Boundaries -->
     <div style="padding:14px;background:var(--steel-light);border:1px solid var(--border);border-radius:8px;margin-top:12px">
       <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">⏰ Shift Boundaries</div>
-      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:10px;line-height:1.5">Hours (24h) when shift handover banner appears</div>
+      <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);margin-bottom:10px;line-height:1.5">Times (HH:MM) when shift handover banner appears</div>
       <div style="display:flex;gap:8px;margin-bottom:10px">
         <div style="flex:1">
-          <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:4px">SHIFT 1</label>
-          <input id="shift-boundary-0" type="number" min="0" max="23" style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none">
+          <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:4px">DAY SHIFT</label>
+          <input id="shift-boundary-0" type="time" style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none">
         </div>
         <div style="flex:1">
-          <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:4px">SHIFT 2</label>
-          <input id="shift-boundary-1" type="number" min="0" max="23" style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none">
-        </div>
-        <div style="flex:1">
-          <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:4px">SHIFT 3</label>
-          <input id="shift-boundary-2" type="number" min="0" max="23" style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none">
+          <label style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);display:block;margin-bottom:4px">NIGHT SHIFT</label>
+          <input id="shift-boundary-1" type="time" style="width:100%;box-sizing:border-box;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:13px;outline:none">
         </div>
       </div>
       <button onclick="saveShiftBoundaries()" style="background:var(--steel-light);border:1px solid var(--accent);color:var(--accent);padding:9px;border-radius:6px;font-family:'Bebas Neue',sans-serif;font-size:15px;letter-spacing:1px;cursor:pointer;width:100%">Save Boundaries</button>
@@ -2333,7 +2329,7 @@ var STANCHION_COUNT = 38;
 var MAX_STANCHION_FT = 80; // default
 var STANCHION_MAX_FT_OVERRIDES = { 2:70, 3:70, 'BSU':70 };
 
-var SHIFT_BOUNDARIES = [6, 14, 22]; // 6am, 2pm, 10pm (24hr)
+var SHIFT_BOUNDARIES = ['06:00', '18:00']; // day shift, night shift (HH:MM)
 var SHIFT_BANNER_WINDOW_MIN = 15;   // show banner for N minutes after each boundary
 (function() {
   var savedBoundaries = localStorage.getItem('rt_shift_boundaries');
@@ -8579,9 +8575,9 @@ function tenantContinue() {
 function openSettings() {
   document.getElementById('settings-overlay').classList.add('open');
   document.getElementById('settings-panel').classList.add('open');
-  SHIFT_BOUNDARIES.forEach(function(h, i) {
+  SHIFT_BOUNDARIES.forEach(function(t, i) {
     var el = document.getElementById('shift-boundary-' + i);
-    if (el) el.value = h;
+    if (el) el.value = t;
   });
 }
 function closeSettings() {
@@ -9167,9 +9163,10 @@ function maybeShowShiftBanner() {
   if (!bannerEl) return;
   var now = new Date();
   var currentMin = now.getHours() * 60 + now.getMinutes();
-  var inWindow = SHIFT_BOUNDARIES.some(function(h) {
-    var bMin = h * 60;
-    var diff = currentMin - bMin;
+  var inWindow = SHIFT_BOUNDARIES.some(function(t) {
+    var parts = String(t).split(':');
+    var bTotal = (+parts[0]) * 60 + (+(parts[1] || 0));
+    var diff = currentMin - bTotal;
     return diff >= 0 && diff <= SHIFT_BANNER_WINDOW_MIN;
   });
   var ackKey = 'rt_shift_banner_ack_' + dateKey() + '_' + Math.floor(currentMin / 60);
@@ -9204,12 +9201,11 @@ function maybeShowShiftBanner() {
 function saveShiftBoundaries() {
   var inputs = [
     document.getElementById('shift-boundary-0'),
-    document.getElementById('shift-boundary-1'),
-    document.getElementById('shift-boundary-2')
+    document.getElementById('shift-boundary-1')
   ];
-  var vals = inputs.map(function(el) { return parseInt(el.value, 10); });
-  if (vals.some(function(v) { return isNaN(v) || v < 0 || v > 23; })) {
-    document.getElementById('shift-boundary-status').textContent = '⛔ Enter valid hours (0–23).';
+  var vals = inputs.map(function(el) { return el ? el.value : ''; });
+  if (vals.some(function(v) { return !v || !/^\d{2}:\d{2}$/.test(v); })) {
+    document.getElementById('shift-boundary-status').textContent = '⛔ Enter valid times (HH:MM).';
     return;
   }
   SHIFT_BOUNDARIES = vals;
