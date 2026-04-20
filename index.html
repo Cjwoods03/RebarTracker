@@ -6301,9 +6301,8 @@ function stanchionPos(s) {
 function stanchionDistance(s1, s2) {
   return Math.abs(stanchionPos(s1) - stanchionPos(s2));
 }
-function isStanchionEmpty(s) {
-  var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
-  return sides.every(function(side) { return !store[s+side]; });
+function isSlotEmpty(slotId) {
+  return !store[slotId];
 }
 
 function runOptimizer() {
@@ -6388,7 +6387,7 @@ function runOptimizer() {
         var iBdl = locs[i].item.bundles || 0;
         var bBdl = best.item.bundles || 0;
         if (iBdl > bBdl) { best = locs[i]; continue; }
-        if (iBdl === bBdl && isStanchionEmpty(best.stan) && !isStanchionEmpty(locs[i].stan)) {
+        if (iBdl === bBdl && isSlotEmpty(best.loc) && !isSlotEmpty(locs[i].loc)) {
           best = locs[i];
         }
       }
@@ -6475,8 +6474,8 @@ function runOptimizer() {
           });
         });
         defragCandidates.sort(function(a, b) {
-          var aEmpty = isStanchionEmpty(a.loc.slice(0,-1)) ? 1 : 0;
-          var bEmpty = isStanchionEmpty(b.loc.slice(0,-1)) ? 1 : 0;
+          var aEmpty = isSlotEmpty(a.loc) ? 1 : 0;
+          var bEmpty = isSlotEmpty(b.loc) ? 1 : 0;
           if (aEmpty !== bEmpty) return aEmpty - bEmpty;
           return a.dist - b.dist;
         });
