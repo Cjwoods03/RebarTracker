@@ -6319,9 +6319,13 @@ function runOptimizer() {
           if (srcLen <= 0 || srcLen > remainFt) return;
           var newUsed = usedFt + srcLen;
           var pct = newUsed / maxFt;
-          if (pct < 0.85) return; // only suggest if it gets us to 85%+
+          var fillPriority;
+          if (pct >= 0.85)      fillPriority = 'high';
+          else if (pct >= 0.65) fillPriority = 'medium';
+          else if (pct >= 0.40) fillPriority = 'low';
+          else return;
           suggestions.push({
-            priority: 'high',
+            priority: fillPriority,
             moveType: srcItem.type || 'straight',
             ruleType: 'pair',
             rule: 'Fill partner sides',
@@ -6343,7 +6347,7 @@ function runOptimizer() {
       sides.forEach(function(side) {
         var item = store[s+side];
         if (!item) return;
-        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'') + '|' + (item.species||'') + '|' + (item.finish||'') + '|' + (item.pcWidth||'') + '|' + (item.pcThickness||'') + '|' + (item.endFinish||'') + '|' + (item.coating||'') + '|' + (item.glassWidth||'') + '|' + (item.glassHeight||'') + '|' + (item.cableAwg||'') + '|' + (item.cableConductors||'') + '|' + (item.cableColor||'');
+        var key = item.size + '|' + (item.length||'') + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'');
         if (!seen[key]) seen[key] = [];
         seen[key].push({ loc: s+side, stan: s, side: side, item: item });
       });
@@ -6359,6 +6363,11 @@ function runOptimizer() {
       locs.forEach(function(loc) {
         if (loc.loc === best.loc) return;
         var srcItem = loc.item;
+        var destCap = stanchionCapacity[best.stan];
+        if (destCap && destCap.maxBundlesPerSide) {
+          var destBdl = slotAllItems(best.loc).reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
+          if (destBdl + (srcItem.bundles || 0) > destCap.maxBundlesPerSide) return;
+        }
         suggestions.push({
           priority: 'medium',
           moveType: srcItem.type || 'straight',
