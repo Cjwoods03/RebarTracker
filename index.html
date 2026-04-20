@@ -6137,6 +6137,46 @@ function filterOptMoves(group, val, btn) {
   renderOptMoveList();
 }
 
+function renderMoveCard(move, options) {
+  options = options || {};
+  var priorityColors = { high:'#e84040', medium:'#f5a623', low:'#27c06e' };
+  var priorityLabels = { high:'\uD83D\uDD34 HIGH', medium:'\uD83D\uDFE1 MED', low:'\uD83D\uDFE2 LOW' };
+  var pc = priorityColors[move.priority] || 'var(--text-dim)';
+  var pl = priorityLabels[move.priority] || (move.priority || 'low').toUpperCase();
+  var moveTitle = move.from && move.to ? move.from + ' \u2192 ' + move.to : (move.desc || '');
+  var srcItem = move.item || store[move.from];
+  var freedFt = srcItem ? (parseFloat(srcItem.length) || 0) : 0;
+  var row = function(label, val) {
+    return '<div style="display:flex;gap:8px;margin-bottom:3px">' +
+      '<span style="color:var(--text-dim);min-width:110px;flex-shrink:0">' + label + '</span>' +
+      '<span style="color:var(--text)">' + val + '</span>' +
+      '</div>';
+  };
+  var explanationHtml = '';
+  if (move.from && move.from.length >= 2) {
+    explanationHtml = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;margin:8px 0;padding:8px 10px;background:var(--steel);border-radius:6px;border:1px solid var(--border);line-height:1.6">' +
+      row('Why:', (move.rule || '') + (move.detail ? ' \u2014 ' + move.detail : '')) +
+      (freedFt > 0 ? row('Footage freed:', freedFt + 'ft freed at ' + move.from) : '') +
+      (srcItem && srcItem.weightTons ? row('Move weight:', srcItem.weightTons.toFixed(2) + 't \u00b7 ' + srcItem.bundles + ' ' + LBL('bundles')) : '') +
+      '</div>';
+  }
+  var executeBtn = options.hideExecuteButton ? '' :
+    '<button class="opt-move-btn" onclick="executeOptimizerMove(' + options.executeIdx + ')" style="margin-top:6px">EXECUTE MOVE</button>';
+  return '<div class="opt-move-card">' +
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
+      '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--accent);line-height:1;letter-spacing:1px">' + moveTitle + '</div>' +
+      '<div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px">' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:' + pc + ';border:1px solid ' + pc + '">' + pl + '</span>' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:var(--text-dim);border:1px solid var(--border)">' + (move.moveType === 'spool' ? 'SPOOL' : 'STRAIGHT') + '</span>' +
+        '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:#6090cc;border:1px solid #6090cc">' + (move.ruleType === 'consolidate' ? 'CONSOLIDATE' : 'PAIR') + '</span>' +
+      '</div>' +
+    '</div>' +
+    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);line-height:1.5">' + (move.desc || moveTitle) + '</div>' +
+    explanationHtml +
+    executeBtn +
+    '</div>';
+}
+
 function renderOptMoveList() {
   // Build filtered list while preserving original indices (needed for executeOptimizerMove)
   var filteredWithIdx = [];
@@ -6151,48 +6191,8 @@ function renderOptMoveList() {
     listEl.innerHTML = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text-dim);padding:12px 0">No moves match this filter.</div>';
     return;
   }
-  var priorityColors = { high:'#e84040', medium:'#f5a623', low:'#27c06e' };
-  var priorityLabels = { high:'🔴 HIGH', medium:'🟡 MED', low:'🟢 LOW' };
   listEl.innerHTML = filteredWithIdx.map(function(entry) {
-    var m = entry.m;
-    var origIdx = entry.origIdx;
-    var pc = priorityColors[m.priority] || 'var(--text-dim)';
-    var pl = priorityLabels[m.priority] || m.priority.toUpperCase();
-
-    // Move title: "6A → 12B" derived from from/to slot IDs
-    var moveTitle = m.from && m.to ? m.from + ' \u2192 ' + m.to : m.desc;
-
-    // Explanation: footage freed + move weight at origin
-    var explanationHtml = '';
-    if (m.from && m.from.length >= 2) {
-      var srcItem = store[m.from];
-      var freedFt = srcItem ? (parseFloat(srcItem.length) || 0) : 0;
-      var row = function(label, val) {
-        return '<div style="display:flex;gap:8px;margin-bottom:3px">' +
-          '<span style="color:var(--text-dim);min-width:110px;flex-shrink:0">' + label + '</span>' +
-          '<span style="color:var(--text)">' + val + '</span>' +
-          '</div>';
-      };
-      explanationHtml = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;margin:8px 0;padding:8px 10px;background:var(--steel);border-radius:6px;border:1px solid var(--border);line-height:1.6">' +
-        row('Why:', m.rule + (m.detail ? ' — ' + m.detail : '')) +
-        (freedFt > 0 ? row('Footage freed:', freedFt + 'ft freed at ' + m.from) : '') +
-        (srcItem && srcItem.weightTons ? row('Move weight:', srcItem.weightTons.toFixed(2) + 't \u00b7 ' + srcItem.bundles + ' ' + LBL('bundles')) : '') +
-        '</div>';
-    }
-
-    return '<div class="opt-move-card">' +
-      '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">' +
-        '<div style="font-family:\'Bebas Neue\',sans-serif;font-size:20px;color:var(--accent);line-height:1;letter-spacing:1px">' + moveTitle + '</div>' +
-        '<div style="display:flex;gap:5px;flex-shrink:0;margin-left:8px">' +
-          '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:'+pc+';border:1px solid '+pc+'">'+pl+'</span>' +
-          '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:var(--text-dim);border:1px solid var(--border)">'+(m.moveType==='spool'?'SPOOL':'STRAIGHT')+'</span>' +
-          '<span style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;padding:2px 6px;border-radius:4px;background:var(--steel);color:#6090cc;border:1px solid #6090cc">'+(m.ruleType==='consolidate'?'CONSOLIDATE':'PAIR')+'</span>' +
-        '</div>' +
-      '</div>' +
-      '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:11px;color:var(--text);line-height:1.5">' + m.desc + '</div>' +
-      explanationHtml +
-      '<button class="opt-move-btn" onclick="executeOptimizerMove('+origIdx+')" style="margin-top:6px">EXECUTE MOVE</button>' +
-      '</div>';
+    return renderMoveCard(entry.m, { executeIdx: entry.origIdx });
   }).join('');
 }
 
@@ -6523,6 +6523,33 @@ function runDeepOptimizer() {
   renderDeepOptResults(combined, baseScore);
 }
 
+function enrichChainMove(state, move, stepIdx) {
+  var src = state.store[move.from] || move.item;
+  var destItem = state.store[move.to];
+  var destStan = move.to.slice(0, -1);
+  var destStanKey = isNaN(destStan) ? destStan : parseInt(destStan, 10);
+  var destMax = maxFtForStanchion(destStanKey);
+  var srcLen = parseFloat(src ? src.length : '') || 0;
+  var destUsed = simStanchionFtUsed(state, destStan);
+  var addsFt = (destItem && parseFloat(destItem.length) === srcLen) ? 0 : srcLen;
+  var postUsed = destUsed + addsFt;
+  var fillPct = destMax > 0 ? postUsed / destMax : 0;
+  var priority = fillPct >= 0.85 ? 'high' : fillPct >= 0.65 ? 'medium' : 'low';
+  var ruleType = destItem ? 'consolidate' : 'pair';
+  var it = src || move.item;
+  return {
+    from: move.from,
+    to: move.to,
+    item: it,
+    priority: priority,
+    moveType: (it && it.type) || 'straight',
+    ruleType: ruleType,
+    rule: 'Deep Optimize \u2014 Step ' + (stepIdx + 1),
+    detail: 'Stanchion ' + destStan + ': ' + postUsed.toFixed(0) + '/' + destMax + 'ft used after move (' + Math.round(fillPct * 100) + '%)',
+    desc: 'Move ' + (it ? it.size + ' ' + formatLength(it.length || '') : '') + ' from ' + move.from + ' \u2192 ' + move.to
+  };
+}
+
 function renderDeepOptResults(chains, baseScore) {
   var wrap = document.getElementById('opt-deep-results');
   var summary = document.getElementById('opt-deep-summary');
@@ -6533,27 +6560,26 @@ function renderDeepOptResults(chains, baseScore) {
     list.innerHTML = '';
     return;
   }
-  summary.textContent = chains.length + ' chain option' + (chains.length !== 1 ? 's' : '') + ' found — ranked by total gain (footage + empty stanchions + run cycle coverage)';
+  var best = chains[0];
+  var summaryText = chains.length + ' chain option' + (chains.length !== 1 ? 's' : '') +
+    ' found \u00b7 Best chain frees up to ' + best.score.freedFt.toFixed(0) + 'ft' +
+    (best.score.rcCovered > 0 ? ' and covers ' + best.score.rcCovered + ' run cycle item' + (best.score.rcCovered !== 1 ? 's' : '') : '');
+  summary.textContent = summaryText;
   var html = '';
   chains.forEach(function(c, idx) {
-    var steps = c.chain.map(function(m, i) {
-      var it = m.item;
-      return '<div style="padding:6px 10px;background:var(--steel);border-left:3px solid var(--accent);margin-top:4px;font-size:12px">' +
-        '<strong>Step ' + (i+1) + ':</strong> Move ' + it.size + ' ' + formatLength(it.length||'') +
-        ' from ' + m.from + ' \u2192 ' + m.to +
-        '</div>';
+    var simSt = simCloneState();
+    var stepCards = c.chain.map(function(m, i) {
+      var enriched = enrichChainMove(simSt, m, i);
+      simApplyMove(simSt, m);
+      return renderMoveCard(enriched, { hideExecuteButton: true });
     }).join('');
-    var gainStr = c.score.freedFt.toFixed(0) + 'ft freed \u00b7 ' + c.score.emptied + ' empty stans \u00b7 ' + c.score.rcCovered + ' RC items covered';
     html += '<div class="opt-deep-card" style="background:var(--steel-mid,var(--steel));border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px">' +
       '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleDeepChain(' + idx + ')">' +
-      '<div>' +
-      '<strong style="font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px">Chain ' + (idx+1) + ' \u2014 ' + c.chain.length + ' move' + (c.chain.length > 1 ? 's' : '') + '</strong>' +
-      '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">' + gainStr + '</div>' +
-      '</div>' +
+      '<strong style="font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px;font-size:16px">CHAIN ' + (idx+1) + ' \u2014 ' + c.chain.length + ' MOVE' + (c.chain.length > 1 ? 'S' : '') + '</strong>' +
       '<span id="deep-chevron-' + idx + '" style="font-size:14px">&#9660;</span>' +
       '</div>' +
       '<div id="deep-steps-' + idx + '" style="display:none;margin-top:8px">' +
-      steps +
+      stepCards +
       '<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="executeOptimizerChain(' + idx + ')">&#9889; EXECUTE CHAIN</button>' +
       '</div>' +
       '</div>';
