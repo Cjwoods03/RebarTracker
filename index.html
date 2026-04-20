@@ -2279,8 +2279,6 @@ function applyModeLabels() {
   if (ofTitle) ofTitle.textContent = LBL('multiStan');
   var logoSub = document.querySelector('.logo-sub');
   if (logoSub) logoSub.textContent = LBL('logoSub');
-  var mbl = document.getElementById('mode-btn-label');
-  if (mbl) mbl.textContent = MODES[APP_MODE] ? MODES[APP_MODE].name : APP_MODE;
 }
 
 // _optsHtml(arr) — converts a dropdown config array to <option> HTML
@@ -2325,59 +2323,6 @@ function rebuildDropdowns() {
 // setAppMode(modeId) — switches to any registered mode.
 // Removes all known mode body classes, applies the new mode's classes,
 // then refreshes labels, dropdowns, and the map render.
-function setAppMode(modeId) {
-  if (!MODES[modeId]) return; // unknown mode — ignore
-
-  // Remove every mode's declared body classes
-  Object.keys(MODES).forEach(function(id) {
-    (MODES[id].bodyClasses || []).forEach(function(c) {
-      document.body.classList.remove(c);
-    });
-  });
-
-  APP_MODE = modeId;
-  localStorage.setItem('rt_mode', APP_MODE);
-  document.body.setAttribute('data-mode', APP_MODE);
-
-  // Apply the new mode's body classes
-  (MODES[APP_MODE].bodyClasses || []).forEach(function(c) {
-    document.body.classList.add(c);
-  });
-
-  // Update mode button appearance
-  var btn = document.getElementById('mode-select-btn');
-  if (btn) btn.style.borderColor = APP_MODE === 'rebar' ? '' : 'var(--accent)';
-
-  applyModeLabels();
-  rebuildDropdowns();
-  renderAll();
-  renderInventory();
-}
-
-// Mode selector modal
-function openModeSelector() {
-  if (TENANT_MODES[tenantKey] && MODES[TENANT_MODES[tenantKey]]) return; // locked tenant
-  var html = Object.keys(MODES).map(function(id) {
-    var m = MODES[id];
-    var isActive = id === APP_MODE;
-    return '<div class="mode-card' + (isActive ? ' active' : '') + '" onclick="setAppMode(\'' + id + '\');closeModeSelector()">' +
-      '<div class="mode-card-dot"></div>' +
-      '<div class="mode-card-body">' +
-        '<div class="mode-card-name">' + m.name + '</div>' +
-        '<div class="mode-card-desc">' + m.description + '</div>' +
-      '</div>' +
-      (isActive ? '<div class="mode-card-tag">ACTIVE</div>' : '') +
-    '</div>';
-  }).join('');
-  document.getElementById('mode-cards').innerHTML = html;
-  document.getElementById('mode-selector-overlay').classList.add('active');
-}
-function closeModeSelector() {
-  document.getElementById('mode-selector-overlay').classList.remove('active');
-}
-function handleModeSelectorClick(e) {
-  if (e.target === document.getElementById('mode-selector-overlay')) closeModeSelector();
-}
 
 // ─── DATA ────────────────────────────────────────────────────────
 var _uidSeq = 0;
@@ -2774,19 +2719,8 @@ function calcA22PiecesFromWeight() {
 // Returns the "size" value for any form prefix, handling aluminum profile text input
 // prefix: 'inp' (main form), 'sec' (secondary), 'edit' (edit modal), 'rc' (run cycle)
 function getFormSize(prefix) {
-  if (APP_MODE === 'alum') {
-    var profileEl = document.getElementById((prefix || 'inp') + '-profile');
-    return profileEl ? profileEl.value.trim() : '';
-  }
   var sizeEl = document.getElementById((prefix || 'inp') + '-size');
   return sizeEl ? sizeEl.value : '';
-}
-
-// Parses "2x4", "4x6", etc. → {t: thickness, w: width} for board foot calc
-function parseLumberDims(size) {
-  var m = size && size.match(/^(\d+)x(\d+)$/i);
-  if (!m) return null;
-  return { t: parseInt(m[1]), w: parseInt(m[2]) };
 }
 
 function calcBundleWeight() {
@@ -2800,91 +2734,7 @@ function calcBundleWeight() {
   var pieces  = parseInt(document.getElementById('inp-pieces').value) || 0;
   var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
-  // ── Wire/Cable: footage totals across reels ──
-  if (APP_MODE === 'cable') {
-    if (!lenNum || !bundles) { calcEl.style.display = 'none'; return; }
-    var totalFt  = lenNum * bundles;
-    var cAwgEl   = document.getElementById('inp-cable-awg');
-    var cAwg     = cAwgEl ? cAwgEl.value : '';
-    var html =
-      '<span style="color:var(--text-dim)">📏 ' + lenNum.toLocaleString() + 'ft/reel × ' + bundles + ' reel' + (bundles !== 1 ? 's' : '') + '</span><br>' +
-      '<strong style="color:var(--accent)">Total footage: ' + totalFt.toLocaleString() + ' ft' + (cAwg ? ' — ' + cAwg : '') + '</strong>';
-    calcEl.innerHTML = html;
-    calcEl.style.display = 'block';
-    return;
-  }
-
-  // ── Flat glass: lite weight from width × height × thickness ──
-  if (APP_MODE === 'glass') {
-    var gwEl  = document.getElementById('inp-glass-width');
-    var ghEl  = document.getElementById('inp-glass-height');
-    var gw    = parseFloat(gwEl  ? gwEl.value  : 0) || 0;
-    var gh    = parseFloat(ghEl  ? ghEl.value  : 0) || 0;
-    var thickMm = parseFloat(document.getElementById('inp-grade').value) || 0;
-    var glQty   = parseInt(document.getElementById('inp-bundles').value) || 0;
-    if (!gw || !gh) { calcEl.style.display = 'none'; return; }
-    var sqFt = (gw * gh) / 144;
-    var sqM  = (gw * gh) / 1550.0031;
-    var kgPerLite  = thickMm ? (2.5 * thickMm * sqM) : 0;
-    var lbsPerLite = kgPerLite * 2.20462;
-    var html =
-      '<span style="color:var(--text-dim)">🪟 ' + gw + '" × ' + gh + '" = ' + sqFt.toFixed(2) + ' sq ft</span><br>' +
-      (thickMm
-        ? '<span style="color:var(--text-dim)">' + sqM.toFixed(3) + ' m² × ' + thickMm + 'mm × 2.5 kg/mm/m²</span> &nbsp;·&nbsp; <strong style="color:var(--safe)">' + lbsPerLite.toFixed(1) + ' lbs / lite</strong>'
-        : '<span style="color:var(--text-dim)">Select thickness for weight calculation</span>');
-    if (glQty > 0 && thickMm) {
-      var lbsTotal  = lbsPerLite * glQty;
-      var sqFtTotal = sqFt * glQty;
-      html += '<br><strong style="color:var(--accent)">Total (' + glQty + ' lites): ' + sqFtTotal.toFixed(1) + ' sq ft · ' + lbsTotal.toFixed(0) + ' lbs / ' + (lbsTotal / 2000).toFixed(2) + 't</strong>';
-    }
-    calcEl.innerHTML = html;
-    calcEl.style.display = 'block';
-    return;
-  }
-
-  // ── Precast concrete: weight from dimensions ──
-  if (APP_MODE === 'precast') {
-    var pcWEl = document.getElementById('inp-pc-width');
-    var pcTEl = document.getElementById('inp-pc-thickness');
-    var pcW = parseFloat(pcWEl ? pcWEl.value : 0) || 0;
-    var pcT = parseFloat(pcTEl ? pcTEl.value : 0) || 0;
-    if (!lenNum || !pcW || !pcT) { calcEl.style.display = 'none'; return; }
-    var cuFt = lenNum * pcW * (pcT / 12);
-    var lbsPerPc = cuFt * 150;
-    var pcBundles = parseInt(document.getElementById('inp-bundles').value) || 0;
-    var html =
-      '<span style="color:var(--text-dim)">📐 ' + lenNum + 'ft × ' + pcW + 'ft wide × ' + pcT + '" thick</span><br>' +
-      '<span style="color:var(--text-dim)">' + cuFt.toFixed(2) + ' cu.ft @ 150 lbs/cu.ft</span> &nbsp;·&nbsp; ' +
-      '<strong style="color:var(--safe)">' + lbsPerPc.toFixed(0) + ' lbs / piece</strong>';
-    if (pcBundles > 0) {
-      var lbsTotal = lbsPerPc * pcBundles;
-      html += '<br><strong style="color:var(--accent)">Total (' + pcBundles + ' pc): ' + lbsTotal.toFixed(0) + ' lbs / ' + (lbsTotal / 2000).toFixed(2) + 't</strong>';
-    }
-    calcEl.innerHTML = html;
-    calcEl.style.display = 'block';
-    return;
-  }
-
-  // ── Lumber yard: board feet calculation ──
-  if (APP_MODE === 'lumber') {
-    var dims = parseLumberDims(size);
-    if (!dims || !lenNum || !pieces) { calcEl.style.display = 'none'; return; }
-    var bfPerPc   = (dims.t * dims.w * lenNum) / 12;
-    var bfPerUnit = bfPerPc * pieces;
-    var bfTotal   = bfPerUnit * bundles;
-    var html =
-      '<span style="color:var(--text-dim)">📐 ' + size + ' × ' + lenNum + 'ft × ' + pieces + ' pc/unit</span><br>' +
-      '<span style="color:var(--text-dim)">BF/pc: ' + bfPerPc.toFixed(2) + '</span> &nbsp;·&nbsp; ' +
-      '<strong style="color:var(--safe)">BF/unit: ' + bfPerUnit.toFixed(1) + '</strong>';
-    if (bundles > 0) {
-      html += '<br><strong style="color:var(--accent)">Total (' + bundles + ' units): ' + bfTotal.toFixed(0) + ' board feet</strong>';
-    }
-    calcEl.innerHTML = html;
-    calcEl.style.display = 'block';
-    return;
-  }
-
-  // ── Rebar / SSC: lbs weight calculation ──
+  // ── Rebar: lbs weight calculation ──
   var lbsPerFt = REBAR_LBS_PER_FT[size] || 0;
 
   if (!lbsPerFt || !lenNum || !pieces) { calcEl.style.display = 'none'; return; }
@@ -3661,13 +3511,8 @@ function makeSlot(id, side) {
       // Single product — show detail + customer if present
       var custStr = item.customer || '';
       // Aluminum: alloy+temper; precast: element+mix; pipe/cable: size+material/AWG; glass: type+thickness
-      var slotLine1 = (APP_MODE === 'alum') ? (item.grade || '—') : item.size;
-      var slotLine2 = (APP_MODE === 'alum')    ? (item.spec  || '—') :
-                      (APP_MODE === 'precast') ? (item.grade || '—') :
-                      (APP_MODE === 'pipe')    ? (item.grade || '—') :
-                      (APP_MODE === 'glass')   ? (item.grade ? item.grade + 'mm' : '—') :
-                      (APP_MODE === 'cable')   ? (item.cableAwg || (item.length ? formatLength(item.length) : '—')) :
-                      (item.length ? formatLength(item.length) : 'Coil');
+      var slotLine1 = item.size;
+      var slotLine2 = item.length ? formatLength(item.length) : 'Coil';
       div.innerHTML =
         '<div class="slot-size'+(isSpool?' spool-color':'')+'">'+slotLine1+'</div>'+
         '<div class="slot-len">'+slotLine2+'</div>'+
@@ -4229,7 +4074,7 @@ function buildModalRows(item, isSpool, days) {
   rows += mrow(LBL('szLbl'), item.size);
   rows += mrow('Type', isSpool ? LBL('prodSpool') : LBL('prodType'));
   if (item.grade) {
-    var gradeDisp = (APP_MODE === 'glass') ? item.grade + 'mm' : (LBL('gradePrefix') + item.grade);
+    var gradeDisp = LBL('gradePrefix') + item.grade;
     rows += mrow(LBL('gradeLbl'), gradeDisp);
   }
   if (item.spec)    rows += mrow(LBL('specLbl'), item.spec);
@@ -4243,14 +4088,7 @@ function buildModalRows(item, isSpool, days) {
     var gSqFt = (item.glassWidth * item.glassHeight) / 144;
     rows += mrow('Size', item.glassWidth + '" \xd7 ' + item.glassHeight + '" (' + gSqFt.toFixed(2) + ' sq ft)');
   }
-  if (item.cableAwg)        rows += mrow('AWG / Size', item.cableAwg);
-  if (item.cableConductors) rows += mrow('Conductors', item.cableConductors + 'C');
-  if (item.cableColor)      rows += mrow('Insulation Color', item.cableColor);
-  if (APP_MODE !== 'glass') rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
-  if (APP_MODE === 'cable' && item.length && item.bundles > 1) {
-    var totalFtDisp = (parseFloat(item.length) * item.bundles).toLocaleString();
-    rows += mrow('Total Footage', totalFtDisp + ' ft (' + item.bundles + ' reels)');
-  }
+  rows += mrow('Length', item.length ? formatLength(item.length) : 'Coil');
   if (item.spoolWeightLbs) {
     rows += mrow('Coil Weight', item.spoolWeightLbs.toLocaleString() + ' LBS (' + (item.spoolWeightLbs/2000).toFixed(1) + ' tons)');
     rows += mrow('Total Weight', ((item.spoolWeightLbs/2000)*(item.bundles||0)).toFixed(2) + 't');
@@ -4567,30 +4405,6 @@ function confirmEdit() {
   var newSize    = document.getElementById('edit-size').value;
   var newGrade   = document.getElementById('edit-grade').value;
   var newSpec    = document.getElementById('edit-spec').value;
-  var editSpeciesEl2 = document.getElementById('edit-species');
-  var newSpecies = editSpeciesEl2 ? editSpeciesEl2.value : undefined;
-  var editFinishEl2 = document.getElementById('edit-finish');
-  var newFinish  = editFinishEl2 ? editFinishEl2.value : undefined;
-  var editProfileEl2 = document.getElementById('edit-profile');
-  var newProfileSize = (APP_MODE === 'alum' && editProfileEl2) ? editProfileEl2.value.trim() : undefined;
-  var editPcWidthEl2 = document.getElementById('edit-pc-width');
-  var newPcWidth = editPcWidthEl2 ? (parseFloat(editPcWidthEl2.value) || 0) : 0;
-  var editPcThicknessEl2 = document.getElementById('edit-pc-thickness');
-  var newPcThickness = editPcThicknessEl2 ? (parseFloat(editPcThicknessEl2.value) || 0) : 0;
-  var editEndFinishEl2 = document.getElementById('edit-endfinish');
-  var newEndFinish = editEndFinishEl2 ? editEndFinishEl2.value : undefined;
-  var editCoatingEl2 = document.getElementById('edit-coating');
-  var newCoating = editCoatingEl2 ? editCoatingEl2.value : undefined;
-  var editGlassWidthEl2  = document.getElementById('edit-glass-width');
-  var newGlassWidth  = editGlassWidthEl2  ? (parseFloat(editGlassWidthEl2.value)  || 0) : 0;
-  var editGlassHeightEl2 = document.getElementById('edit-glass-height');
-  var newGlassHeight = editGlassHeightEl2 ? (parseFloat(editGlassHeightEl2.value) || 0) : 0;
-  var editCableAwgEl2        = document.getElementById('edit-cable-awg');
-  var newCableAwg        = editCableAwgEl2        ? editCableAwgEl2.value        : undefined;
-  var editCableConductorsEl2 = document.getElementById('edit-cable-conductors');
-  var newCableConductors = editCableConductorsEl2 ? editCableConductorsEl2.value : undefined;
-  var editCableColorEl2      = document.getElementById('edit-cable-color');
-  var newCableColor      = editCableColorEl2      ? editCableColorEl2.value      : undefined;
   var newBundles = parseInt(document.getElementById('edit-bundles').value) || item.bundles;
   var newHeat    = document.getElementById('edit-heat').value.trim();
   var ftRaw = document.getElementById('edit-length-ft').value.trim();
@@ -4601,19 +4415,9 @@ function confirmEdit() {
   var lenFieldsTouched = ftRaw !== '' || inRaw !== ''; // user explicitly filled or cleared fields
 
   // Apply changes
-  if (newProfileSize) item.size = newProfileSize; // aluminum: profile text overrides size
-  else if (newSize)   item.size = newSize;
-  if (newGrade   !== undefined) item.grade   = newGrade;
-  if (newSpec    !== undefined) item.spec    = newSpec;
-  if (newSpecies !== undefined) item.species = newSpecies;
-  if (newFinish  !== undefined) item.finish  = newFinish;
-  if (APP_MODE === 'precast') { item.pcWidth = newPcWidth; item.pcThickness = newPcThickness; }
-  if (newEndFinish !== undefined) item.endFinish = newEndFinish;
-  if (newCoating   !== undefined) item.coating   = newCoating;
-  if (APP_MODE === 'glass') { item.glassWidth = newGlassWidth; item.glassHeight = newGlassHeight; }
-  if (newCableAwg        !== undefined) item.cableAwg        = newCableAwg;
-  if (newCableConductors !== undefined) item.cableConductors = newCableConductors;
-  if (newCableColor      !== undefined) item.cableColor      = newCableColor;
+  if (newSize)  item.size  = newSize;
+  if (newGrade !== undefined) item.grade = newGrade;
+  if (newSpec  !== undefined) item.spec  = newSpec;
   item.bundles = newBundles;
   if (item.spoolWeightLbs) item.weightTons = (item.spoolWeightLbs / 2000) * newBundles;
   else if (item.weightPerBundleTons) item.weightTons = item.weightPerBundleTons * newBundles;
@@ -7003,27 +6807,9 @@ function openSplitFromForm() {
     var spec    = document.getElementById('inp-spec').value;
     var bundles = parseInt(document.getElementById('inp-bundles').value) || 0;
 
-    var _ofSpeciesEl     = document.getElementById('inp-species');
-    var _ofFinishEl      = document.getElementById('inp-finish');
-    var _ofEndFinishEl   = document.getElementById('inp-endfinish');
-    var _ofCoatingEl     = document.getElementById('inp-coating');
-    var _ofGlassWidthEl      = document.getElementById('inp-glass-width');
-    var _ofGlassHeightEl     = document.getElementById('inp-glass-height');
-    var _ofCableAwgEl        = document.getElementById('inp-cable-awg');
-    var _ofCableConductorsEl = document.getElementById('inp-cable-conductors');
-    var _ofCableColorEl      = document.getElementById('inp-cable-color');
     _of.item = {
       size: size, length: lenNum ? String(lenNum) : '', type: 'straight',
       grade: grade, spec: spec,
-      species:         (APP_MODE === 'lumber' && _ofSpeciesEl)         ? _ofSpeciesEl.value         : '',
-      finish:          (APP_MODE === 'alum'   && _ofFinishEl)          ? _ofFinishEl.value          : '',
-      endFinish:       (APP_MODE === 'pipe'   && _ofEndFinishEl)       ? _ofEndFinishEl.value       : '',
-      coating:         (APP_MODE === 'pipe'   && _ofCoatingEl)         ? _ofCoatingEl.value         : '',
-      glassWidth:      (APP_MODE === 'glass'  && _ofGlassWidthEl)      ? (parseFloat(_ofGlassWidthEl.value)  || 0) : 0,
-      glassHeight:     (APP_MODE === 'glass'  && _ofGlassHeightEl)     ? (parseFloat(_ofGlassHeightEl.value) || 0) : 0,
-      cableAwg:        (APP_MODE === 'cable'  && _ofCableAwgEl)        ? _ofCableAwgEl.value        : '',
-      cableConductors: (APP_MODE === 'cable'  && _ofCableConductorsEl) ? _ofCableConductorsEl.value : '',
-      cableColor:      (APP_MODE === 'cable'  && _ofCableColorEl)      ? _ofCableColorEl.value      : '',
       weightPerBundleTons: getCalcBdlTons(),
       spoolWeightLbs: 0,
       customer: document.getElementById('inp-customer').value.trim(),
@@ -7572,21 +7358,9 @@ function calcSuggestLoc(type, size, length, grade, spec, customer) {
         var existing = store[id];
         if (!existing) continue;
         if (scrapSlots[id] || holdSlots[id] || redTagSlots[id] || reservedSlots[id]) continue;
-        var curSpecies   = (APP_MODE === 'lumber' && document.getElementById('inp-species'))    ? document.getElementById('inp-species').value    : '';
-        var curFinish    = (APP_MODE === 'alum'   && document.getElementById('inp-finish'))     ? document.getElementById('inp-finish').value     : '';
-        var curEndFinish       = (APP_MODE === 'pipe'  && document.getElementById('inp-endfinish'))       ? document.getElementById('inp-endfinish').value       : '';
-        var curCoating         = (APP_MODE === 'pipe'  && document.getElementById('inp-coating'))         ? document.getElementById('inp-coating').value         : '';
-        var curCableAwg        = (APP_MODE === 'cable' && document.getElementById('inp-cable-awg'))       ? document.getElementById('inp-cable-awg').value       : '';
-        var curCableConductors = (APP_MODE === 'cable' && document.getElementById('inp-cable-conductors')) ? document.getElementById('inp-cable-conductors').value : '';
         if (existing.size === size && parseFloat(existing.length) === length &&
-            (!grade               || !existing.grade           || existing.grade           === grade) &&
-            (!spec                || !existing.spec            || existing.spec            === spec) &&
-            (!curSpecies          || !existing.species         || existing.species         === curSpecies) &&
-            (!curFinish           || !existing.finish          || existing.finish          === curFinish) &&
-            (!curEndFinish        || !existing.endFinish       || existing.endFinish       === curEndFinish) &&
-            (!curCoating          || !existing.coating         || existing.coating         === curCoating) &&
-            (!curCableAwg         || !existing.cableAwg        || existing.cableAwg        === curCableAwg) &&
-            (!curCableConductors  || !existing.cableConductors || existing.cableConductors === curCableConductors) &&
+            (!grade || !existing.grade || existing.grade === grade) &&
+            (!spec  || !existing.spec  || existing.spec  === spec) &&
             (existing.customer||'') === (customer||'')) {
           pick2 = id;
           var lbl = (s==='BSU') ? 'B.SU' : LBL('stan')+' '+s;
@@ -7866,8 +7640,6 @@ function renderRunCycle() {
 function logRun() {
   var locVal = document.getElementById('inp-location').value;
   var type = document.getElementById('inp-type').value;
-  // Precast / glass mode: always treat as straight (discrete items, no spools)
-  if (APP_MODE === 'precast' || APP_MODE === 'glass') type = 'straight';
   var size = getFormSize('inp');
   var length = getLengthDisplay(); // display string e.g. "20'6\""
   var lenNum = getLengthDecimal(); // decimal feet e.g. 20.5
@@ -7917,43 +7689,18 @@ function logRun() {
   }
 
   if (!size || !bundles) { alert(LBL('sizeAlert')); return; }
-  // Glass mode: no length — width × height replaces footage tracking
-  if (type==='straight' && !lenNum && APP_MODE !== 'glass') { alert('Please enter a length.'); return; }
+  if (type==='straight' && !lenNum) { alert('Please enter a length.'); return; }
   var grade = document.getElementById('inp-grade').value;
   var spec  = document.getElementById('inp-spec').value;
   if (!grade) { alert(LBL('gradeAlert')); return; }
   if (!spec)  { alert(LBL('specAlert')); return; }
 
   // For spool, get weight from the fixed dropdown (lbs → tons)
-  var inpPcWidthEl      = document.getElementById('inp-pc-width');
-  var inpPcThicknessEl  = document.getElementById('inp-pc-thickness');
-  var inpGlassWidthEl   = document.getElementById('inp-glass-width');
-  var inpGlassHeightEl  = document.getElementById('inp-glass-height');
   var weightTons;
   if (type === 'spool') {
     var spoolLbs = parseFloat(document.getElementById('inp-spool-weight').value) || 0;
     var spoolCoils = parseInt(bundles) || 0;
     weightTons = (spoolLbs / 2000) * spoolCoils;
-  } else if (APP_MODE === 'precast') {
-    var _pcW = parseFloat(inpPcWidthEl ? inpPcWidthEl.value : 0) || 0;
-    var _pcT = parseFloat(inpPcThicknessEl ? inpPcThicknessEl.value : 0) || 0;
-    if (lenNum && _pcW && _pcT) {
-      var _cuFt = lenNum * _pcW * (_pcT / 12);
-      weightTons = (_cuFt * 150 / 2000) * (parseInt(bundles) || 0);
-    } else {
-      weightTons = 0;
-    }
-  } else if (APP_MODE === 'glass') {
-    var _gw = parseFloat(inpGlassWidthEl ? inpGlassWidthEl.value : 0) || 0;
-    var _gh = parseFloat(inpGlassHeightEl ? inpGlassHeightEl.value : 0) || 0;
-    var _gThick = parseFloat(document.getElementById('inp-grade').value) || 0;
-    if (_gw && _gh && _gThick) {
-      var _gSqM = (_gw * _gh) / 1550.0031;
-      var _gLbsPerLite = (2.5 * _gThick * _gSqM) * 2.20462;
-      weightTons = (_gLbsPerLite / 2000) * (parseInt(bundles) || 0);
-    } else {
-      weightTons = 0;
-    }
   } else {
     var bdlTons = getCalcBdlTons();
     weightTons = bdlTons * (parseInt(bundles) || 0);
@@ -8058,7 +7805,7 @@ function logRun() {
   }
 
   // If stanchion side, enforce per-stanchion ft rule (skip for CYCLE, same-product merges, glass, and cable modes)
-  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE' && APP_MODE !== 'glass' && APP_MODE !== 'cable') {
+  if (type==='straight' && !loc.startsWith('RACK-') && loc !== 'CYCLE') {
     var stanKey = loc.slice(0, -1);
     var stanNum = parseInt(stanKey) || stanKey;
     // If the destination already holds the same product, this is a bundle merge —
@@ -8107,27 +7854,9 @@ function logRun() {
       var ofNewBdl = parseInt(bundles) || 0;
       if (ofNewBdl + ofUsedBdl > ofCap.maxBundlesPerSide) {
         // Build item template and hand off to overflow modal
-        var _ofTplSpeciesEl     = document.getElementById('inp-species');
-        var _ofTplFinishEl      = document.getElementById('inp-finish');
-        var _ofTplEndFinishEl   = document.getElementById('inp-endfinish');
-        var _ofTplCoatingEl     = document.getElementById('inp-coating');
-        var _ofTplGlassWidthEl      = document.getElementById('inp-glass-width');
-        var _ofTplGlassHeightEl     = document.getElementById('inp-glass-height');
-        var _ofTplCableAwgEl        = document.getElementById('inp-cable-awg');
-        var _ofTplCableConductorsEl = document.getElementById('inp-cable-conductors');
-        var _ofTplCableColorEl      = document.getElementById('inp-cable-color');
         var ofTemplate = {
           size: size, length: lenNum ? String(lenNum) : '', type: type,
           grade: grade, spec: spec,
-          species:         (APP_MODE === 'lumber' && _ofTplSpeciesEl)         ? _ofTplSpeciesEl.value         : '',
-          finish:          (APP_MODE === 'alum'   && _ofTplFinishEl)          ? _ofTplFinishEl.value          : '',
-          endFinish:       (APP_MODE === 'pipe'   && _ofTplEndFinishEl)       ? _ofTplEndFinishEl.value       : '',
-          coating:         (APP_MODE === 'pipe'   && _ofTplCoatingEl)         ? _ofTplCoatingEl.value         : '',
-          glassWidth:      (APP_MODE === 'glass'  && _ofTplGlassWidthEl)      ? (parseFloat(_ofTplGlassWidthEl.value)  || 0) : 0,
-          glassHeight:     (APP_MODE === 'glass'  && _ofTplGlassHeightEl)     ? (parseFloat(_ofTplGlassHeightEl.value) || 0) : 0,
-          cableAwg:        (APP_MODE === 'cable'  && _ofTplCableAwgEl)        ? _ofTplCableAwgEl.value        : '',
-          cableConductors: (APP_MODE === 'cable'  && _ofTplCableConductorsEl) ? _ofTplCableConductorsEl.value : '',
-          cableColor:      (APP_MODE === 'cable'  && _ofTplCableColorEl)      ? _ofTplCableColorEl.value      : '',
           weightPerBundleTons: getCalcBdlTons(),
           spoolWeightLbs: 0,
           customer: document.getElementById('inp-customer').value.trim(),
@@ -8140,40 +7869,12 @@ function logRun() {
   }
 
   var spoolLbsStored = type==='spool' ? (parseFloat(document.getElementById('inp-spool-weight').value)||0) : 0;
-  var inpSpeciesEl         = document.getElementById('inp-species');
-  var inpFinishEl          = document.getElementById('inp-finish');
-  var inpEndFinishEl       = document.getElementById('inp-endfinish');
-  var inpCoatingEl         = document.getElementById('inp-coating');
-  var inpCableAwgEl        = document.getElementById('inp-cable-awg');
-  var inpCableConductorsEl = document.getElementById('inp-cable-conductors');
-  var inpCableColorEl      = document.getElementById('inp-cable-color');
-  // Glass: compute weight per lite for weightPerBundleTons field
-  var _glassWtPerLite = 0;
-  if (APP_MODE === 'glass') {
-    var _gw2 = parseFloat(inpGlassWidthEl ? inpGlassWidthEl.value : 0) || 0;
-    var _gh2 = parseFloat(inpGlassHeightEl ? inpGlassHeightEl.value : 0) || 0;
-    var _gt2 = parseFloat(grade) || 0;
-    if (_gw2 && _gh2 && _gt2) {
-      _glassWtPerLite = ((2.5 * _gt2 * (_gw2 * _gh2 / 1550.0031)) * 2.20462) / 2000;
-    }
-  }
   var item = {
     uid: genUid(),
     size: size, length: lenNum ? String(lenNum) : '', type: type,
     grade: grade, spec: spec,
-    species:      (APP_MODE === 'lumber'   && inpSpeciesEl)     ? inpSpeciesEl.value    : '',
-    finish:       (APP_MODE === 'alum'     && inpFinishEl)      ? inpFinishEl.value     : '',
-    pcWidth:      (APP_MODE === 'precast'  && inpPcWidthEl)     ? (parseFloat(inpPcWidthEl.value) || 0)     : 0,
-    pcThickness:  (APP_MODE === 'precast'  && inpPcThicknessEl) ? (parseFloat(inpPcThicknessEl.value) || 0) : 0,
-    endFinish:    (APP_MODE === 'pipe'     && inpEndFinishEl)   ? inpEndFinishEl.value  : '',
-    coating:      (APP_MODE === 'pipe'     && inpCoatingEl)     ? inpCoatingEl.value    : '',
-    glassWidth:      (APP_MODE === 'glass' && inpGlassWidthEl)        ? (parseFloat(inpGlassWidthEl.value)  || 0) : 0,
-    glassHeight:     (APP_MODE === 'glass' && inpGlassHeightEl)       ? (parseFloat(inpGlassHeightEl.value) || 0) : 0,
-    cableAwg:        (APP_MODE === 'cable' && inpCableAwgEl)          ? inpCableAwgEl.value        : '',
-    cableConductors: (APP_MODE === 'cable' && inpCableConductorsEl)   ? inpCableConductorsEl.value : '',
-    cableColor:      (APP_MODE === 'cable' && inpCableColorEl)        ? inpCableColorEl.value      : '',
     bundles: parseInt(bundles),
-    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : (APP_MODE === 'glass' ? _glassWtPerLite : getCalcBdlTons()),
+    weightPerBundleTons: type==='spool' ? (spoolLbsStored/2000) : getCalcBdlTons(),
     weightTons: weightTons,
     spoolWeightLbs: spoolLbsStored,
     customer: document.getElementById('inp-customer').value.trim(),
@@ -8530,16 +8231,8 @@ function renderInventory() {
     var productLine = item.size + (item.length ? ' · ' + formatLength(item.length) : ' · Coil') + ' · ' + item.bundles + (isSpool ? ' coils' : ' ' + LBL('bundles'));
     // Grade/spec line
     var gradeSpec = [
-      item.grade ? (APP_MODE === 'rebar' ? 'Gr'+item.grade : (APP_MODE === 'glass' ? item.grade + 'mm' : item.grade)) : '',
-      item.spec  || '',
-      (APP_MODE === 'lumber'  && item.species)                            ? item.species : '',
-      (APP_MODE === 'alum'    && item.finish)                             ? item.finish  : '',
-      (APP_MODE === 'precast' && item.pcWidth && item.pcThickness)        ? (item.pcWidth + 'ft × ' + item.pcThickness + '"') : '',
-      (APP_MODE === 'pipe'    && item.endFinish)                          ? item.endFinish : '',
-      (APP_MODE === 'pipe'    && item.coating && item.coating !== 'None') ? item.coating : '',
-      (APP_MODE === 'glass'   && item.glassWidth && item.glassHeight)     ? (item.glassWidth + '"\xd7' + item.glassHeight + '"') : '',
-      (APP_MODE === 'cable'   && item.cableAwg)                           ? item.cableAwg : '',
-      (APP_MODE === 'cable'   && item.cableConductors)                    ? (item.cableConductors + 'C') : ''
+      item.grade ? ('Gr' + item.grade) : '',
+      item.spec  || ''
     ].filter(Boolean).join(' · ');
     // Optional info line
     var infoLine = [item.customer, item.heat, item.order].filter(Boolean).join(' · ');
