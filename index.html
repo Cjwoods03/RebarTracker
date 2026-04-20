@@ -6308,7 +6308,8 @@ function runOptimizer() {
       var emptySides    = sides.filter(function(side) { return !store[s+side] && slotAvailable(s+side); });
       if (occupiedSides.length === 0 || emptySides.length === 0) return;
 
-      // Look for product elsewhere that would fill the gap
+      // Collect all candidates from the rest of the warehouse that fit
+      var candidates = [];
       order.forEach(function(s2) {
         if (s2 === s) return;
         var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
@@ -6317,24 +6318,29 @@ function runOptimizer() {
           if (!srcItem) return;
           var srcLen = parseFloat(srcItem.length) || 0;
           if (srcLen <= 0 || srcLen > remainFt) return;
-          var newUsed = usedFt + srcLen;
-          var pct = newUsed / maxFt;
-          var fillPriority;
-          if (pct >= 0.85)      fillPriority = 'high';
-          else if (pct >= 0.65) fillPriority = 'medium';
-          else if (pct >= 0.40) fillPriority = 'low';
-          else return;
-          suggestions.push({
-            priority: fillPriority,
-            moveType: srcItem.type || 'straight',
-            ruleType: 'pair',
-            rule: 'Fill partner sides',
-            desc: 'Move ' + srcItem.size + ' ' + formatLength(srcItem.length) + ' from ' + stanLabel(s2) + ' ' + side2 + '-side → ' + stanLabel(s) + ' ' + emptySides[0] + '-side',
-            detail: stanLabel(s) + ' would be ' + newUsed.toFixed(0) + '/' + maxFt + 'ft (' + Math.round(pct*100) + '% full)',
-            gain: newUsed.toFixed(0) + '/' + maxFt + 'ft (' + Math.round(pct*100) + '%)',
-            from: s2+side2, to: s+emptySides[0]
-          });
+          candidates.push({ srcItem: srcItem, srcStan: s2, srcSide: side2, srcLen: srcLen });
         });
+      });
+      // Pick the longest-fitting candidate — minimizes wasted footage
+      candidates.sort(function(a, b) { return b.srcLen - a.srcLen; });
+      if (candidates.length === 0) return;
+      var best = candidates[0];
+      var newUsed = usedFt + best.srcLen;
+      var pct = newUsed / maxFt;
+      var fillPriority;
+      if (pct >= 0.85)      fillPriority = 'high';
+      else if (pct >= 0.65) fillPriority = 'medium';
+      else if (pct >= 0.40) fillPriority = 'low';
+      else return;
+      suggestions.push({
+        priority: fillPriority,
+        moveType: best.srcItem.type || 'straight',
+        ruleType: 'pair',
+        rule: 'Fill partner sides',
+        desc: 'Move ' + best.srcItem.size + ' ' + formatLength(best.srcItem.length) + ' from ' + stanLabel(best.srcStan) + ' ' + best.srcSide + '-side → ' + stanLabel(s) + ' ' + emptySides[0] + '-side',
+        detail: stanLabel(s) + ' would be ' + newUsed.toFixed(0) + '/' + maxFt + 'ft (' + Math.round(pct*100) + '% full)',
+        gain: newUsed.toFixed(0) + '/' + maxFt + 'ft (' + Math.round(pct*100) + '%)',
+        from: best.srcStan+best.srcSide, to: s+emptySides[0]
       });
     });
   }
