@@ -240,18 +240,32 @@ New functions: formatReceivedDate(iso) and getItemAgeDays(item) near formatLengt
 Architecture note: loadData backfill block sits immediately after counter-normalization (~line 9104), safe to run every load, no-ops once all items are stamped.
 Note: e2e2830 (Heat # on LOG RUN form) was skipped — heat capture is intentionally limited to CSV import and edit modal only.
 
-### Session 3 — SHIFT NOTES + MODE CLEANUP (complete)
+### Session 3 — SHIFT NOTES + MODE CLEANUP + OPTIMIZER (complete)
 - 51aac36 — Shift notes: added shift/date/crew fields, archive-by-age behind toggle button
 - 2ae350c — Shift notes: removed category field
 - 78f6912 — Remove non-rebar mode definitions from MODES
 - 0406b8c — Remove mode selector UI and mf-* CSS
 - 7f6766d — Remove mode-specific form fields from all modals
 - fbc83bd — Remove mode-switching functions and non-rebar APP_MODE branches
+- Shift boundaries: reduced from 3 whole-hour inputs to 2 HH:MM time inputs (Day/Night start), supports half-hour increments
+- Dashboard: removed loads KPIs, throughput section, quality/ops section; replaced Received vs Shipped with Daily Tonnage On Hand chart reading from `tenants/NUCOR-SEDALIA-01/tonnageLog` (snapshot written on each app load via `.set()` so it deduplicates by date)
+- 3556a47 — Optimizer cleanup: pruned 11 dead mode fields from consolidate_same key, added bundle capacity check to merges, tiered fill_partner priorities (85%+ high, 65–84% med, 40–64% low)
+- 3432086 — Optimizer fill_partner best-fit: picks the longest source that fits the remaining footage instead of any fit
+- a752347 — Optimizer crane-travel distance: new `stanchionPos`/`stanchionDistance` helpers (BSU=3.5 between stanchions 3 and 4); defrag and fill_partner prefer nearest destinations
+- 6a1fbcf — Optimizer: `isStanchionEmpty` helper; defrag + consolidate_same prefer occupied destinations as tiebreaker; new `consolidate_spools` rule (7th built-in) merges duplicate spools across racks within a section, respects RACK_MAX_SPOOLS cap
 
 App is now rebar-only. ~1,500+ lines of dead code removed total.
 setAppMode, openModeSelector, closeModeSelector, handleModeSelectorClick removed entirely.
 parseLumberDims removed; getFormSize simplified to single-line rebar path.
 calcBundleWeight now rebar-only (all non-rebar branches removed).
+
+New function locations (Session 3):
+- `stanchionPos` / `stanchionDistance` — near runOptimizer helpers (~line 7298 area)
+- `isStanchionEmpty` — immediately after stanchionDistance
+- `consolidate_spools` rule body — in runOptimizer, after run_cycle rule, before dedup block
+
+New Firebase path (Session 3):
+- `tenants/{tenantKey}/tonnageLog/{YYYY-MM-DD}` — `{ date, tons }` written on each app load; deduplicates by date via `.set()`
 
 ### Sessions 4-10 — not yet started
 See playbook for upcoming scope.
