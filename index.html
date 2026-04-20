@@ -6231,6 +6231,12 @@ var OPTIMIZER_BUILT_IN_RULES = [
     label: 'Run Cycle Planning',
     desc: 'For each product in the Run Cycle list that has no compatible open slot, suggest a move that would free up suitable space.',
     enabled: true
+  },
+  {
+    id: 'consolidate_spools',
+    label: 'Consolidate spool racks',
+    desc: 'If the same spool product exists on multiple racks within a section, suggest consolidating onto the rack that already has the most coils.',
+    enabled: true
   }
 ];
 
@@ -6295,6 +6301,10 @@ function stanchionPos(s) {
 }
 function stanchionDistance(s1, s2) {
   return Math.abs(stanchionPos(s1) - stanchionPos(s2));
+}
+function isStanchionEmpty(s) {
+  var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+  return sides.every(function(side) { return !store[s+side]; });
 }
 
 function runOptimizer() {
@@ -6376,7 +6386,12 @@ function runOptimizer() {
       // Find the stanchion with most of this product and suggest merging others into it
       var best = locs[0];
       for (var i=1; i<locs.length; i++) {
-        if ((locs[i].item.bundles||0) > (best.item.bundles||0)) best = locs[i];
+        var iBdl = locs[i].item.bundles || 0;
+        var bBdl = best.item.bundles || 0;
+        if (iBdl > bBdl) { best = locs[i]; continue; }
+        if (iBdl === bBdl && isStanchionEmpty(best.stan) && !isStanchionEmpty(locs[i].stan)) {
+          best = locs[i];
+        }
       }
       var srcLocs = locs.filter(function(loc) { return loc.loc !== best.loc; });
       srcLocs.sort(function(a, b) {
@@ -6460,7 +6475,12 @@ function runOptimizer() {
             defragCandidates.push({ loc: s2+side2, dist: stanchionDistance(s, s2) });
           });
         });
-        defragCandidates.sort(function(a, b) { return a.dist - b.dist; });
+        defragCandidates.sort(function(a, b) {
+          var aEmpty = isStanchionEmpty(a.loc.slice(0,-1)) ? 1 : 0;
+          var bEmpty = isStanchionEmpty(b.loc.slice(0,-1)) ? 1 : 0;
+          if (aEmpty !== bEmpty) return aEmpty - bEmpty;
+          return a.dist - b.dist;
+        });
         var bestDefragDest = defragCandidates.length > 0 ? defragCandidates[0].loc : null;
         if (bestDefragDest) {
           suggestions.push({
@@ -6620,6 +6640,47 @@ function runOptimizer() {
         detail: 'Planned: ' + rcLabel + ' · ' + rcItem.bundles + ' ' + LBL('bundles'),
         from: bestFrom || (order[0] + 'A'),
         to:   bestTo   || (order[0] + 'A')
+      });
+    });
+  }
+
+  // ── RULE: Consolidate spool racks ────────────────────────────
+  if (ruleEnabled('consolidate_spools')) {
+    Object.keys(SPOOL_SECTIONS).forEach(function(sec) {
+      var sectionRacks = SPOOL_SECTIONS[sec];
+      var spoolGroups = {};
+      sectionRacks.forEach(function(rack) {
+        var rid = 'RACK-' + rack;
+        var item = store[rid];
+        if (!item) return;
+        var key = item.size + '|' + (item.grade||'') + '|' + (item.spec||'') + '|' + (item.customer||'');
+        if (!spoolGroups[key]) spoolGroups[key] = [];
+        spoolGroups[key].push({ rack: rack, rid: rid, item: item });
+      });
+      Object.keys(spoolGroups).forEach(function(key) {
+        var entries = spoolGroups[key];
+        if (entries.length < 2) return;
+        var target = entries[0];
+        for (var i = 1; i < entries.length; i++) {
+          if ((entries[i].item.bundles || 0) > (target.item.bundles || 0)) target = entries[i];
+        }
+        var maxCap = RACK_MAX_SPOOLS[target.rack] || null;
+        var targetCoils = target.item.bundles || 0;
+        entries.forEach(function(entry) {
+          if (entry.rid === target.rid) return;
+          var srcCoils = entry.item.bundles || 0;
+          if (maxCap && targetCoils + srcCoils > maxCap) return;
+          suggestions.push({
+            priority: 'low',
+            moveType: 'spool',
+            ruleType: 'consolidate',
+            rule: 'Consolidate spool racks',
+            desc: 'Move ' + entry.item.size + ' coils from Row ' + entry.rack + ' \u2192 Row ' + target.rack + ' (merge, Sec ' + sec + ')',
+            detail: srcCoils + ' coils \u2192 Row ' + target.rack + ' (' + targetCoils + (maxCap ? '/' + maxCap : '') + ' coils)',
+            gain: 'Frees Row ' + entry.rack,
+            from: entry.rid, to: target.rid
+          });
+        });
       });
     });
   }
