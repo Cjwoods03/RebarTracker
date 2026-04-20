@@ -10987,120 +10987,170 @@ if (!tenantKey) {
 }
 
 function seedWarehouse() {
-  function straight(loc, size, length, bundles) {
-    var item = { uid:genUid(), heat:'', size:size, length:String(length), type:'straight',
-      grade:'', spec:'', bundles:bundles, weightPerBundleTons:2.1, weightTons:bundles*2.1,
-      spoolWeightLbs:0, ship:'', order:'', customer:'', loc:loc, logged:'sim' };
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+  var LB_PER_FT = {'#3':0.376,'#4':0.668,'#5':1.043,'#6':1.502,
+                   '#7':2.044,'#8':2.670,'#9':3.400,'#10':4.303};
+  function wt(size, ft, pcs) {
+    return Math.round(pcs * parseFloat(ft) * (LB_PER_FT[size] || 1.0) / 2000 * 1000) / 1000;
+  }
+  function ago(days) {
+    return new Date(Date.now() - days * 86400000).toISOString();
+  }
+  function mkStraight(loc, size, length, bundles, pcs, daysAgo, cust, ord, heat) {
+    var wpb = wt(size, length, pcs);
+    return { uid:genUid(), size:size, length:String(length), type:'straight',
+      grade:'60', spec:'A615', bundles:bundles, pieces:pcs,
+      weightPerBundleTons:wpb, weightTons:Math.round(wpb*bundles*1000)/1000,
+      spoolWeightLbs:0, lpns:'', heat:heat, customer:cust, order:ord, ship:'',
+      loc:loc, logged:'sim', receivedDate:ago(daysAgo) };
+  }
+  function place(loc, size, length, bundles, pcs, daysAgo, cust, ord, heat) {
+    var item = mkStraight(loc, size, length, bundles, pcs, daysAgo, cust, ord, heat);
     store[loc] = item; inventory.push(item);
   }
-  function spool(loc, size, coils, spoolLbs) {
-    var item = { uid:genUid(), heat:'', size:size, length:'Coil', type:'spool',
-      grade:'', spec:'', bundles:coils, spoolWeightLbs:spoolLbs, weightPerBundleTons:spoolLbs/2000,
-      weightTons:(spoolLbs/2000)*coils, ship:'', order:'', customer:'', loc:loc, logged:'sim' };
+  function extra(loc, size, length, bundles, pcs, daysAgo, cust, ord, heat) {
+    var item = mkStraight(loc, size, length, bundles, pcs, daysAgo, cust, ord, heat);
+    if (!storeExtra[loc]) storeExtra[loc] = [];
+    storeExtra[loc].push(item); inventory.push(item);
+  }
+  function spool(loc, size, coils, spoolLbs, daysAgo) {
+    var wpb = Math.round(spoolLbs / 2000 * 1000) / 1000;
+    var item = { uid:genUid(), size:size, length:'Coil', type:'spool',
+      grade:'60', spec:'A615', bundles:coils, pieces:0, spoolWeightLbs:spoolLbs,
+      weightPerBundleTons:wpb, weightTons:Math.round(wpb*coils*1000)/1000,
+      lpns:'', heat:'', customer:'TEST-CO', order:'PO-3001', ship:'',
+      loc:loc, logged:'sim', receivedDate:ago(daysAgo) };
     store[loc] = item; inventory.push(item);
   }
 
-  // ── STANCHIONS 1–3 & B.SU (max 70ft) ──
-  straight('1A','#8','60',14); straight('1B','#8','10',4);
-  straight('2A','#5','40',20);
-  // Stanchion 3 — empty
-  straight('BSUA','#4','40',18);
+  // ── Clear in-memory state ─────────────────────────────────────────────────────
+  Object.keys(store).forEach(function(k) { store[k] = null; });
+  storeExtra = {};
+  inventory.length = 0;
+  area22Stacks.length = 0; area22NextId = 1;
+  area1Stacks.length  = 0; area1NextId  = 1;
+  scrapSlots = {}; holdSlots = {}; redTagSlots = {}; reservedSlots = {};
 
-  // ── STANCHIONS 4–21 (max 80ft) ──
-  straight('4A','#5','40',18); straight('4B','#5','40',16);
-  straight('5A','#6','60',12);
-  straight('6A','#8','40',10); straight('6B','#8','40',9);
-  // Stanchion 7 — empty
-  straight('8A','#4','40',18); straight('8B','#4','40',17);
-  straight('9A','#9','60',8);
-  straight('10A','#5','60',14); straight('10B','#5','20',6);
-  straight('11A','#6','40',16); straight('11B','#6','40',14);
-  straight('12A','#7','60',11);
-  straight('13A','#8','60',9);
-  straight('14A','#5','40',18); straight('14B','#5','40',17);
-  straight('15A','#3','40',30); straight('15B','#3','40',28);
-  straight('16A','#10','60',7);
-  straight('17A','#4','40',22); straight('17B','#4','40',20);
-  straight('18A','#6','60',13); straight('18B','#6','20',5);
-  // Stanchion 19 — empty
-  straight('20A','#5','60',15); straight('20B','#5','20',6);
-  straight('21A','#7','60',9);
+  // ── Stanchions 2–21 (skip 1=freeStack, 3=empty, 7=empty, 16=empty, 19=empty) ─
+  // Green 0–30 days
+  place('2A', '#5','40',18,20,  8, 'ACME CONST',  'PO-1001','HT-2241-044');
+  place('4A', '#6','60',10,20, 12, 'METRO STEEL', 'PO-1002','HT-2241-071');
+  place('4B', '#4','40',16,20, 12, 'METRO STEEL', 'PO-1002','HT-2241-072');
+  extra('4A', '#5','20', 8,20, 12, 'METRO STEEL', 'PO-1002','HT-2241-073');
+  place('5A', '#8','40', 9,18,  5, 'RIDGE BUILD', 'PO-1003','HT-2242-011');
+  place('5B', '#8','40', 8,18,  5, 'RIDGE BUILD', 'PO-1003','HT-2242-011');
+  place('6A', '#5','60',14,20, 18, 'ACME CONST',  'PO-1004','HT-2240-088');
+  extra('6A', '#4','20',10,20, 18, 'ACME CONST',  'PO-1004','HT-2240-089');
+  place('8A', '#7','60', 8,18, 22, 'METRO STEEL', 'PO-1005','HT-2239-031');
+  place('8B', '#5','40',15,20, 22, 'METRO STEEL', 'PO-1005','HT-2239-032');
+  // Yellow 31–60 days
+  place('9A', '#6','40',13,20, 38, 'RIDGE BUILD', 'PO-1006','HT-2235-019');
+  place('10A','#5','60',16,20, 42, 'ACME CONST',  'PO-1007','HT-2234-055');
+  place('10B','#5','20', 6,20, 42, 'ACME CONST',  'PO-1007','HT-2234-055');
+  extra('10A','#6','40', 7,20, 42, 'ACME CONST',  'PO-1007','HT-2234-056');
+  place('11A','#4','40',20,20, 48, 'TEST-CO',      'PO-1008','HT-2233-002');
+  place('11B','#4','40',18,20, 48, 'TEST-CO',      'PO-1008','HT-2233-002');
+  place('12A','#7','60',10,18, 35, 'RIDGE BUILD',  'PO-1009','HT-2236-044');
+  extra('12A','#6','20', 5,20, 35, 'RIDGE BUILD',  'PO-1009','HT-2236-045');
+  place('13A','#8','60', 9,18, 55, 'TEST-CO',      'PO-1010','HT-2231-077');
+  place('14A','#5','40',18,20, 44, 'METRO STEEL',  'PO-1011','HT-2234-021');
+  place('14B','#5','40',17,20, 44, 'METRO STEEL',  'PO-1011','HT-2234-021');
+  extra('14A','#4','20',12,20, 44, 'METRO STEEL',  'PO-1011','HT-2234-022');
+  place('15A','#6','60',12,20, 52, 'ACME CONST',   'PO-1012','HT-2232-009');
+  place('15B','#6','20', 5,20, 52, 'ACME CONST',   'PO-1012','HT-2232-009');
+  // Orange 61–90 days
+  place('17A','#4','40',22,20, 68, 'TEST-CO',       'PO-1013','HT-2228-033');
+  place('17B','#4','40',20,20, 68, 'TEST-CO',       'PO-1013','HT-2228-033');
+  extra('17A','#5','20', 8,20, 68, 'TEST-CO',       'PO-1013','HT-2228-034');
+  place('18A','#6','60',13,20, 75, 'RIDGE BUILD',   'PO-1014','HT-2226-061');
+  place('18B','#6','20', 5,20, 75, 'RIDGE BUILD',   'PO-1014','HT-2226-061');
+  place('20A','#5','60',15,20, 82, 'ACME CONST',    'PO-1015','HT-2224-018');
+  extra('20A','#7','20', 4,18, 82, 'ACME CONST',    'PO-1015','HT-2224-019');
+  place('21A','#7','60', 9,18, 70, 'METRO STEEL',   'PO-1016','HT-2227-042');
 
-  // ── STANCHION 22 (Area 22) ──
-  var a22seed = [
-    {side:'A',type:'straight',size:'#5',length:'40',bundles:12},
-    {side:'A',type:'straight',size:'#6',length:'60',bundles:8},
-    {side:'A',type:'straight',size:'#4',length:'20',bundles:20},
-    {side:'B',type:'spool',size:'#4',length:'Coil',bundles:6,spoolWeightLbs:6800},
-    {side:'B',type:'straight',size:'#3',length:'20',bundles:25},
-    {side:'B',type:'straight',size:'#8',length:'40',bundles:10},
-  ];
-  a22seed.forEach(function(s) {
-    var stack = {
-      uid:genUid(),
-      id:'S'+String(area22NextId++).padStart(2,'0'),
-      side:s.side, heat:'', size:s.size, length:s.length||'', type:s.type,
-      grade:'', spec:'',
-      bundles:s.bundles, spoolWeightLbs:s.spoolWeightLbs||0,
-      weightPerBundleTons:(s.spoolWeightLbs||0)/2000,
-      weightTons:((s.spoolWeightLbs||0)/2000)*s.bundles,
-      ship:'', order:'', customer:'', loc:'AREA-22', logged:'sim'
-    };
+  // ── Stanchions 23–38 (skip 22=freeStack, 27=empty, 33=empty, 34=empty, 38=empty)
+  // Orange continued
+  place('23A','#8','60',11,18, 88, 'TEST-CO',       'PO-1017','HT-2222-008');
+  place('23B','#5','40',14,20, 88, 'TEST-CO',       'PO-1017','HT-2222-008');
+  place('24A','#5','40',19,20, 65, 'RIDGE BUILD',   'PO-1018','HT-2228-071');
+  extra('24A','#6','40', 8,20, 65, 'RIDGE BUILD',   'PO-1018','HT-2228-072');
+  // Red 91+ days
+  place('25A','#6','60',13,20, 95, 'ACME CONST',    'PO-1019','HT-2220-039');
+  place('25B','#4','40',16,20, 95, 'ACME CONST',    'PO-1019','HT-2220-039');
+  place('26A','#7','40',10,18,102, 'TEST-CO',        'PO-1020','HT-2218-055');
+  extra('26A','#5','20', 6,20,102, 'TEST-CO',        'PO-1020','HT-2218-056');
+  place('28A','#8','40',12,18,108, 'METRO STEEL',    'PO-1021','HT-2217-013');
+  place('28B','#8','40',11,18,108, 'METRO STEEL',    'PO-1021','HT-2217-013');
+  place('29A','#5','60',16,20,115, 'RIDGE BUILD',    'PO-1022','HT-2215-029');
+  place('29B','#5','20', 6,20,115, 'RIDGE BUILD',    'PO-1022','HT-2215-029');
+  extra('29A','#4','40',10,20,115, 'RIDGE BUILD',    'PO-1022','HT-2215-030');
+  place('30A','#6','60',11,20, 98, 'ACME CONST',     'PO-1023','HT-2220-077');
+  place('31A','#7','60', 8,18,120, 'TEST-CO',         'PO-1024','HT-2214-004');
+  place('31B','#4','20',15,20,120, 'TEST-CO',         'PO-1024','HT-2214-004');
+  place('32A','#5','40',17,20,105, 'METRO STEEL',     'PO-1025','HT-2218-091');
+  extra('32A','#8','20', 3,18,105, 'METRO STEEL',     'PO-1025','HT-2218-092');
+  place('35A','#6','40',14,20, 92, 'RIDGE BUILD',     'PO-1026','HT-2221-038');
+  place('35B','#6','20', 4,20, 92, 'RIDGE BUILD',     'PO-1026','HT-2221-038');
+  extra('35A','#5','20', 7,20, 92, 'RIDGE BUILD',     'PO-1026','HT-2221-039');
+  place('36A','#4','40',20,20,130, 'ACME CONST',      'PO-1027','HT-2211-062');
+  place('36B','#4','40',18,20,130, 'ACME CONST',      'PO-1027','HT-2211-062');
+  place('37A','#8','60',10,18,110, 'TEST-CO',          'PO-1028','HT-2216-025');
+
+  // ── Area 22 — 6 stacks, mixed ages ───────────────────────────────────────────
+  [
+    {side:'A',size:'#5',length:'40',bundles:12,pcs:20,days: 30,heat:'HT-2237-011'},
+    {side:'A',size:'#6',length:'60',bundles: 8,pcs:20,days: 65,heat:'HT-2228-044'},
+    {side:'A',size:'#4',length:'20',bundles:20,pcs:20,days:  5,heat:'HT-2242-077'},
+    {side:'B',size:'#4',length:'20',bundles:18,pcs:20,days: 85,heat:'HT-2223-019'},
+    {side:'B',size:'#6',length:'40',bundles:14,pcs:20,days: 48,heat:'HT-2233-055'},
+    {side:'B',size:'#8',length:'40',bundles:10,pcs:18,days:110,heat:'HT-2216-033'},
+  ].forEach(function(s) {
+    var wpb = wt(s.size, s.length, s.pcs);
+    var stack = { uid:genUid(), id:'S'+String(area22NextId++).padStart(2,'0'),
+      side:s.side, size:s.size, length:s.length, type:'straight',
+      grade:'60', spec:'A615', bundles:s.bundles, pieces:s.pcs,
+      weightPerBundleTons:wpb, weightTons:Math.round(wpb*s.bundles*1000)/1000,
+      spoolWeightLbs:0, lpns:'', heat:s.heat,
+      customer:'TEST-CO', order:'PO-2001', ship:'',
+      loc:'AREA-22', logged:'sim', receivedDate:ago(s.days) };
     area22Stacks.push(stack); inventory.push(stack);
   });
 
-  // ── STANCHIONS 23–38 ──
-  straight('23A','#8','60',11);
-  straight('24A','#5','40',19); straight('24B','#5','40',17);
-  straight('25A','#6','60',13);
-  straight('26A','#7','40',10); straight('26B','#7','40',9);
-  // Stanchion 27 — empty
-  straight('28A','#9','60',7);
-  straight('29A','#5','60',16); straight('29B','#5','20',6);
-  straight('30A','#8','40',12); straight('30B','#8','40',11);
-  straight('31A','#6','60',14);
-  straight('32A','#7','60',9); straight('32B','#7','20',3);
-  straight('33A','#3','40',32); straight('33B','#3','40',30);
-  // Stanchion 34 — empty
-  straight('35A','#8','60',11); straight('35B','#8','20',4);
-  straight('36A','#4','40',20); straight('36B','#4','40',18);
-  straight('37A','#10','60',6);
-  straight('38A','#6','40',15); straight('38B','#6','40',13);
-
-  // ── SPOOL RACKS — nearly full ──
-  spool('RACK-1.1','#4',18,6800); spool('RACK-1.2','#4',20,6800);
-  spool('RACK-1.3','#5',15,9600); spool('RACK-1.4','#3',28,4000);
-  spool('RACK-1.5','#5',22,9600); spool('RACK-1.6','#4',19,6800);
-  spool('RACK-1.7','#3',30,4000); spool('RACK-1.8','#5',16,9600);
+  // ── Spool racks — nearly full, spread across age buckets ─────────────────────
+  spool('RACK-1.1','#4',18,6800, 10); spool('RACK-1.2','#4',20,6800, 10);
+  spool('RACK-1.3','#5',15,9600, 15); spool('RACK-1.4','#3',28,4000, 15);
+  spool('RACK-1.5','#5',22,9600, 20); spool('RACK-1.6','#4',19,6800, 20);
+  spool('RACK-1.7','#3',30,4000, 45); spool('RACK-1.8','#5',16,9600, 45);
   // 1.9 empty
-  spool('RACK-2.1','#4',25,6800); spool('RACK-2.2','#5',18,9600);
-  spool('RACK-2...','#3',1,4000);
-  spool('RACK-3.1-2','#3',73,4000);
-  spool('RACK-3.3-4','#4',58,6800);
-  spool('RACK-3.5-6','#5',42,9600);
-  spool('RACK-4.1','#5',40,6800); spool('RACK-4.2','#4',38,6800);
-  spool('RACK-4.3','#5',38,6800); spool('RACK-4.4','#6',35,9600);
-  spool('RACK-4.5','#4',40,6800);
+  spool('RACK-2.1','#4',25,6800, 30); spool('RACK-2.2','#5',18,9600, 30);
+  spool('RACK-2...','#3', 1,4000, 70);
+  spool('RACK-3.1-2','#3',73,4000, 55);
+  spool('RACK-3.3-4','#4',58,6800, 55);
+  spool('RACK-3.5-6','#5',42,9600, 55);
+  spool('RACK-4.1','#5',40,6800, 80); spool('RACK-4.2','#4',38,6800, 80);
+  spool('RACK-4.3','#5',38,6800, 80); spool('RACK-4.4','#6',35,9600, 80);
+  spool('RACK-4.5','#4',40,6800, 80);
   // 4.6 empty
-  spool('RACK-5.1','#6',40,9600); spool('RACK-5.2','#6',38,9600);
-  spool('RACK-5.3','#5',42,6800); spool('RACK-5.4','#4',40,6800);
+  spool('RACK-5.1','#6',40,9600, 95); spool('RACK-5.2','#6',38,9600, 95);
+  spool('RACK-5.3','#5',42,6800, 95); spool('RACK-5.4','#4',40,6800, 95);
   // 5.5, 5.6 empty
-  spool('RACK-6.1','#4',40,6800); spool('RACK-6.2','#4',38,6800);
-  spool('RACK-6.3','#5',40,6800); spool('RACK-6.4','#5',38,6800);
-  spool('RACK-6.5','#3',36,4000); spool('RACK-6.6','#3',34,4000);
-  spool('RACK-6.7','#4',42,6800); spool('RACK-6.8','#5',36,9600);
-  spool('RACK-6.9','#4',35,6800);
+  spool('RACK-6.1','#4',40,6800,110); spool('RACK-6.2','#4',38,6800,110);
+  spool('RACK-6.3','#5',40,6800,110); spool('RACK-6.4','#5',38,6800,110);
+  spool('RACK-6.5','#3',36,4000,110); spool('RACK-6.6','#3',34,4000,110);
+  spool('RACK-6.7','#4',42,6800,110); spool('RACK-6.8','#5',36,9600,110);
+  spool('RACK-6.9','#4',35,6800,110);
   // 6.10 empty
-  spool('RACK-7.1','#5',52,6800); spool('RACK-7.2','#5',50,6800);
-  spool('RACK-7.3','#4',48,6800); spool('RACK-7.4','#4',46,6800);
-  spool('RACK-7.5','#6',50,9600); spool('RACK-7.6','#6',48,9600);
-  spool('RACK-7.7','#5',54,6800); spool('RACK-7.8','#4',50,6800);
+  spool('RACK-7.1','#5',52,6800,120); spool('RACK-7.2','#5',50,6800,120);
+  spool('RACK-7.3','#4',48,6800,120); spool('RACK-7.4','#4',46,6800,120);
+  spool('RACK-7.5','#6',50,9600,120); spool('RACK-7.6','#6',48,9600,120);
+  spool('RACK-7.7','#5',54,6800,120); spool('RACK-7.8','#4',50,6800,120);
   // 7.9, 7.10 empty
 
-  // A few status slots for realism
-  scrapSlots['2B'] = true;
-  holdSlots['13B'] = true;
+  // ── Slot flags ────────────────────────────────────────────────────────────────
+  scrapSlots['2B']   = true;
+  holdSlots['13B']   = true;
   redTagSlots['28B'] = true;
+  reservedSlots['9B'] = true;
 }
 </script>
 </body>
