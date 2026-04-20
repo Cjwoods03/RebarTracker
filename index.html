@@ -6155,13 +6155,11 @@ function renderOptMoveList() {
     // Move title: "6A → 12B" derived from from/to slot IDs
     var moveTitle = m.from && m.to ? m.from + ' \u2192 ' + m.to : m.desc;
 
-    // Explanation: space freed + tonnage capacity at origin
+    // Explanation: footage freed + move weight at origin
     var explanationHtml = '';
     if (m.from && m.from.length >= 2) {
-      var srcStan = m.from.slice(0, -1);
-      var srcStanNum = isNaN(srcStan) ? srcStan : parseInt(srcStan);
-      var maxFt = maxFtForStanchion(srcStanNum);
       var srcItem = store[m.from];
+      var freedFt = srcItem ? (parseFloat(srcItem.length) || 0) : 0;
       var row = function(label, val) {
         return '<div style="display:flex;gap:8px;margin-bottom:3px">' +
           '<span style="color:var(--text-dim);min-width:110px;flex-shrink:0">' + label + '</span>' +
@@ -6170,7 +6168,7 @@ function renderOptMoveList() {
       };
       explanationHtml = '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;margin:8px 0;padding:8px 10px;background:var(--steel);border-radius:6px;border:1px solid var(--border);line-height:1.6">' +
         row('Why:', m.rule + (m.detail ? ' — ' + m.detail : '')) +
-        row('Space freed:', maxFt + 'ft max at ' + m.from) +
+        (freedFt > 0 ? row('Footage freed:', freedFt + 'ft freed at ' + m.from) : '') +
         (srcItem && srcItem.weightTons ? row('Move weight:', srcItem.weightTons.toFixed(2) + 't \u00b7 ' + srcItem.bundles + ' ' + LBL('bundles')) : '') +
         '</div>';
     }
