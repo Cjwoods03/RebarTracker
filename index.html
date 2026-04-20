@@ -1624,16 +1624,6 @@
           </div>
         </div>
         <div class="form-group">
-          <label>Category</label>
-          <select id="note-category">
-            <option value="Inventory">Inventory</option>
-            <option value="Equipment">Equipment</option>
-            <option value="Safety">Safety</option>
-            <option value="Customer">Customer</option>
-            <option value="Other" selected>Other</option>
-          </select>
-        </div>
-        <div class="form-group">
           <label>Note</label>
           <textarea id="note-body" rows="3" placeholder="What happened? What does the next shift need to know?" style="width:100%;background:var(--steel-light);border:1px solid var(--border);color:var(--text);padding:12px;font-family:'IBM Plex Mono',monospace;font-size:14px;border-radius:6px;outline:none;resize:vertical"></textarea>
         </div>
@@ -10347,8 +10337,7 @@ function saveShiftBoundaries() {
 function submitShiftNote() {
   var body = document.getElementById('note-body').value.trim();
   if (!body) { document.getElementById('note-status').textContent = '⛔ Write something before submitting.'; return; }
-  var category = document.getElementById('note-category').value || 'Other';
-  var shift = document.getElementById('note-shift').value || 'Day';
+  var shift =document.getElementById('note-shift').value || 'Day';
   var noteDate = document.getElementById('note-date').value || new Date().toISOString().slice(0,10);
   var crew = document.getElementById('note-crew').value || 'A';
   var files = Array.from(document.getElementById('note-photos').files || []);
@@ -10365,7 +10354,6 @@ function submitShiftNote() {
       shift: shift,
       date: noteDate,
       crew: crew,
-      category: category,
       body: body,
       photoUrls: photoUrls,
       status: 'open',
@@ -10407,7 +10395,7 @@ function _buildShiftNoteCard(n) {
   var shiftHeader = headerParts.length ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;font-weight:bold;color:var(--text);margin-bottom:4px">' + headerParts.join(' · ') + '</div>' : '';
   return '<div style="padding:10px;background:var(--steel-light);border:1px solid var(--border);border-left:3px solid ' + statusColor + ';border-radius:6px;margin-bottom:8px">' +
     shiftHeader +
-    '<div style="display:flex;justify-content:space-between;font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-bottom:4px"><span>' + (n.operatorName || 'Unknown') + ' · ' + new Date(n.timestamp).toLocaleString() + '</span><span style="background:var(--steel);padding:1px 6px;border-radius:3px">' + (n.category || 'Other') + '</span></div>' +
+    '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:10px;color:var(--text-dim);margin-bottom:4px">' + (n.operatorName || 'Unknown') + ' · ' + new Date(n.timestamp).toLocaleString() + '</div>' +
     '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:13px;color:var(--text);white-space:pre-wrap;margin-bottom:6px">' + escHtml(n.body) + '</div>' +
     (photoHtml ? '<div style="display:flex;gap:4px;flex-wrap:wrap;margin-bottom:6px">' + photoHtml + '</div>' : '') +
     (n.status === 'resolved' ? '<div style="font-family:\'IBM Plex Mono\',monospace;font-size:9px;color:var(--safe);margin-bottom:6px">✓ Resolved by ' + (n.resolvedBy || '?') + ' at ' + new Date(n.resolvedAt).toLocaleString() + '</div>' : '') +
