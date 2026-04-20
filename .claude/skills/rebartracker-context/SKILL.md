@@ -20,7 +20,7 @@ Single-file HTML warehouse management app for a Nucor Steel rebar mill shipping 
 
 - **Project:** rebar-tracker
 - **Type:** Realtime Database (NOT Firestore)
-- **Storage:** Firebase Storage enabled from Session 4 onward for shift note and flag photos
+- **Storage:** Firebase Storage enabled for shift note and flag photos
 - **All writes are tenant-scoped** through the `ref(path)` helper (~line 8295) which prefixes `tenants/{tenantKey}/`. Never write to the database root directly.
 
 ## Active tenant
@@ -54,14 +54,14 @@ ref('audit/' + entryId).set(...)  // writes to tenants/NUCOR-SEDALIA-01/audit/
 - `tenants/{key}/customers/{id}` — customer directory
 - `tenants/{key}/shipper` — single shipper record
 
-### 3. Multi-mode support via LBL()
-The app supports 8 industry modes (rebar, ssc, lumber, alum, precast, pipe, glass, cable) defined in `MODES` (~line 2127). All user-facing strings must route through `LBL(key)` (~line 2670):
+### 3. LBL() for user-facing strings
+The app is rebar-only now (non-rebar modes removed). All user-facing strings still route through `LBL(key)` (~line 2670) — the function exists, the rebar labels are hardcoded:
 
-- `LBL('stan')` → "Stanchion" in rebar, "Bay" in SSC, "Bunk" in lumber
-- `LBL('bundles')` → "bundles" in rebar, "lifts" in SSC, "units" in lumber
-- `LBL('bdlAbbr')` → "bdl" / "lft" / "unit"
+- `LBL('stan')` → "Stanchion"
+- `LBL('bundles')` → "bundles"
+- `LBL('bdlAbbr')` → "bdl"
 
-Never hardcode mode-specific strings. Even for a tenant locked to rebar, the code should still use LBL() so the codebase stays portable.
+Never hardcode these strings directly — always use LBL() so adding a mode in future doesn't require hunting callsites.
 
 ### 4. Firebase key encoding
 Firebase keys cannot contain `. # $ [ ] / -`. Slot IDs like `RACK-1.1` or secondary keys with those characters must go through `fbEncode()` / `fbDecode()` (~line 8327). Encoded: `RACK-1.1` → `RACK__DASH__1__DOT__1`.
@@ -205,71 +205,6 @@ Line numbers drift. Use function names as the primary locator, `~line` as a conf
 - `buildArea1Block`, `buildArea1HorizCol`: Area 1 renderers
 - `buildArea22Block`, `buildArea22HorizCol`: Area 22 renderers
 
-## Session playbook
-
-Ten-session roadmap at `/mnt/user-data/outputs/RebarTracker-ClaudeCode-Prompts.md` (in the active conversation) or in the user's local filesystem if downloaded.
-
-When the user references a specific prompt like "Prompt 2B" or "Session 3", locate it in the playbook. When they say "move to the next session" or "close out Session N", the verify prompt is the last one in each session.
-
-## Session history — what's landed
-
-Keep this list updated at the end of each session when Carter asks for the session-close reminder.
-
-### Session 1 — CLEANUP (complete)
-Scope grew beyond original 3 bugs. Final commits:
-- Bug 1 verified already fixed (same-product merge footage skip)
-- Bug 2 fixed — Split and Overflow dropdowns show all slots with ⊗ disabled state (8c5d618)
-- Bug 3 fixed — freeStack stanchions excluded from transfer modal dropdowns (a65e93d)
-- Area 1 / Area 22 added as transfer destinations with side picker (658dac9)
-- Bug A fixed — secondary stack footage check uses delta logic
-- Bug C fixed — Area modals field parity with main form
-- Bug B added — Area → Stanchion and Area → Area transfers with MERGE support (0b0a9cc)
-- Bug D fixed — weight/pieces auto-calc wired in Area modals (2d45ec2)
-- Renderer fix — A/B split in Area 1 and Area 22 horizontal view (291fca2)
-- Bug E fixed — area counter reset when zone empties, loadData normalizes stale state (d2bda81)
-- Session 1 verified marker committed (empty commit)
-
-### Session 2 — RECEIVED DATE + HEAT (complete)
-- 17c8351 — receivedDate ISO timestamp added to all item creation paths; preserved on merge
-- 4f5342f — loadData backfill migration: stamps receivedDate on legacy items, sets receivedDateBackfilled: true
-- 51de983 — formatReceivedDate + getItemAgeDays helpers; Received and Age rows in slot detail modal
-- 2674a71 — Session 2 verified marker
-
-New item schema fields: receivedDate (ISO 8601, all creation paths), receivedDateBackfilled: true (migration-stamped items only)
-New functions: formatReceivedDate(iso) and getItemAgeDays(item) near formatLength (~line 3486)
-Architecture note: loadData backfill block sits immediately after counter-normalization (~line 9104), safe to run every load, no-ops once all items are stamped.
-Note: e2e2830 (Heat # on LOG RUN form) was skipped — heat capture is intentionally limited to CSV import and edit modal only.
-
-### Session 3 — SHIFT NOTES + MODE CLEANUP + OPTIMIZER (complete)
-- 51aac36 — Shift notes: added shift/date/crew fields, archive-by-age behind toggle button
-- 2ae350c — Shift notes: removed category field
-- 78f6912 — Remove non-rebar mode definitions from MODES
-- 0406b8c — Remove mode selector UI and mf-* CSS
-- 7f6766d — Remove mode-specific form fields from all modals
-- fbc83bd — Remove mode-switching functions and non-rebar APP_MODE branches
-- Shift boundaries: reduced from 3 whole-hour inputs to 2 HH:MM time inputs (Day/Night start), supports half-hour increments
-- Dashboard: removed loads KPIs, throughput section, quality/ops section; replaced Received vs Shipped with Daily Tonnage On Hand chart reading from `tenants/NUCOR-SEDALIA-01/tonnageLog` (snapshot written on each app load via `.set()` so it deduplicates by date)
-- 3556a47 — Optimizer cleanup: pruned 11 dead mode fields from consolidate_same key, added bundle capacity check to merges, tiered fill_partner priorities (85%+ high, 65–84% med, 40–64% low)
-- 3432086 — Optimizer fill_partner best-fit: picks the longest source that fits the remaining footage instead of any fit
-- a752347 — Optimizer crane-travel distance: new `stanchionPos`/`stanchionDistance` helpers (BSU=3.5 between stanchions 3 and 4); defrag and fill_partner prefer nearest destinations
-- 6a1fbcf — Optimizer: `isStanchionEmpty` helper; defrag + consolidate_same prefer occupied destinations as tiebreaker; new `consolidate_spools` rule (7th built-in) merges duplicate spools across racks within a section, respects RACK_MAX_SPOOLS cap
-
-App is now rebar-only. ~1,500+ lines of dead code removed total.
-setAppMode, openModeSelector, closeModeSelector, handleModeSelectorClick removed entirely.
-parseLumberDims removed; getFormSize simplified to single-line rebar path.
-calcBundleWeight now rebar-only (all non-rebar branches removed).
-
-New function locations (Session 3):
-- `stanchionPos` / `stanchionDistance` — near runOptimizer helpers (~line 7298 area)
-- `isStanchionEmpty` — immediately after stanchionDistance
-- `consolidate_spools` rule body — in runOptimizer, after run_cycle rule, before dedup block
-
-New Firebase path (Session 3):
-- `tenants/{tenantKey}/tonnageLog/{YYYY-MM-DD}` — `{ date, tons }` written on each app load; deduplicates by date via `.set()`
-
-### Sessions 4-10 — not yet started
-See playbook for upcoming scope.
-
 ## Workflow rules (quick reference)
 
 - One commit per discrete fix. Never bundle multiple fixes.
@@ -279,19 +214,35 @@ See playbook for upcoming scope.
 - Never leave debug `console.log` statements in committed code.
 - When the user shares a plan or test matrix, that's CONTEXT, not a work order. Wait for `[IMPLEMENT NOW]` or equivalent explicit instruction.
 
-## Session-close reminder
+## Recent work log
 
-**At the end of every working session, proactively remind Carter to update this skill.** Say something like:
+Track recent significant commits here, newest at top. Trim entries older than ~30 commits to keep the file lean.
 
-> Before we wrap, let's update the rebartracker-context skill with what landed in this session. Here's what I'd add to the Session N entry:
-> - [list of commits + short descriptions]
-> - [any new function locations, schema changes, or architecture additions]
-> 
-> Paste this to Claude Code to update the skill:
-> ```
-> Edit ~/RebarTracker/.claude/skills/rebartracker-context/SKILL.md — under "Session N" in the session history section, append [provided content]. Commit with message "docs: update context skill for Session N completion" and push.
-> ```
-> 
-> And upload the updated SKILL.md to Claude.ai Skills settings so future chats have the refreshed context.
+### April 2026 — Rebar-only cleanup + optimizer overhaul
+- a2ae14c — Optimizer cards: replace misleading slot capacity with actual move weight (weightTons · bundles)
+- 6a1fbcf — Optimizer: isStanchionEmpty helper; defrag + consolidate_same prefer occupied destinations as tiebreaker; consolidate_spools rule added (7th built-in)
+- a752347 — Optimizer crane-travel: stanchionPos/stanchionDistance helpers (BSU=3.5), defrag and fill_partner prefer nearest destinations
+- 3432086 — Optimizer fill_partner: picks longest source that fits instead of any fit
+- 3556a47 — Optimizer cleanup: pruned 11 dead mode fields from consolidate_same key, added bundle capacity check to merges, tiered fill_partner priorities
+- Shift boundaries reduced from 3 whole-hour inputs to 2 HH:MM time inputs (Day/Night)
+- Dashboard: removed loads KPIs, throughput, quality/ops; added Daily Tonnage On Hand chart reading from tonnageLog path
+- fbc83bd — Removed mode-switching functions and non-rebar APP_MODE branches
+- 7f6766d — Removed mode-specific form fields from all modals
+- 0406b8c — Removed mode selector UI and mf-* CSS
+- 78f6912 — Removed non-rebar mode definitions from MODES (rebar-only now)
+- 51aac36 — Shift notes: added shift/date/crew fields, archive-by-age toggle
+- 2ae350c — Shift notes: removed category field
 
-Do this whether or not Carter explicitly asks. Skill currency is a maintenance task that's easy to forget.
+### Earlier work
+- Item schema: every item has receivedDate (ISO 8601) and optionally receivedDateBackfilled: true
+- Helper functions: formatReceivedDate / getItemAgeDays / getAgeClass / formatAgeShort / formatAgeLong
+- Age stripe color classes applied to map slots, inventory cards, modal Age row
+- PICK FIRST badge on oldest item in stacked slots
+
+## New Firebase paths added
+- tenants/{tenantKey}/tonnageLog/{YYYY-MM-DD} — { date, tons } written on app load via set (deduplicates by date)
+
+## Notable dead code removed
+- setAppMode, openModeSelector, closeModeSelector, handleModeSelectorClick
+- parseLumberDims, mode-specific branches in calcBundleWeight, getFormSize, buildModalRows, logRun, renderInventory
+- Dashboard KPIs: kpiReceivedInWindow, kpiShippedInWindow, kpiShippedWeightTonsInWindow, kpiBundlesOnHand, kpiTonsOnHand, kpiMTRPendingActive, kpiStaleHolds, kpiRedTagCount, kpiAvgTurnaroundDays, kpiActionsToday, kpiMostActiveOperator, kpiReceiveShipByDay, kpiLoadsShippedInWindow, kpiLoadsInProgress
