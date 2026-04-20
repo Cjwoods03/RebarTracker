@@ -240,7 +240,20 @@ New functions: formatReceivedDate(iso) and getItemAgeDays(item) near formatLengt
 Architecture note: loadData backfill block sits immediately after counter-normalization (~line 9104), safe to run every load, no-ops once all items are stamped.
 Note: e2e2830 (Heat # on LOG RUN form) was skipped — heat capture is intentionally limited to CSV import and edit modal only.
 
-### Sessions 3-10 — not yet started
+### Session 3 — SHIFT NOTES + MODE CLEANUP (complete)
+- 51aac36 — Shift notes: added shift/date/crew fields, archive-by-age behind toggle button
+- 2ae350c — Shift notes: removed category field
+- 78f6912 — Remove non-rebar mode definitions from MODES
+- 0406b8c — Remove mode selector UI and mf-* CSS
+- 7f6766d — Remove mode-specific form fields from all modals
+- fbc83bd — Remove mode-switching functions and non-rebar APP_MODE branches
+
+App is now rebar-only. ~1,500+ lines of dead code removed total.
+setAppMode, openModeSelector, closeModeSelector, handleModeSelectorClick removed entirely.
+parseLumberDims removed; getFormSize simplified to single-line rebar path.
+calcBundleWeight now rebar-only (all non-rebar branches removed).
+
+### Sessions 4-10 — not yet started
 See playbook for upcoming scope.
 
 ## Workflow rules (quick reference)
