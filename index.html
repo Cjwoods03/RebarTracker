@@ -3886,11 +3886,12 @@ function kpiShippedWeightTonsInWindow(days) {
   return 0;
 }
 
-function kpiLoadsShippedInWindow(days) {
-  var cutoff = Date.now() - days * 86400000;
-  return Object.values(loads).filter(function(l) {
-    return l.status === 'shipped' && l.shippedAt && new Date(l.shippedAt).getTime() >= cutoff;
-  }).length;
+function kpiBundlesOnHand() {
+  return inventory.reduce(function(s, i) { return s + (i.bundles || 0); }, 0);
+}
+
+function kpiTonsOnHand() {
+  return inventory.reduce(function(s, i) { return s + (i.weightTons || 0); }, 0);
 }
 
 function kpiMTRPendingActive() {
@@ -3937,11 +3938,6 @@ function kpiMostActiveOperator(days) {
   return { name: top || '—', count: topCount };
 }
 
-function kpiLoadsInProgress() {
-  return Object.values(loads).filter(function(l) {
-    return l.status === 'building' || l.status === 'staged';
-  }).length;
-}
 
 function kpiReceiveShipByDay(days) {
   var result = {};
@@ -4045,7 +4041,7 @@ function renderDashboard() {
   html += '<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">';
   html += tile('Received', kpiReceivedInWindow(_dashWindow).toLocaleString(), LBL('bundles'), 'var(--safe)');
   html += tile('Shipped', kpiShippedInWindow(_dashWindow).toLocaleString(), LBL('bundles'), 'var(--accent)');
-  html += tile('Loads shipped', kpiLoadsShippedInWindow(_dashWindow), '', 'var(--accent)');
+  html += tile('Bundles on hand', kpiBundlesOnHand().toLocaleString(), LBL('bundles'), 'var(--accent)');
   html += tile('Shipped wt', kpiShippedWeightTonsInWindow(_dashWindow).toFixed(1), 'tons', 'var(--accent)');
   html += tile('Avg turnaround', kpiAvgTurnaroundDays(), 'days', (function() { var t = kpiAvgTurnaroundDays(); if (t > 30) return 'var(--warn)'; return 'var(--accent)'; })());
   html += '</div>';
@@ -4055,7 +4051,7 @@ function renderDashboard() {
   html += tile('MTR pending', kpiMTRPendingActive(), '', (function() { return kpiMTRPendingActive() > 0 ? 'var(--warn)' : 'var(--accent)'; })());
   html += tile('Stale holds', kpiStaleHolds(), '7+ days', (function() { return kpiStaleHolds() > 0 ? 'var(--hot)' : 'var(--accent)'; })());
   html += tile('Red tags', kpiRedTagCount(), '', (function() { return kpiRedTagCount() > 0 ? 'var(--hot)' : 'var(--accent)'; })());
-  html += tile('Loads active', kpiLoadsInProgress(), '', 'var(--accent)');
+  html += tile('Tons on hand', kpiTonsOnHand().toFixed(1), 'tons', 'var(--accent)');
   html += tile('Actions today', kpiActionsToday(), '', 'var(--accent)');
   html += tile('Top operator', (topOp.name || '—'), '', 'var(--accent)', topOp.count + ' actions / ' + _dashWindow + 'd');
   html += '</div>';
