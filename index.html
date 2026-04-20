@@ -6288,6 +6288,15 @@ function addOptimizerRule() {
   saveData();
 }
 
+function stanchionPos(s) {
+  if (s === 'BSU') return 3.5; // physically between stan 3 and stan 4
+  var n = parseInt(s, 10);
+  return isNaN(n) ? 0 : n;
+}
+function stanchionDistance(s1, s2) {
+  return Math.abs(stanchionPos(s1) - stanchionPos(s2));
+}
+
 function runOptimizer() {
   renderOptimizerRules();
   var suggestions = [];
@@ -6321,8 +6330,11 @@ function runOptimizer() {
           candidates.push({ srcItem: srcItem, srcStan: s2, srcSide: side2, srcLen: srcLen });
         });
       });
-      // Pick the longest-fitting candidate — minimizes wasted footage
-      candidates.sort(function(a, b) { return b.srcLen - a.srcLen; });
+      // Pick the longest-fitting candidate — tiebreak by nearest stanchion
+      candidates.sort(function(a, b) {
+        if (b.srcLen !== a.srcLen) return b.srcLen - a.srcLen;
+        return stanchionDistance(a.srcStan, s) - stanchionDistance(b.srcStan, s);
+      });
       if (candidates.length === 0) return;
       var best = candidates[0];
       var newUsed = usedFt + best.srcLen;
@@ -6366,16 +6378,20 @@ function runOptimizer() {
       for (var i=1; i<locs.length; i++) {
         if ((locs[i].item.bundles||0) > (best.item.bundles||0)) best = locs[i];
       }
-      locs.forEach(function(loc) {
-        if (loc.loc === best.loc) return;
+      var srcLocs = locs.filter(function(loc) { return loc.loc !== best.loc; });
+      srcLocs.sort(function(a, b) {
+        return stanchionDistance(a.stan, best.stan) - stanchionDistance(b.stan, best.stan);
+      });
+      srcLocs.forEach(function(loc) {
         var srcItem = loc.item;
         var destCap = stanchionCapacity[best.stan];
         if (destCap && destCap.maxBundlesPerSide) {
           var destBdl = slotAllItems(best.loc).reduce(function(sum, i) { return sum + (i.bundles || 0); }, 0);
           if (destBdl + (srcItem.bundles || 0) > destCap.maxBundlesPerSide) return;
         }
+        var consolidatePriority = stanchionDistance(loc.stan, best.stan) <= 10 ? 'medium' : 'low';
         suggestions.push({
-          priority: 'medium',
+          priority: consolidatePriority,
           moveType: srcItem.type || 'straight',
           ruleType: 'consolidate',
           rule: 'Consolidate same product',
@@ -6432,19 +6448,20 @@ function runOptimizer() {
         var item = store[s+side];
         if (!item) return;
         var lenItem = parseFloat(item.length) || 0;
-        // Find the FIRST viable target — one suggestion per source side (avoid combinatorial explosion)
-        var bestDefragDest = null;
-        order.some(function(s2) {
-          if (s2 === s) return false;
+        // Find the NEAREST viable target to minimise crane travel
+        var defragCandidates = [];
+        order.forEach(function(s2) {
+          if (s2 === s) return;
           var rem2 = stanchionFtRemaining(s2);
-          if (lenItem > rem2) return false;
+          if (lenItem > rem2) return;
           var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
-          return sides2.some(function(side2) {
-            if (!slotAvailable(s2+side2)) return false;
-            bestDefragDest = s2+side2;
-            return true; // stop after first match
+          sides2.forEach(function(side2) {
+            if (!slotAvailable(s2+side2)) return;
+            defragCandidates.push({ loc: s2+side2, dist: stanchionDistance(s, s2) });
           });
         });
+        defragCandidates.sort(function(a, b) { return a.dist - b.dist; });
+        var bestDefragDest = defragCandidates.length > 0 ? defragCandidates[0].loc : null;
         if (bestDefragDest) {
           suggestions.push({
             priority: 'low',
