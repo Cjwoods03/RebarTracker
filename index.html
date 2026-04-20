@@ -1173,6 +1173,7 @@
         </div>
 
         <button class="btn btn-primary" style="margin-top:0;width:100%" onclick="runOptimizer()">⚡ ANALYZE &amp; SUGGEST MOVES</button>
+        <button class="btn btn-primary" style="margin-top:8px;width:100%" onclick="runDeepOptimizer()">⚡⚡ DEEP OPTIMIZE (up to 3-move chains)</button>
 
         <div id="opt-results" style="margin-top:16px;display:none">
           <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">SUGGESTED MOVES</div>
@@ -1198,6 +1199,12 @@
             <button class="filter-btn opt-filter-ruleType" onclick="filterOptMoves('ruleType','pair',this)">Pair Short Runs</button>
           </div>
           <div id="opt-move-list"></div>
+        </div>
+
+        <div id="opt-deep-results" style="display:none;margin-top:16px">
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;margin-bottom:10px">DEEP OPTIMIZE CHAINS</div>
+          <div id="opt-deep-summary" style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim);margin-bottom:10px"></div>
+          <div id="opt-deep-chain-list"></div>
         </div>
 
       </div>
@@ -6301,6 +6308,299 @@ function stanchionDistance(s1, s2) {
 }
 function isSlotEmpty(slotId) {
   return !store[slotId];
+}
+
+// ─── DEEP OPTIMIZE — simulation helpers (no side effects) ────────
+
+function simCloneState() {
+  var simStore = {};
+  Object.keys(store).forEach(function(k) {
+    simStore[k] = store[k] ? Object.assign({}, store[k]) : null;
+  });
+  var simStoreExtra = {};
+  Object.keys(storeExtra).forEach(function(k) {
+    simStoreExtra[k] = (storeExtra[k] || []).map(function(i) { return Object.assign({}, i); });
+  });
+  return { store: simStore, storeExtra: simStoreExtra };
+}
+
+function simSlotOccupied(state, slotId) {
+  return !!state.store[slotId] || (state.storeExtra[slotId] && state.storeExtra[slotId].length > 0);
+}
+
+function simStanchionFtUsed(state, s) {
+  var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+  var total = 0;
+  sides.forEach(function(side) {
+    var sid = s + side;
+    var maxLen = 0;
+    if (state.store[sid]) maxLen = Math.max(maxLen, parseFloat(state.store[sid].length) || 0);
+    (state.storeExtra[sid] || []).forEach(function(i) {
+      maxLen = Math.max(maxLen, parseFloat(i.length) || 0);
+    });
+    total += maxLen;
+  });
+  return total;
+}
+
+function simStanchionEmpty(state, s) {
+  var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+  return sides.every(function(side) { return !simSlotOccupied(state, s + side); });
+}
+
+function simApplyMove(state, move) {
+  var src = state.store[move.from];
+  if (!src) return false;
+  state.store[move.from] = null;
+  var dest = state.store[move.to];
+  if (!dest) {
+    state.store[move.to] = Object.assign({}, src);
+  } else {
+    var sameProduct = dest.size === src.size &&
+      parseFloat(dest.length) === parseFloat(src.length) &&
+      (dest.grade||'') === (src.grade||'') &&
+      (dest.spec||'') === (src.spec||'') &&
+      (dest.customer||'') === (src.customer||'');
+    if (sameProduct) {
+      dest.bundles = (dest.bundles || 0) + (src.bundles || 0);
+      dest.weightTons = (dest.weightTons || 0) + (src.weightTons || 0);
+    } else {
+      if (!state.storeExtra[move.to]) state.storeExtra[move.to] = [];
+      state.storeExtra[move.to].push(Object.assign({}, src));
+    }
+  }
+  return true;
+}
+
+function simScore(state) {
+  var order = orderedStanchions();
+  var freedFt = 0;
+  var emptied = 0;
+  order.forEach(function(s) {
+    if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+    if (simStanchionEmpty(state, s)) { emptied++; }
+    var maxFt = maxFtForStanchion(s);
+    var used = simStanchionFtUsed(state, s);
+    freedFt += Math.max(0, maxFt - used);
+  });
+  var rcCovered = 0;
+  (runCycle || []).forEach(function(rc) {
+    if (!rc.size || !rc.length) return;
+    var rcLen = parseFloat(rc.length) || 0;
+    var hasSlot = false;
+    order.some(function(s) {
+      if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return false;
+      if (hasSlot) return true;
+      var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+      return sides.some(function(side) {
+        var sid = s + side;
+        var existing = state.store[sid];
+        if (!existing) {
+          var rem = maxFtForStanchion(s) - simStanchionFtUsed(state, s);
+          if (rcLen <= rem && !scrapSlots[sid] && !holdSlots[sid] && !redTagSlots[sid] && !reservedSlots[sid]) {
+            hasSlot = true; return true;
+          }
+          return false;
+        }
+        if (existing.size === rc.size &&
+            parseFloat(existing.length) === rcLen &&
+            (!rc.grade || !existing.grade || existing.grade === rc.grade) &&
+            (!rc.spec || !existing.spec || existing.spec === rc.spec) &&
+            (existing.customer||'') === (rc.customer||'')) {
+          hasSlot = true; return true;
+        }
+        return false;
+      });
+    });
+    if (hasSlot) rcCovered++;
+  });
+  return { freedFt: freedFt, emptied: emptied, rcCovered: rcCovered, total: freedFt + (emptied * 40) + (rcCovered * 100) };
+}
+
+function generateValidMoves(state) {
+  var moves = [];
+  var order = orderedStanchions();
+  order.forEach(function(s) {
+    if (stanchionCapacity[s] && stanchionCapacity[s].freeStack) return;
+    var sides = cSideEnabled[s] ? ['A','B','C'] : ['A','B'];
+    sides.forEach(function(side) {
+      var srcId = s + side;
+      var srcItem = state.store[srcId];
+      if (!srcItem) return;
+      if (scrapSlots[srcId] || holdSlots[srcId] || redTagSlots[srcId] || reservedSlots[srcId]) return;
+      var srcLen = parseFloat(srcItem.length) || 0;
+      order.forEach(function(s2) {
+        if (s2 === s) return;
+        if (stanchionCapacity[s2] && stanchionCapacity[s2].freeStack) return;
+        var sides2 = cSideEnabled[s2] ? ['A','B','C'] : ['A','B'];
+        sides2.forEach(function(side2) {
+          var destId = s2 + side2;
+          if (scrapSlots[destId] || holdSlots[destId] || redTagSlots[destId] || reservedSlots[destId]) return;
+          var destItem = state.store[destId];
+          var destUsed = simStanchionFtUsed(state, s2);
+          var destMax = maxFtForStanchion(s2);
+          var addsFt = srcLen;
+          if (destItem && parseFloat(destItem.length) === srcLen) addsFt = 0;
+          if (destUsed + addsFt > destMax) return;
+          if (destItem) {
+            var sameProduct = destItem.size === srcItem.size &&
+              parseFloat(destItem.length) === srcLen &&
+              (destItem.grade||'') === (srcItem.grade||'') &&
+              (destItem.spec||'') === (srcItem.spec||'') &&
+              (destItem.customer||'') === (srcItem.customer||'');
+            if (sameProduct) {
+              var cap = stanchionCapacity[s2];
+              if (cap && cap.maxBundlesPerSide) {
+                if ((destItem.bundles||0) + (srcItem.bundles||0) > cap.maxBundlesPerSide) return;
+              }
+            }
+            if (!sameProduct) return;
+          }
+          moves.push({ from: srcId, to: destId, item: Object.assign({}, srcItem) });
+        });
+      });
+    });
+  });
+  return moves;
+}
+
+function runDeepOptimizer() {
+  var baseState = simCloneState();
+  var baseScore = simScore(baseState);
+
+  var singles = generateValidMoves(baseState).map(function(m) {
+    var st = simCloneState();
+    simApplyMove(st, m);
+    var sc = simScore(st);
+    return { chain: [m], score: sc, gain: sc.total - baseScore.total };
+  }).filter(function(c) { return c.gain > 0; });
+  singles.sort(function(a,b){ return b.gain - a.gain; });
+  var topSingles = singles.slice(0, 20);
+
+  var doubles = [];
+  topSingles.forEach(function(c1) {
+    var st1 = simCloneState();
+    simApplyMove(st1, c1.chain[0]);
+    var moves2 = generateValidMoves(st1);
+    moves2.forEach(function(m2) {
+      if (m2.from === c1.chain[0].from || m2.from === c1.chain[0].to) return;
+      var st2 = simCloneState();
+      simApplyMove(st2, c1.chain[0]);
+      simApplyMove(st2, m2);
+      var sc = simScore(st2);
+      if (sc.total > c1.score.total) {
+        doubles.push({ chain: [c1.chain[0], m2], score: sc, gain: sc.total - baseScore.total });
+      }
+    });
+  });
+  doubles.sort(function(a,b){ return b.gain - a.gain; });
+  var topDoubles = doubles.slice(0, 10);
+
+  var triples = [];
+  topDoubles.forEach(function(c2) {
+    var st2 = simCloneState();
+    simApplyMove(st2, c2.chain[0]);
+    simApplyMove(st2, c2.chain[1]);
+    var moves3 = generateValidMoves(st2);
+    moves3.forEach(function(m3) {
+      if (c2.chain.some(function(x){ return x.from === m3.from || x.to === m3.from; })) return;
+      var st3 = simCloneState();
+      simApplyMove(st3, c2.chain[0]);
+      simApplyMove(st3, c2.chain[1]);
+      simApplyMove(st3, m3);
+      var sc = simScore(st3);
+      if (sc.total > c2.score.total) {
+        triples.push({ chain: [c2.chain[0], c2.chain[1], m3], score: sc, gain: sc.total - baseScore.total });
+      }
+    });
+  });
+  triples.sort(function(a,b){ return b.gain - a.gain; });
+  var topTriples = triples.slice(0, 10);
+
+  var combined = topSingles.slice(0, 10).concat(topDoubles.slice(0, 10)).concat(topTriples.slice(0, 10));
+  combined.sort(function(a,b){ return b.gain - a.gain; });
+  window._deepOptChains = combined;
+  renderDeepOptResults(combined, baseScore);
+}
+
+function renderDeepOptResults(chains, baseScore) {
+  var wrap = document.getElementById('opt-deep-results');
+  var summary = document.getElementById('opt-deep-summary');
+  var list = document.getElementById('opt-deep-chain-list');
+  wrap.style.display = 'block';
+  if (chains.length === 0) {
+    summary.textContent = 'No multi-move chains improve the current layout.';
+    list.innerHTML = '';
+    return;
+  }
+  summary.textContent = chains.length + ' chain option' + (chains.length !== 1 ? 's' : '') + ' found — ranked by total gain (footage + empty stanchions + run cycle coverage)';
+  var html = '';
+  chains.forEach(function(c, idx) {
+    var steps = c.chain.map(function(m, i) {
+      var it = m.item;
+      return '<div style="padding:6px 10px;background:var(--steel);border-left:3px solid var(--accent);margin-top:4px;font-size:12px">' +
+        '<strong>Step ' + (i+1) + ':</strong> Move ' + it.size + ' ' + formatLength(it.length||'') +
+        ' from ' + m.from + ' \u2192 ' + m.to +
+        '</div>';
+    }).join('');
+    var gainStr = c.score.freedFt.toFixed(0) + 'ft freed \u00b7 ' + c.score.emptied + ' empty stans \u00b7 ' + c.score.rcCovered + ' RC items covered';
+    html += '<div class="opt-deep-card" style="background:var(--steel-mid,var(--steel));border:1px solid var(--border);border-radius:8px;padding:12px;margin-top:8px">' +
+      '<div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer" onclick="toggleDeepChain(' + idx + ')">' +
+      '<div>' +
+      '<strong style="font-family:\'Bebas Neue\',sans-serif;letter-spacing:1px">Chain ' + (idx+1) + ' \u2014 ' + c.chain.length + ' move' + (c.chain.length > 1 ? 's' : '') + '</strong>' +
+      '<div style="font-size:11px;color:var(--text-dim);margin-top:2px">' + gainStr + '</div>' +
+      '</div>' +
+      '<span id="deep-chevron-' + idx + '" style="font-size:14px">&#9660;</span>' +
+      '</div>' +
+      '<div id="deep-steps-' + idx + '" style="display:none;margin-top:8px">' +
+      steps +
+      '<button class="btn btn-primary" style="margin-top:10px;width:100%" onclick="executeOptimizerChain(' + idx + ')">&#9889; EXECUTE CHAIN</button>' +
+      '</div>' +
+      '</div>';
+  });
+  list.innerHTML = html;
+}
+
+function toggleDeepChain(idx) {
+  var body = document.getElementById('deep-steps-' + idx);
+  var chev = document.getElementById('deep-chevron-' + idx);
+  var isOpen = body.style.display !== 'none';
+  body.style.display = isOpen ? 'none' : 'block';
+  chev.innerHTML = isOpen ? '&#9660;' : '&#9650;';
+}
+
+function executeOptimizerChain(idx) {
+  var chain = (window._deepOptChains || [])[idx];
+  if (!chain) return;
+  if (!confirm('Execute ' + chain.chain.length + '-move chain?')) return;
+  chain.chain.forEach(function(m) {
+    var src = store[m.from];
+    if (!src) return;
+    store[m.from] = null;
+    var dest = store[m.to];
+    if (!dest) {
+      store[m.to] = Object.assign({}, src);
+    } else {
+      var sameProduct = dest.size === src.size &&
+        parseFloat(dest.length) === parseFloat(src.length) &&
+        (dest.grade||'') === (src.grade||'') &&
+        (dest.spec||'') === (src.spec||'') &&
+        (dest.customer||'') === (src.customer||'');
+      if (sameProduct) {
+        dest.bundles = (dest.bundles || 0) + (src.bundles || 0);
+        dest.weightTons = (dest.weightTons || 0) + (src.weightTons || 0);
+      } else {
+        if (!storeExtra[m.to]) storeExtra[m.to] = [];
+        storeExtra[m.to].push(Object.assign({}, src));
+      }
+    }
+  });
+  saveData();
+  renderAll();
+  renderInventory();
+  window._deepOptChains.splice(idx, 1);
+  renderDeepOptResults(window._deepOptChains, simScore(simCloneState()));
+  showScrapToast('\u2713 Executed ' + chain.chain.length + '-move chain');
 }
 
 function runOptimizer() {
