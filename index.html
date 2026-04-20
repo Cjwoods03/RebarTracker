@@ -918,11 +918,6 @@
               <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
             </select>
           </div>
-          <!-- Aluminum extrusion mode — profile/shape text field -->
-          <div class="form-group mf-profile-field">
-            <label data-mode-label="szLbl">Profile / Shape</label>
-            <input type="text" id="inp-profile" placeholder="Shape name or part #" oninput="calcBundleWeight()" autocomplete="off">
-          </div>
           <div class="form-group" id="length-group">
             <label>Length</label>
             <div style="display:flex;gap:6px;align-items:center">
@@ -935,17 +930,6 @@
                 <span style="position:absolute;right:8px;top:50%;transform:translateY(-50%);font-family:'IBM Plex Mono',monospace;font-size:11px;color:var(--text-dim)">in</span>
               </div>
             </div>
-          </div>
-        </div>
-        <!-- SSC-only: Thickness × Width dimensions -->
-        <div class="form-row mode-field">
-          <div class="form-group">
-            <label>Thickness (in)</label>
-            <input type="number" id="inp-thickness" placeholder="e.g. 0.5" min="0" step="any" inputmode="decimal">
-          </div>
-          <div class="form-group">
-            <label>Width (in)</label>
-            <input type="number" id="inp-width" placeholder="e.g. 6" min="0" step="any" inputmode="decimal">
           </div>
         </div>
         <div class="form-row">
@@ -965,130 +949,6 @@
               <option value="A615">A615</option>
               <option value="A706">A706</option>
             </select>
-          </div>
-        </div>
-        <!-- Lumber yard mode — species field -->
-        <div class="form-row mf-species-field">
-          <div class="form-group" style="width:100%">
-            <label>Species</label>
-            <select id="inp-species">
-              <option value="">— Species —</option>
-              <option value="SPF">SPF</option>
-              <option value="Douglas Fir">Douglas Fir</option>
-              <option value="Southern Yellow Pine">Southern Yellow Pine</option>
-              <option value="Hem-Fir">Hem-Fir</option>
-              <option value="Cedar">Cedar</option>
-              <option value="Redwood">Redwood</option>
-            </select>
-          </div>
-        </div>
-        <!-- Aluminum extrusion mode — finish field -->
-        <div class="form-row mf-finish-field">
-          <div class="form-group" style="width:100%">
-            <label>Finish</label>
-            <select id="inp-finish">
-              <option value="">— Finish —</option>
-              <option value="Mill">Mill</option>
-              <option value="Anodized">Anodized</option>
-              <option value="Clear Coat">Clear Coat</option>
-              <option value="Painted">Painted</option>
-              <option value="Powder Coated">Powder Coated</option>
-            </select>
-          </div>
-        </div>
-        <!-- Precast concrete mode — Width and Thickness fields -->
-        <div class="form-row mf-pc-dims-field">
-          <div class="form-group">
-            <label>Width (ft)</label>
-            <input type="number" id="inp-pc-width" placeholder="e.g. 8" min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
-          </div>
-          <div class="form-group">
-            <label>Thickness (in)</label>
-            <input type="number" id="inp-pc-thickness" placeholder="e.g. 8" min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
-          </div>
-        </div>
-        <!-- Pipe/Tube mode — End Finish field -->
-        <div class="form-row mf-endfinish-field">
-          <div class="form-group" style="width:100%">
-            <label>End Finish</label>
-            <select id="inp-endfinish">
-              <option value="">— End Finish —</option>
-              <option value="Plain End">Plain End</option>
-              <option value="Beveled">Beveled</option>
-              <option value="Threaded">Threaded</option>
-              <option value="Grooved">Grooved</option>
-              <option value="Flanged">Flanged</option>
-            </select>
-          </div>
-        </div>
-        <!-- Pipe/Tube mode — Coating field -->
-        <div class="form-row mf-coating-field">
-          <div class="form-group" style="width:100%">
-            <label>Coating</label>
-            <select id="inp-coating">
-              <option value="">— Coating —</option>
-              <option value="None">None</option>
-              <option value="FBE">FBE</option>
-              <option value="Coal Tar">Coal Tar</option>
-              <option value="Galvanized">Galvanized</option>
-              <option value="Painted">Painted</option>
-            </select>
-          </div>
-        </div>
-        <!-- Flat glass mode — Width and Height fields -->
-        <div class="form-row mf-glass-dims-field">
-          <div class="form-group">
-            <label>Width (in)</label>
-            <input type="number" id="inp-glass-width" placeholder='e.g. 48' min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
-          </div>
-          <div class="form-group">
-            <label>Height (in)</label>
-            <input type="number" id="inp-glass-height" placeholder='e.g. 84' min="0" step="any" inputmode="decimal" oninput="calcBundleWeight()">
-          </div>
-        </div>
-        <!-- Wire/Cable mode — AWG size and conductor count -->
-        <div class="form-row mf-cable-awg-row">
-          <div class="form-group">
-            <label>AWG / Size</label>
-            <select id="inp-cable-awg">
-              <option value="">— AWG Size —</option>
-              <option value="14 AWG">14 AWG</option>
-              <option value="12 AWG">12 AWG</option>
-              <option value="10 AWG">10 AWG</option>
-              <option value="8 AWG">8 AWG</option>
-              <option value="6 AWG">6 AWG</option>
-              <option value="4 AWG">4 AWG</option>
-              <option value="2 AWG">2 AWG</option>
-              <option value="1/0">1/0</option>
-              <option value="2/0">2/0</option>
-              <option value="3/0">3/0</option>
-              <option value="4/0">4/0</option>
-              <option value="250 MCM">250 MCM</option>
-              <option value="350 MCM">350 MCM</option>
-              <option value="500 MCM">500 MCM</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label>Conductors</label>
-            <select id="inp-cable-conductors">
-              <option value="">— # Cond —</option>
-              <option value="1">1</option>
-              <option value="2">2</option>
-              <option value="3">3</option>
-              <option value="4">4</option>
-              <option value="5">5</option>
-              <option value="7">7</option>
-              <option value="12">12</option>
-              <option value="19">19</option>
-              <option value="37">37</option>
-            </select>
-          </div>
-        </div>
-        <!-- Wire/Cable mode — Insulation Color -->
-        <div class="form-row mf-cable-color-field">
-          <div class="form-group" style="width:100%">
-            <label>Insulation Color</label>
-            <input type="text" id="inp-cable-color" placeholder="e.g. Black, Red, Yellow" autocomplete="off">
           </div>
         </div>
         <div id="length-hint" style="display:none"></div>
@@ -1375,11 +1235,6 @@
                 <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
               </select>
             </div>
-            <!-- Aluminum extrusion mode — profile/shape text field -->
-            <div class="mf-profile-field">
-              <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase" data-mode-label="szLbl">Profile / Shape</div>
-              <input type="text" id="rc-profile" placeholder="Shape or part #" autocomplete="off" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
-            </div>
             <div>
               <div style="font-family:'IBM Plex Mono',monospace;font-size:9px;color:var(--text-dim);margin-bottom:4px;letter-spacing:1px;text-transform:uppercase">Length (ft)</div>
               <input type="number" id="rc-length" placeholder="e.g. 20" min="1" inputmode="decimal" style="width:100%;background:var(--steel);border:1px solid var(--border);color:var(--text);padding:8px 10px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:12px;outline:none;box-sizing:border-box">
@@ -1658,11 +1513,6 @@
           <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
         </select>
       </div>
-      <!-- Aluminum extrusion mode — profile/shape text field -->
-      <div class="form-group mf-profile-field">
-        <label data-mode-label="szLbl">Profile / Shape</label>
-        <input type="text" id="sec-profile" placeholder="Shape name or part #" autocomplete="off">
-      </div>
       <div class="form-group">
         <label>Length</label>
         <div style="display:flex;gap:6px;align-items:center">
@@ -1693,35 +1543,6 @@
           <option value="">— Spec —</option>
           <option value="A615">A615</option>
           <option value="A706">A706</option>
-        </select>
-      </div>
-    </div>
-    <!-- Lumber yard mode — species field -->
-    <div class="form-row mf-species-field">
-      <div class="form-group" style="width:100%">
-        <label>Species</label>
-        <select id="sec-species">
-          <option value="">— Species —</option>
-          <option value="SPF">SPF</option>
-          <option value="Douglas Fir">Douglas Fir</option>
-          <option value="Southern Yellow Pine">Southern Yellow Pine</option>
-          <option value="Hem-Fir">Hem-Fir</option>
-          <option value="Cedar">Cedar</option>
-          <option value="Redwood">Redwood</option>
-        </select>
-      </div>
-    </div>
-    <!-- Aluminum extrusion mode — finish field -->
-    <div class="form-row mf-finish-field">
-      <div class="form-group" style="width:100%">
-        <label>Finish</label>
-        <select id="sec-finish">
-          <option value="">— Finish —</option>
-          <option value="Mill">Mill</option>
-          <option value="Anodized">Anodized</option>
-          <option value="Clear Coat">Clear Coat</option>
-          <option value="Painted">Painted</option>
-          <option value="Powder Coated">Powder Coated</option>
         </select>
       </div>
     </div>
@@ -1791,11 +1612,6 @@
           <option>#7</option><option>#8</option><option>#9</option><option>#10</option><option>#11</option>
         </select>
       </div>
-      <!-- Aluminum extrusion mode — profile/shape text field -->
-      <div class="form-group mf-profile-field">
-        <label data-mode-label="szLbl">Profile / Shape</label>
-        <input type="text" id="edit-profile" placeholder="Shape name or part #" autocomplete="off">
-      </div>
       <div class="form-group">
         <label>Length</label>
         <div style="display:flex;gap:6px;align-items:center">
@@ -1827,130 +1643,6 @@
           <option value="A615">A615</option>
           <option value="A706">A706</option>
         </select>
-      </div>
-    </div>
-    <!-- Lumber yard mode — species field -->
-    <div class="form-row mf-species-field">
-      <div class="form-group" style="width:100%">
-        <label>Species</label>
-        <select id="edit-species">
-          <option value="">— Species —</option>
-          <option value="SPF">SPF</option>
-          <option value="Douglas Fir">Douglas Fir</option>
-          <option value="Southern Yellow Pine">Southern Yellow Pine</option>
-          <option value="Hem-Fir">Hem-Fir</option>
-          <option value="Cedar">Cedar</option>
-          <option value="Redwood">Redwood</option>
-        </select>
-      </div>
-    </div>
-    <!-- Aluminum extrusion mode — finish field -->
-    <div class="form-row mf-finish-field">
-      <div class="form-group" style="width:100%">
-        <label>Finish</label>
-        <select id="edit-finish">
-          <option value="">— Finish —</option>
-          <option value="Mill">Mill</option>
-          <option value="Anodized">Anodized</option>
-          <option value="Clear Coat">Clear Coat</option>
-          <option value="Painted">Painted</option>
-          <option value="Powder Coated">Powder Coated</option>
-        </select>
-      </div>
-    </div>
-    <!-- Precast concrete mode — Width and Thickness fields -->
-    <div class="form-row mf-pc-dims-field">
-      <div class="form-group">
-        <label>Width (ft)</label>
-        <input type="number" id="edit-pc-width" placeholder="e.g. 8" min="0" step="any" inputmode="decimal">
-      </div>
-      <div class="form-group">
-        <label>Thickness (in)</label>
-        <input type="number" id="edit-pc-thickness" placeholder="e.g. 8" min="0" step="any" inputmode="decimal">
-      </div>
-    </div>
-    <!-- Pipe/Tube mode — End Finish field -->
-    <div class="form-row mf-endfinish-field">
-      <div class="form-group" style="width:100%">
-        <label>End Finish</label>
-        <select id="edit-endfinish">
-          <option value="">— End Finish —</option>
-          <option value="Plain End">Plain End</option>
-          <option value="Beveled">Beveled</option>
-          <option value="Threaded">Threaded</option>
-          <option value="Grooved">Grooved</option>
-          <option value="Flanged">Flanged</option>
-        </select>
-      </div>
-    </div>
-    <!-- Pipe/Tube mode — Coating field -->
-    <div class="form-row mf-coating-field">
-      <div class="form-group" style="width:100%">
-        <label>Coating</label>
-        <select id="edit-coating">
-          <option value="">— Coating —</option>
-          <option value="None">None</option>
-          <option value="FBE">FBE</option>
-          <option value="Coal Tar">Coal Tar</option>
-          <option value="Galvanized">Galvanized</option>
-          <option value="Painted">Painted</option>
-        </select>
-      </div>
-    </div>
-    <!-- Flat glass mode — Width and Height fields -->
-    <div class="form-row mf-glass-dims-field">
-      <div class="form-group">
-        <label>Width (in)</label>
-        <input type="number" id="edit-glass-width" placeholder='e.g. 48' min="0" step="any" inputmode="decimal">
-      </div>
-      <div class="form-group">
-        <label>Height (in)</label>
-        <input type="number" id="edit-glass-height" placeholder='e.g. 84' min="0" step="any" inputmode="decimal">
-      </div>
-    </div>
-    <!-- Wire/Cable mode — AWG size and conductor count -->
-    <div class="form-row mf-cable-awg-row">
-      <div class="form-group">
-        <label>AWG / Size</label>
-        <select id="edit-cable-awg">
-          <option value="">— AWG Size —</option>
-          <option value="14 AWG">14 AWG</option>
-          <option value="12 AWG">12 AWG</option>
-          <option value="10 AWG">10 AWG</option>
-          <option value="8 AWG">8 AWG</option>
-          <option value="6 AWG">6 AWG</option>
-          <option value="4 AWG">4 AWG</option>
-          <option value="2 AWG">2 AWG</option>
-          <option value="1/0">1/0</option>
-          <option value="2/0">2/0</option>
-          <option value="3/0">3/0</option>
-          <option value="4/0">4/0</option>
-          <option value="250 MCM">250 MCM</option>
-          <option value="350 MCM">350 MCM</option>
-          <option value="500 MCM">500 MCM</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>Conductors</label>
-        <select id="edit-cable-conductors">
-          <option value="">— # Cond —</option>
-          <option value="1">1</option>
-          <option value="2">2</option>
-          <option value="3">3</option>
-          <option value="4">4</option>
-          <option value="5">5</option>
-          <option value="7">7</option>
-          <option value="12">12</option>
-          <option value="19">19</option>
-          <option value="37">37</option>
-        </select>
-      </div>
-    </div>
-    <!-- Wire/Cable mode — Insulation Color -->
-    <div class="form-row mf-cable-color-field">
-      <div class="form-group" style="width:100%">
-        <label>Insulation Color</label>
-        <input type="text" id="edit-cable-color" placeholder="e.g. Black, Red, Yellow" autocomplete="off">
       </div>
     </div>
     <div class="form-group">
